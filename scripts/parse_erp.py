@@ -37,9 +37,20 @@ def to_num(v):
 
 def parse_supplier_prices(ws):
     """Supplier Prices tab — header on row 4: Date | Material SKU | Supplier | Pack Price | Units per Pack | Is Latest | Notes.
-    Returns a map: { material_sku: { packPrice, unitsPerPack, supplier } } for the latest row only.
+
+    For v1.1+ (Conflict 5A: per-supplier latest), Is Latest is per (SKU, Supplier) — multiple
+    rows can have Is Latest="yes" for the same SKU if they're for different suppliers.
+
+    Returns TWO maps:
+      - latest_per_supplier: { (sku, supplier): {packPrice, unitsPerPack, date} }
+        (the latest "yes" row for each (sku, supplier) combination)
+      - latest_any_supplier: { sku: {packPrice, unitsPerPack, supplier, date} }
+        (the most recent "yes" row for the SKU, regardless of supplier — used as fallback
+        when Materials.Preferred Supplier is blank)
     """
-    latest_by_sku = {}
+    latest_per_supplier = {}  # keyed by (sku, supplier)
+    latest_any_supplier = {}  # keyed by sku, with date tracked
+
     for row in ws.iter_rows(min_row=5, values_only=True):
         if not row or not row[0] or not row[1]:
             continue
@@ -47,17 +58,34 @@ def parse_supplier_prices(ws):
         if not sku or sku == "Material SKU":
             continue
         is_latest = to_str(row[5]).lower() == "yes"
+        if not is_latest:
+            continue
+
         pack_price = to_num(row[3])
         units_per_pack = to_num(row[4])
         supplier = to_str(row[2])
-        # Always keep the most recent "yes" row; if no "yes" flag, keep the latest by date
-        if is_latest or sku not in latest_by_sku:
-            latest_by_sku[sku] = {
+        date = row[0]
+
+        # Track per (sku, supplier)
+        key = (sku, supplier)
+        latest_per_supplier[key] = {
+            "packPrice": pack_price,
+            "unitsPerPack": units_per_pack,
+            "supplier": supplier,
+            "date": date,
+        }
+
+        # Track latest across all suppliers for this SKU
+        existing = latest_any_supplier.get(sku)
+        if existing is None or (date and (existing.get("date") is None or str(date) > str(existing.get("date")))):
+            latest_any_supplier[sku] = {
                 "packPrice": pack_price,
                 "unitsPerPack": units_per_pack,
                 "supplier": supplier,
+                "date": date,
             }
-    return latest_by_sku
+
+    return latest_per_supplier, latest_any_supplier
 
 
 def parse_stock_movements(ws):
@@ -96,11 +124,15 @@ def parse_suppliers(ws):
     return suppliers
 
 
-def parse_materials(ws, latest_prices, stock_sums):
+def parse_materials(ws, latest_per_supplier, latest_any_supplier, stock_sums):
     """Materials sheet — header on row 4 (1-indexed):
        SKU, Item Name, Category, Unit, Unit Cost, Supplier, Current Stock, Reorder Level, Reorder Qty,
        Stock Value, Status, Pack Price, Units per Pack, Colors Available, Photo, Notes,
        Type, Preferred Supplier (cols Q, R added in v1).
+
+    For v1.1+ (Conflict 5A):
+      - If Preferred Supplier (col R) is set, look up Supplier Prices by (sku, preferred_supplier)
+      - If Preferred Supplier is blank, fall back to the most recent price (any supplier)
     """
     HEADER_SKU = "SKU"
     materials = []
@@ -109,17 +141,27 @@ def parse_materials(ws, latest_prices, stock_sums):
         if not sku or sku == HEADER_SKU:
             continue
 
-        # In ERP Zai v1+, Pack Price (col L) and Current Stock (col G) are formulas.
-        # Read actual values from the latest_prices and stock_sums maps instead.
-        # For pre-v1 files (no Supplier Prices tab), fall back to the cell value.
-        latest = latest_prices.get(sku, {})
-        pack_price = latest.get("packPrice") if latest else None
+        preferred_supplier = to_str(row[17]) if len(row) > 17 and row[17] else ""
+
+        # Try preferred supplier first, then fall back to most recent
+        price_info = None
+        if preferred_supplier and latest_per_supplier:
+            price_info = latest_per_supplier.get((sku, preferred_supplier))
+        if price_info is None and latest_any_supplier:
+            price_info = latest_any_supplier.get(sku)
+
+        # Fall back to direct cell value (pre-v1 files)
+        pack_price = price_info.get("packPrice") if price_info else None
         if pack_price is None:
             pack_price = to_num(row[11])  # col L value (pre-v1: number, v1+: formula string → None)
-        units_per_pack = latest.get("unitsPerPack") if latest else None
+        units_per_pack = price_info.get("unitsPerPack") if price_info else None
         if units_per_pack is None:
             units_per_pack = to_num(row[12])  # col M
-        supplier_from_prices = latest.get("supplier") if latest else None
+        # Supplier: prefer the resolved price_info's supplier (which = preferred supplier if set);
+        # fall back to col F
+        supplier_resolved = price_info.get("supplier") if price_info else None
+        if not supplier_resolved:
+            supplier_resolved = to_str(row[5])
 
         current_stock = stock_sums.get(sku) if stock_sums else None
         if current_stock is None:
@@ -139,7 +181,7 @@ def parse_materials(ws, latest_prices, stock_sums):
             "category": to_str(row[2]).lower() or "other",
             "unit": to_str(row[3]) or "pack",
             "unitCost": unit_cost,
-            "supplier": supplier_from_prices or to_str(row[5]),
+            "supplier": supplier_resolved,
             "currentStockPacks": current_stock,
             "reorderLevelPacks": to_num(row[7]),
             "reorderQtyPacks": to_num(row[8]),
@@ -147,7 +189,7 @@ def parse_materials(ws, latest_prices, stock_sums):
             "unitsPerPack": units_per_pack,
             "colors": to_str(row[13]),
             "type": to_str(row[16]) if len(row) > 16 and row[16] else _default_type(sku),
-            "preferredSupplier": to_str(row[17]) if len(row) > 17 and row[17] else "",
+            "preferredSupplier": preferred_supplier,
             "notes": to_str(row[15]),
         })
     return materials
@@ -236,17 +278,18 @@ def main():
     wb_formulas = load_workbook(EXCEL_PATH, data_only=False)  # for fallback only
 
     # Read the new v1+ tabs if they exist; otherwise pass empty dicts
-    latest_prices = {}
+    latest_per_supplier = {}
+    latest_any_supplier = {}
     stock_sums = {}
     if "Supplier Prices" in wb.sheetnames:
-        latest_prices = parse_supplier_prices(wb["Supplier Prices"])
-        print(f"  Read {len(latest_prices)} latest prices from Supplier Prices tab")
+        latest_per_supplier, latest_any_supplier = parse_supplier_prices(wb["Supplier Prices"])
+        print(f"  Read {len(latest_per_supplier)} per-supplier latest prices ({len(latest_any_supplier)} distinct SKUs)")
     if "Stock Movements" in wb.sheetnames:
         stock_sums = parse_stock_movements(wb["Stock Movements"])
         print(f"  Read {len(stock_sums)} stock balances from Stock Movements tab")
 
     suppliers = parse_suppliers(wb["Suppliers"])
-    materials = parse_materials(wb["Materials"], latest_prices, stock_sums)
+    materials = parse_materials(wb["Materials"], latest_per_supplier, latest_any_supplier, stock_sums)
     recipes = parse_recipes(wb["Recipes"])
     products = parse_products(wb["Products"])
 
