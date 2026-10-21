@@ -2636,8 +2636,8 @@
       "unitsPerPack": 1.0,
       "colors": "",
       "type": "consumable",
-      "preferredSupplier": "",
-      "notes": "[v1.1] Preferred Supplier left blank per Conflict 9c — both OASIS ($43.07) and LA FINCA ($48) are valid sources. Materials.Pack Price will show empty until you choose one."
+      "preferredSupplier": "LA FINCA",
+      "notes": "[v1.1 fix] Preferred Supplier set to LA FINCA per Conflict 9c → B (user decision). Pack Price = $48/piece, Unit Cost = $48/piece."
     },
     {
       "sku": "FLR-MARGARITA-OCRE-LF",
@@ -3056,11 +3056,11 @@
       "componentName": "ESPUMA FLORAL",
       "qty": 1.0,
       "unit": "pack",
-      "unitCost": 0,
-      "lineCost": 0,
+      "unitCost": 48.0,
+      "lineCost": 48.0,
       "category": "packaging",
       "color": "",
-      "check": "NO COST",
+      "check": "OK",
       "notes": "",
       "version": "v1",
       "effectiveFrom": "2026-10-01"
@@ -3166,14 +3166,14 @@
       "category": "Arrangement",
       "size": "Large",
       "flowersCost": 299.0,
-      "otherMaterialsCost": 95.0,
-      "totalCost": 394.0,
-      "suggestedPriceBeforeIva": 1312.5,
-      "suggestedPriceWithIva": 1522.5,
+      "otherMaterialsCost": 143.0,
+      "totalCost": 442.0,
+      "suggestedPriceBeforeIva": 1446.9,
+      "suggestedPriceWithIva": 1678.404,
       "actualPriceBeforeIva": 1500.0,
       "actualPriceWithIva": 1740.0,
-      "marginPct": 0.737333333333333,
-      "linesToReview": 1,
+      "marginPct": 0.705333333333333,
+      "linesToReview": 0,
       "description": ""
     }
   ]
