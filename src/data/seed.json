@@ -17,6 +17,24 @@
       "leadTimeDays": null,
       "paymentTerms": "",
       "notes": ""
+    },
+    {
+      "name": "BDF Palacio Floral SA de CV",
+      "contactPerson": "",
+      "phone": "",
+      "email": "",
+      "leadTimeDays": null,
+      "paymentTerms": "",
+      "notes": "Added 2026-10-22. Fill contact, lead time, payment terms."
+    },
+    {
+      "name": "PRO Flor",
+      "contactPerson": "",
+      "phone": "",
+      "email": "",
+      "leadTimeDays": null,
+      "paymentTerms": "",
+      "notes": "Added 2026-10-22. Fill contact, lead time, payment terms."
     }
   ],
   "materials": [
@@ -27,12 +45,14 @@
       "unit": "pack",
       "unitCost": 135.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 135.0,
       "unitsPerPack": null,
       "colors": "Blue, White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -42,12 +62,14 @@
       "unit": "pack",
       "unitCost": 175.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 175.0,
       "unitsPerPack": null,
       "colors": "White, Yellow, Pink, Purple, Orange, Burgundy",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -57,12 +79,14 @@
       "unit": "pack",
       "unitCost": 340.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 340.0,
       "unitsPerPack": null,
       "colors": "White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -72,12 +96,14 @@
       "unit": "pack",
       "unitCost": 90.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 90.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -87,12 +113,14 @@
       "unit": "pack",
       "unitCost": 42.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 42.0,
       "unitsPerPack": null,
       "colors": "Pink, White, Yellow, Orange, Red, Purple",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -102,12 +130,14 @@
       "unit": "pack",
       "unitCost": 52.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 52.0,
       "unitsPerPack": null,
       "colors": "Pink, White, Yellow, Orange, Red, Purple",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -117,12 +147,14 @@
       "unit": "pack",
       "unitCost": 153.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 153.0,
       "unitsPerPack": null,
       "colors": "Red, Burgundy, Green, Orange",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -132,12 +164,14 @@
       "unit": "pack",
       "unitCost": 560.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 560.0,
       "unitsPerPack": null,
       "colors": "White, Red, Pink, Purple",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -147,12 +181,14 @@
       "unit": "pack",
       "unitCost": 95.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 95.0,
       "unitsPerPack": null,
       "colors": "Red, Pink, White, Green, Burgundy",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -162,12 +198,14 @@
       "unit": "pack",
       "unitCost": 95.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 95.0,
       "unitsPerPack": null,
       "colors": "Orange, White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -177,12 +215,14 @@
       "unit": "pack",
       "unitCost": 26.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 26.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -192,12 +232,14 @@
       "unit": "pack",
       "unitCost": 85.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 85.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -207,12 +249,14 @@
       "unit": "pack",
       "unitCost": 29.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 29.0,
       "unitsPerPack": null,
       "colors": "Red, Orange, Pink, Yellow",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -222,12 +266,14 @@
       "unit": "pack",
       "unitCost": 330.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 330.0,
       "unitsPerPack": null,
       "colors": "White, Yellow, Pink, Purple, Orange, Burgundy",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -237,12 +283,14 @@
       "unit": "pack",
       "unitCost": 123.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 123.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -252,12 +300,14 @@
       "unit": "pack",
       "unitCost": 125.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 125.0,
       "unitsPerPack": null,
       "colors": "Pink, White, Red",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -267,12 +317,14 @@
       "unit": "pack",
       "unitCost": 150.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 150.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -282,12 +334,14 @@
       "unit": "pack",
       "unitCost": 180.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 180.0,
       "unitsPerPack": null,
       "colors": "Orange, Yellow",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -297,12 +351,14 @@
       "unit": "stem",
       "unitCost": 8.5,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 85.0,
       "unitsPerPack": 10.0,
       "colors": "Orange, Yellow",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -312,12 +368,14 @@
       "unit": "pack",
       "unitCost": 400.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 400.0,
       "unitsPerPack": null,
       "colors": "Red, Pink, White, Yellow, Orange, Purple",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -327,12 +385,14 @@
       "unit": "pack",
       "unitCost": 115.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 115.0,
       "unitsPerPack": null,
       "colors": "Red, Pink, White, Yellow, Orange, Purple",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -342,12 +402,14 @@
       "unit": "pack",
       "unitCost": 48.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 48.0,
       "unitsPerPack": null,
       "colors": "Red, Pink, White, Yellow, Orange, Purple",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -357,12 +419,14 @@
       "unit": "pack",
       "unitCost": 145.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 145.0,
       "unitsPerPack": null,
       "colors": "Red, Pink, White, Yellow, Orange, Purple",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -372,12 +436,14 @@
       "unit": "pack",
       "unitCost": 150.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 150.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -387,12 +453,14 @@
       "unit": "pack",
       "unitCost": 15.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 15.0,
       "unitsPerPack": null,
       "colors": "Red, Pink, White, Yellow, Orange, Purple",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -402,12 +470,14 @@
       "unit": "pack",
       "unitCost": 67.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 67.0,
       "unitsPerPack": null,
       "colors": "Yellow",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -417,12 +487,14 @@
       "unit": "pack",
       "unitCost": 118.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 118.0,
       "unitsPerPack": null,
       "colors": "Yellow",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -432,12 +504,14 @@
       "unit": "pack",
       "unitCost": 154.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 154.0,
       "unitsPerPack": null,
       "colors": "Red, Pink, Orange, Yellow, White, Burgundy",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -447,12 +521,14 @@
       "unit": "pack",
       "unitCost": 275.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 275.0,
       "unitsPerPack": null,
       "colors": "Blue, Purple, White, Pink",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -462,12 +538,14 @@
       "unit": "pack",
       "unitCost": 114.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 114.0,
       "unitsPerPack": null,
       "colors": "White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -477,12 +555,14 @@
       "unit": "pack",
       "unitCost": 119.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 119.0,
       "unitsPerPack": null,
       "colors": "Blue",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -492,12 +572,14 @@
       "unit": "pack",
       "unitCost": 164.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 164.0,
       "unitsPerPack": null,
       "colors": "Purple, Blue, White, Pink",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -507,12 +589,14 @@
       "unit": "pack",
       "unitCost": 81.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 81.0,
       "unitsPerPack": null,
       "colors": "White, Yellow, Green, Pink, Purple",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -522,12 +606,14 @@
       "unit": "pack",
       "unitCost": 78.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 78.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -537,12 +623,14 @@
       "unit": "pack",
       "unitCost": 105.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 105.0,
       "unitsPerPack": null,
       "colors": "Green, Red, Pink, Orange",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -552,12 +640,14 @@
       "unit": "pack",
       "unitCost": 125.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 125.0,
       "unitsPerPack": null,
       "colors": "Blue, Pink, White, Green, Purple",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -567,12 +657,14 @@
       "unit": "stem",
       "unitCost": 8.6,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 86.0,
       "unitsPerPack": 10.0,
       "colors": "Blue, Pink, White, Green, Purple",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": "ASSUMED PACK SIZE (placeholder, not from LA FINCA) - confirm stems per pack."
     },
     {
@@ -582,12 +674,14 @@
       "unit": "pack",
       "unitCost": 130.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 130.0,
       "unitsPerPack": null,
       "colors": "Blue, Pink, White, Green, Purple",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -597,12 +691,14 @@
       "unit": "pack",
       "unitCost": 115.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 115.0,
       "unitsPerPack": null,
       "colors": "Blue, Purple, White, Yellow",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -612,12 +708,14 @@
       "unit": "pack",
       "unitCost": 329.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 329.0,
       "unitsPerPack": null,
       "colors": "Red, Orange, Pink, Yellow, White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -627,12 +725,14 @@
       "unit": "pack",
       "unitCost": 110.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 110.0,
       "unitsPerPack": null,
       "colors": "Purple, White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -642,12 +742,14 @@
       "unit": "pack",
       "unitCost": 140.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 140.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -657,12 +759,14 @@
       "unit": "pack",
       "unitCost": 205.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 205.0,
       "unitsPerPack": null,
       "colors": "White, Pink, Orange, Yellow",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -672,12 +776,14 @@
       "unit": "pack",
       "unitCost": 137.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 137.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -687,12 +793,14 @@
       "unit": "pack",
       "unitCost": 95.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 95.0,
       "unitsPerPack": null,
       "colors": "Purple, White, Yellow, Pink, Blue",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -702,12 +810,14 @@
       "unit": "stem",
       "unitCost": 23.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 230.0,
       "unitsPerPack": 10.0,
       "colors": "White, Purple, Pink, Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": "ASSUMED PACK SIZE (placeholder, not from LA FINCA) - confirm stems per pack."
     },
     {
@@ -717,12 +827,14 @@
       "unit": "pack",
       "unitCost": 107.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 107.0,
       "unitsPerPack": null,
       "colors": "White, Yellow",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -732,12 +844,14 @@
       "unit": "pack",
       "unitCost": 92.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 92.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -747,12 +861,14 @@
       "unit": "pack",
       "unitCost": 150.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 150.0,
       "unitsPerPack": null,
       "colors": "White, Pink, Purple, Red, Yellow",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -762,12 +878,14 @@
       "unit": "pack",
       "unitCost": 160.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 160.0,
       "unitsPerPack": null,
       "colors": "Purple, White, Pink, Red, Blue",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -777,12 +895,14 @@
       "unit": "pack",
       "unitCost": 113.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 113.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -792,12 +912,14 @@
       "unit": "pack",
       "unitCost": 80.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 80.0,
       "unitsPerPack": null,
       "colors": "Red, Pink, White, Yellow, Orange",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -807,12 +929,14 @@
       "unit": "pack",
       "unitCost": 32.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 32.0,
       "unitsPerPack": null,
       "colors": "White, Lavender, Pink, Yellow",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -822,12 +946,14 @@
       "unit": "pack",
       "unitCost": 640.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 640.0,
       "unitsPerPack": null,
       "colors": "White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -837,12 +963,14 @@
       "unit": "stem",
       "unitCost": 15.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 150.0,
       "unitsPerPack": 10.0,
       "colors": "White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": "Pack size (10) taken from the item name."
     },
     {
@@ -852,12 +980,14 @@
       "unit": "pack",
       "unitCost": 210.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 210.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -867,12 +997,14 @@
       "unit": "stem",
       "unitCost": 36.5,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 365.0,
       "unitsPerPack": 10.0,
       "colors": "White, Pink",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": "Pack size (10) taken from the item name."
     },
     {
@@ -882,12 +1014,14 @@
       "unit": "stem",
       "unitCost": 36.6,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 183.0,
       "unitsPerPack": 5.0,
       "colors": "White, Pink",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": "Pack size (5) taken from the item name."
     },
     {
@@ -897,12 +1031,14 @@
       "unit": "stem",
       "unitCost": 51.6,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 258.0,
       "unitsPerPack": 5.0,
       "colors": "White, Pink",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": "Pack size (5) taken from the item name."
     },
     {
@@ -912,12 +1048,14 @@
       "unit": "pack",
       "unitCost": 575.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 575.0,
       "unitsPerPack": null,
       "colors": "White, Purple, Pink, Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -927,12 +1065,14 @@
       "unit": "pack",
       "unitCost": 148.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 148.0,
       "unitsPerPack": null,
       "colors": "Blue, Purple, Pink, White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -942,12 +1082,14 @@
       "unit": "pack",
       "unitCost": 110.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 110.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -957,12 +1099,14 @@
       "unit": "pack",
       "unitCost": 155.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 155.0,
       "unitsPerPack": null,
       "colors": "Purple, White, Pink, Yellow, Blue",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -972,12 +1116,14 @@
       "unit": "pack",
       "unitCost": 290.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 290.0,
       "unitsPerPack": null,
       "colors": "Purple, White, Pink, Yellow, Blue",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -987,12 +1133,14 @@
       "unit": "pack",
       "unitCost": 110.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 110.0,
       "unitsPerPack": null,
       "colors": "Purple, White, Pink, Yellow, Blue",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1002,12 +1150,14 @@
       "unit": "pack",
       "unitCost": 160.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 160.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1017,12 +1167,14 @@
       "unit": "pack",
       "unitCost": 60.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 60.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1032,12 +1184,14 @@
       "unit": "pack",
       "unitCost": 115.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 115.0,
       "unitsPerPack": null,
       "colors": "Pink, Red, Orange, Yellow, White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1047,12 +1201,14 @@
       "unit": "pack",
       "unitCost": 105.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 105.0,
       "unitsPerPack": null,
       "colors": "Pink, Red, Orange, Yellow, White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1062,12 +1218,14 @@
       "unit": "pack",
       "unitCost": 115.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 115.0,
       "unitsPerPack": null,
       "colors": "Pink, Red, Orange, Yellow, White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1077,12 +1235,14 @@
       "unit": "pack",
       "unitCost": 115.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 115.0,
       "unitsPerPack": null,
       "colors": "Pink, Red, Orange, Yellow, White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1092,12 +1252,14 @@
       "unit": "pack",
       "unitCost": 80.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 80.0,
       "unitsPerPack": null,
       "colors": "White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1107,12 +1269,14 @@
       "unit": "pack",
       "unitCost": 95.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 95.0,
       "unitsPerPack": null,
       "colors": "Dyed - various",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1122,12 +1286,14 @@
       "unit": "pack",
       "unitCost": 65.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 65.0,
       "unitsPerPack": null,
       "colors": "Yellow, Orange",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1137,12 +1303,14 @@
       "unit": "pack",
       "unitCost": 125.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 125.0,
       "unitsPerPack": null,
       "colors": "Yellow, Orange",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1152,12 +1320,14 @@
       "unit": "pack",
       "unitCost": 125.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 125.0,
       "unitsPerPack": null,
       "colors": "Yellow, Orange",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1167,12 +1337,14 @@
       "unit": "pack",
       "unitCost": 1050.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 1050.0,
       "unitsPerPack": null,
       "colors": "White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1182,12 +1354,14 @@
       "unit": "pack",
       "unitCost": 1100.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 1100.0,
       "unitsPerPack": null,
       "colors": "Red, Pink, Orange, Yellow, Purple",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1197,12 +1371,14 @@
       "unit": "stem",
       "unitCost": 17.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 170.0,
       "unitsPerPack": 10.0,
       "colors": "Red, Pink, Orange, Yellow, Purple, White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": "Pack size (10) taken from the item name."
     },
     {
@@ -1212,12 +1388,14 @@
       "unit": "pack",
       "unitCost": 125.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 125.0,
       "unitsPerPack": null,
       "colors": "Purple, Pink, White, Red",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1227,12 +1405,14 @@
       "unit": "pack",
       "unitCost": 129.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 129.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1242,12 +1422,14 @@
       "unit": "pack",
       "unitCost": 130.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 130.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1257,12 +1439,14 @@
       "unit": "pack",
       "unitCost": 905.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 905.0,
       "unitsPerPack": null,
       "colors": "White, Purple, Pink, Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1272,12 +1456,14 @@
       "unit": "pack",
       "unitCost": 220.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 220.0,
       "unitsPerPack": null,
       "colors": "White, Pink, Purple, Yellow",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1287,12 +1473,14 @@
       "unit": "pack",
       "unitCost": 300.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 300.0,
       "unitsPerPack": null,
       "colors": "White, Pink, Purple, Yellow",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1302,12 +1490,14 @@
       "unit": "pack",
       "unitCost": 75.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 75.0,
       "unitsPerPack": null,
       "colors": "White, Pink, Yellow, Orange, Red, Purple",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1317,12 +1507,14 @@
       "unit": "pack",
       "unitCost": 87.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 87.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1332,12 +1524,14 @@
       "unit": "pack",
       "unitCost": 86.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 86.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1347,12 +1541,14 @@
       "unit": "pack",
       "unitCost": 400.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 400.0,
       "unitsPerPack": null,
       "colors": "Pink, White, Red, Orange, Yellow, Purple",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1362,12 +1558,14 @@
       "unit": "pack",
       "unitCost": 260.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 260.0,
       "unitsPerPack": null,
       "colors": "Multicolor (dyed)",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1377,12 +1575,14 @@
       "unit": "pack",
       "unitCost": 135.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 135.0,
       "unitsPerPack": null,
       "colors": "Red, Pink, White, Yellow, Orange, Peach, Lavender",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": "List shows a range ($105 - $135); high end used so cost isn't understated."
     },
     {
@@ -1392,12 +1592,14 @@
       "unit": "stem",
       "unitCost": 26.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 260.0,
       "unitsPerPack": 10.0,
       "colors": "Pink, Peach, White, Apricot, Yellow",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": "ASSUMED PACK SIZE (placeholder, not from LA FINCA) - confirm stems per pack."
     },
     {
@@ -1407,12 +1609,14 @@
       "unit": "pack",
       "unitCost": 360.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 360.0,
       "unitsPerPack": null,
       "colors": "Pink, Peach, White, Apricot, Yellow",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1422,12 +1626,14 @@
       "unit": "pack",
       "unitCost": 250.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 250.0,
       "unitsPerPack": null,
       "colors": "Pink",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1437,12 +1643,14 @@
       "unit": "pack",
       "unitCost": 190.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 190.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1452,12 +1660,14 @@
       "unit": "stem",
       "unitCost": 9.5,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 190.0,
       "unitsPerPack": 20.0,
       "colors": "Red, Pink, White, Yellow, Orange, Peach, Lavender",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": "ASSUMED PACK SIZE (placeholder, not from LA FINCA) - confirm stems per pack. List shows a range ($130 - $190); high end used so cost isn't understated."
     },
     {
@@ -1467,12 +1677,14 @@
       "unit": "pack",
       "unitCost": 155.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 155.0,
       "unitsPerPack": null,
       "colors": "Red, Pink, White, Yellow, Orange, Peach, Lavender",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": "List shows a range ($115 - $155); high end used so cost isn't understated."
     },
     {
@@ -1482,12 +1694,14 @@
       "unit": "pack",
       "unitCost": 260.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 260.0,
       "unitsPerPack": null,
       "colors": "Blue (dyed)",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1497,12 +1711,14 @@
       "unit": "pack",
       "unitCost": 185.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 185.0,
       "unitsPerPack": null,
       "colors": "Red, Pink, White, Yellow, Orange, Peach, Lavender",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": "List shows a range ($165 - $185); high end used so cost isn't understated."
     },
     {
@@ -1512,12 +1728,14 @@
       "unit": "pack",
       "unitCost": 180.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 180.0,
       "unitsPerPack": null,
       "colors": "White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1527,12 +1745,14 @@
       "unit": "pack",
       "unitCost": 34.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 34.0,
       "unitsPerPack": null,
       "colors": "Yellow",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1542,12 +1762,14 @@
       "unit": "pack",
       "unitCost": 35.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 35.0,
       "unitsPerPack": null,
       "colors": "Red",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1557,12 +1779,14 @@
       "unit": "pack",
       "unitCost": 125.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 125.0,
       "unitsPerPack": null,
       "colors": "White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1572,12 +1796,14 @@
       "unit": "pack",
       "unitCost": 148.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 148.0,
       "unitsPerPack": null,
       "colors": "Purple, White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1587,12 +1813,14 @@
       "unit": "pack",
       "unitCost": 120.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 120.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1602,12 +1830,14 @@
       "unit": "pack",
       "unitCost": 29.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 29.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1617,12 +1847,14 @@
       "unit": "pack",
       "unitCost": 460.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 460.0,
       "unitsPerPack": null,
       "colors": "Red, Pink, Yellow, White, Orange, Purple",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1632,12 +1864,14 @@
       "unit": "pack",
       "unitCost": 498.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 498.0,
       "unitsPerPack": null,
       "colors": "Pink, White, Red, Yellow",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1647,12 +1881,14 @@
       "unit": "pack",
       "unitCost": 107.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 107.0,
       "unitsPerPack": null,
       "colors": "",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1662,12 +1898,14 @@
       "unit": "pack",
       "unitCost": 140.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 140.0,
       "unitsPerPack": null,
       "colors": "Purple, Blue, Pink, White",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1677,12 +1915,14 @@
       "unit": "pack",
       "unitCost": 190.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 190.0,
       "unitsPerPack": null,
       "colors": "White, Pink, Purple",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1691,13 +1931,15 @@
       "category": "flower",
       "unit": "stem",
       "unitCost": 50.0,
-      "supplier": "",
-      "currentStockPacks": null,
+      "supplier": "LA FINCA",
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 50.0,
       "unitsPerPack": 1.0,
       "colors": "Pink",
+      "type": "perishable",
+      "preferredSupplier": "",
       "notes": "Price assumed at $50 per stem (owner's assumption; not in LA FINCA's list)."
     },
     {
@@ -1707,12 +1949,14 @@
       "unit": "pack",
       "unitCost": 36.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 36.0,
       "unitsPerPack": null,
       "colors": "Green, White, Purple",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1722,12 +1966,14 @@
       "unit": "pack",
       "unitCost": 28.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 28.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1737,12 +1983,14 @@
       "unit": "pack",
       "unitCost": 74.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 74.0,
       "unitsPerPack": null,
       "colors": "Silver-gray",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1752,12 +2000,14 @@
       "unit": "pack",
       "unitCost": 54.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 54.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1767,12 +2017,14 @@
       "unit": "pack",
       "unitCost": 48.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 48.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1782,12 +2034,14 @@
       "unit": "pack",
       "unitCost": 22.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 22.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1797,12 +2051,14 @@
       "unit": "pack",
       "unitCost": 41.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 41.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1812,12 +2068,14 @@
       "unit": "pack",
       "unitCost": 49.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 49.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1827,12 +2085,14 @@
       "unit": "pack",
       "unitCost": 72.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 72.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1842,12 +2102,14 @@
       "unit": "pack",
       "unitCost": 47.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 47.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1857,12 +2119,14 @@
       "unit": "pack",
       "unitCost": 45.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 45.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1872,12 +2136,14 @@
       "unit": "pack",
       "unitCost": 79.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 79.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1887,12 +2153,14 @@
       "unit": "pack",
       "unitCost": 175.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 175.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1902,12 +2170,14 @@
       "unit": "pack",
       "unitCost": 69.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 69.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1917,12 +2187,14 @@
       "unit": "pack",
       "unitCost": 94.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 94.0,
       "unitsPerPack": null,
       "colors": "Green, Blue-gray",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1932,12 +2204,14 @@
       "unit": "pack",
       "unitCost": 97.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 97.0,
       "unitsPerPack": null,
       "colors": "Green, Blue-gray",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1947,12 +2221,14 @@
       "unit": "pack",
       "unitCost": 99.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 99.0,
       "unitsPerPack": null,
       "colors": "Green, Blue-gray",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1962,12 +2238,14 @@
       "unit": "pack",
       "unitCost": 120.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 120.0,
       "unitsPerPack": null,
       "colors": "Green, Blue-gray",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1977,12 +2255,14 @@
       "unit": "pack",
       "unitCost": 95.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 95.0,
       "unitsPerPack": null,
       "colors": "Green, Blue-gray",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -1992,12 +2272,14 @@
       "unit": "pack",
       "unitCost": 95.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 95.0,
       "unitsPerPack": null,
       "colors": "Green, Blue-gray",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -2007,12 +2289,14 @@
       "unit": "pack",
       "unitCost": 92.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 92.0,
       "unitsPerPack": null,
       "colors": "Green, Blue-gray",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -2022,12 +2306,14 @@
       "unit": "pack",
       "unitCost": 94.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 94.0,
       "unitsPerPack": null,
       "colors": "Green, Blue-gray",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -2037,12 +2323,14 @@
       "unit": "pack",
       "unitCost": 148.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 148.0,
       "unitsPerPack": null,
       "colors": "Dyed - various",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -2052,12 +2340,14 @@
       "unit": "pack",
       "unitCost": 35.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 35.0,
       "unitsPerPack": null,
       "colors": "Green, Burgundy, Variegated",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -2067,12 +2357,14 @@
       "unit": "pack",
       "unitCost": 99.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 99.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -2082,12 +2374,14 @@
       "unit": "pack",
       "unitCost": 22.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 22.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -2097,12 +2391,14 @@
       "unit": "pack",
       "unitCost": 34.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 34.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -2112,12 +2408,14 @@
       "unit": "pack",
       "unitCost": 123.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 123.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -2127,12 +2425,14 @@
       "unit": "pack",
       "unitCost": 108.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 108.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -2142,12 +2442,14 @@
       "unit": "pack",
       "unitCost": 120.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 120.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -2157,12 +2459,14 @@
       "unit": "pack",
       "unitCost": 46.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 46.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -2172,12 +2476,14 @@
       "unit": "pack",
       "unitCost": 150.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 150.0,
       "unitsPerPack": null,
       "colors": "Burgundy, Red",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -2187,12 +2493,14 @@
       "unit": "pack",
       "unitCost": 145.0,
       "supplier": "LA FINCA",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 145.0,
       "unitsPerPack": null,
       "colors": "Green",
+      "type": "perishable",
+      "preferredSupplier": "LA FINCA",
       "notes": ""
     },
     {
@@ -2201,13 +2509,15 @@
       "category": "packaging",
       "unit": "wrap",
       "unitCost": 4.25,
-      "supplier": "",
-      "currentStockPacks": null,
+      "supplier": "LA FINCA",
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 85.0,
       "unitsPerPack": 20.0,
       "colors": "Pink",
+      "type": "consumable",
+      "preferredSupplier": "",
       "notes": "Used in the Peachy Bouquet. Price needed."
     },
     {
@@ -2217,12 +2527,14 @@
       "unit": "piece",
       "unitCost": null,
       "supplier": "",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": null,
       "unitsPerPack": 1.0,
       "colors": "",
+      "type": "consumable",
+      "preferredSupplier": "",
       "notes": "From plantilla_recetas_bouquets. Price needed."
     },
     {
@@ -2232,12 +2544,14 @@
       "unit": "meter",
       "unitCost": null,
       "supplier": "",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": null,
       "unitsPerPack": 1.0,
       "colors": "",
+      "type": "consumable",
+      "preferredSupplier": "",
       "notes": "From plantilla_recetas_bouquets. Price needed (per meter)."
     },
     {
@@ -2247,12 +2561,14 @@
       "unit": "piece",
       "unitCost": null,
       "supplier": "",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": null,
       "unitsPerPack": 1.0,
       "colors": "",
+      "type": "consumable",
+      "preferredSupplier": "",
       "notes": "From plantilla_recetas_bouquets. Price needed."
     },
     {
@@ -2262,12 +2578,14 @@
       "unit": "piece",
       "unitCost": null,
       "supplier": "",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": null,
       "unitsPerPack": 1.0,
       "colors": "",
+      "type": "consumable",
+      "preferredSupplier": "",
       "notes": "From plantilla_recetas_bouquets. Price needed."
     },
     {
@@ -2277,12 +2595,14 @@
       "unit": "piece",
       "unitCost": null,
       "supplier": "",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": null,
       "unitsPerPack": 1.0,
       "colors": "",
+      "type": "consumable",
+      "preferredSupplier": "",
       "notes": "From plantilla_recetas_bouquets. Price needed."
     },
     {
@@ -2292,12 +2612,14 @@
       "unit": "pack",
       "unitCost": 15.729166666666666,
       "supplier": "OASIS",
-      "currentStockPacks": null,
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 755.0,
       "unitsPerPack": 48.0,
       "colors": "",
+      "type": "consumable",
+      "preferredSupplier": "OASIS",
       "notes": "Ecologica"
     },
     {
@@ -2306,13 +2628,15 @@
       "category": "packaging",
       "unit": "pack",
       "unitCost": 43.06666666666667,
-      "supplier": "",
-      "currentStockPacks": null,
+      "supplier": "LA FINCA",
+      "currentStockPacks": 0,
       "reorderLevelPacks": null,
       "reorderQtyPacks": null,
       "packPrice": 646.0,
       "unitsPerPack": 15.0,
       "colors": "",
+      "type": "consumable",
+      "preferredSupplier": "",
       "notes": ""
     }
   ],
@@ -2328,7 +2652,9 @@
       "category": "flower",
       "color": "Pink",
       "check": "ASSUMED PACK",
-      "notes": "Ruffled dusty-pink/salmon blooms (picture also shows a peach-yellow one; list only offers Pink)"
+      "notes": "Ruffled dusty-pink/salmon blooms (picture also shows a peach-yellow one; list only offers Pink)",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-L",
@@ -2341,7 +2667,9 @@
       "category": "flower",
       "color": "Peach",
       "check": "ASSUMED PACK",
-      "notes": "Main peach/apricot roses. Could be ROSA PLUS depending on supplier"
+      "notes": "Main peach/apricot roses. Could be ROSA PLUS depending on supplier",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-L",
@@ -2354,7 +2682,9 @@
       "category": "flower",
       "color": "Orange",
       "check": "ASSUMED PACK",
-      "notes": "More saturated burnt-peach/coral roses"
+      "notes": "More saturated burnt-peach/coral roses",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-L",
@@ -2367,7 +2697,9 @@
       "category": "flower",
       "color": "Pink",
       "check": "ASSUMED PACK",
-      "notes": "Cream-blush roses (low-left of picture)"
+      "notes": "Cream-blush roses (low-left of picture)",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-L",
@@ -2380,7 +2712,9 @@
       "category": "flower",
       "color": "Pink",
       "check": "ASSUMED PACK",
-      "notes": "Garden rose, cupped soft pink"
+      "notes": "Garden rose, cupped soft pink",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-L",
@@ -2393,7 +2727,9 @@
       "category": "flower",
       "color": "Peach",
       "check": "ASSUMED PACK",
-      "notes": "Garden rose, peach-pink (center)"
+      "notes": "Garden rose, peach-pink (center)",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-L",
@@ -2406,7 +2742,9 @@
       "category": "flower",
       "color": "Pink",
       "check": "OK",
-      "notes": "Large pink bloom on the left (confirmed peony). NOT in price list"
+      "notes": "Large pink bloom on the left (confirmed peony). NOT in price list",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-L",
@@ -2419,7 +2757,9 @@
       "category": "flower",
       "color": "White",
       "check": "ASSUMED PACK",
-      "notes": "Cream/blush hydrangea; list has no cream, closest is White. Broken into florets"
+      "notes": "Cream/blush hydrangea; list has no cream, closest is White. Broken into florets",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-L",
@@ -2432,7 +2772,9 @@
       "category": "packaging",
       "color": "Pink",
       "check": "OK",
-      "notes": "Translucent blush wrap, fan-pleated. NOT in price list; unit = 1 wrap"
+      "notes": "Translucent blush wrap, fan-pleated. NOT in price list; unit = 1 wrap",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-M",
@@ -2445,7 +2787,9 @@
       "category": "flower",
       "color": "Pink",
       "check": "ASSUMED PACK",
-      "notes": "Ruffled dusty-pink/salmon blooms (picture also shows a peach-yellow one; list only offers Pink)"
+      "notes": "Ruffled dusty-pink/salmon blooms (picture also shows a peach-yellow one; list only offers Pink)",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-M",
@@ -2458,7 +2802,9 @@
       "category": "flower",
       "color": "Peach",
       "check": "ASSUMED PACK",
-      "notes": "Main peach/apricot roses. Could be ROSA PLUS depending on supplier"
+      "notes": "Main peach/apricot roses. Could be ROSA PLUS depending on supplier",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-M",
@@ -2471,7 +2817,9 @@
       "category": "flower",
       "color": "Orange",
       "check": "ASSUMED PACK",
-      "notes": "More saturated burnt-peach/coral roses"
+      "notes": "More saturated burnt-peach/coral roses",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-M",
@@ -2484,7 +2832,9 @@
       "category": "flower",
       "color": "Pink",
       "check": "ASSUMED PACK",
-      "notes": "Cream-blush roses (low-left of picture)"
+      "notes": "Cream-blush roses (low-left of picture)",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-M",
@@ -2497,7 +2847,9 @@
       "category": "flower",
       "color": "Pink",
       "check": "ASSUMED PACK",
-      "notes": "Garden rose, cupped soft pink"
+      "notes": "Garden rose, cupped soft pink",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-M",
@@ -2510,7 +2862,9 @@
       "category": "flower",
       "color": "Pink",
       "check": "OK",
-      "notes": "Large pink bloom on the left (confirmed peony). NOT in price list"
+      "notes": "Large pink bloom on the left (confirmed peony). NOT in price list",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-M",
@@ -2523,7 +2877,9 @@
       "category": "flower",
       "color": "White",
       "check": "ASSUMED PACK",
-      "notes": "Cream/blush hydrangea; list has no cream, closest is White. Broken into florets"
+      "notes": "Cream/blush hydrangea; list has no cream, closest is White. Broken into florets",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-M",
@@ -2536,7 +2892,9 @@
       "category": "packaging",
       "color": "Pink",
       "check": "OK",
-      "notes": "Translucent blush wrap, fan-pleated. NOT in price list; unit = 1 wrap"
+      "notes": "Translucent blush wrap, fan-pleated. NOT in price list; unit = 1 wrap",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-S",
@@ -2549,7 +2907,9 @@
       "category": "flower",
       "color": "Pink",
       "check": "ASSUMED PACK",
-      "notes": "Ruffled dusty-pink/salmon blooms (picture also shows a peach-yellow one; list only offers Pink)"
+      "notes": "Ruffled dusty-pink/salmon blooms (picture also shows a peach-yellow one; list only offers Pink)",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-S",
@@ -2562,7 +2922,9 @@
       "category": "flower",
       "color": "Peach",
       "check": "ASSUMED PACK",
-      "notes": "Main peach/apricot roses. Could be ROSA PLUS depending on supplier"
+      "notes": "Main peach/apricot roses. Could be ROSA PLUS depending on supplier",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-S",
@@ -2575,7 +2937,9 @@
       "category": "flower",
       "color": "Orange",
       "check": "ASSUMED PACK",
-      "notes": "More saturated burnt-peach/coral roses"
+      "notes": "More saturated burnt-peach/coral roses",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-S",
@@ -2588,7 +2952,9 @@
       "category": "flower",
       "color": "Pink",
       "check": "ASSUMED PACK",
-      "notes": "Cream-blush roses (low-left of picture)"
+      "notes": "Cream-blush roses (low-left of picture)",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-S",
@@ -2601,7 +2967,9 @@
       "category": "flower",
       "color": "Pink",
       "check": "ASSUMED PACK",
-      "notes": "Garden rose, cupped soft pink"
+      "notes": "Garden rose, cupped soft pink",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-S",
@@ -2614,7 +2982,9 @@
       "category": "flower",
       "color": "Pink",
       "check": "OK",
-      "notes": "Large pink bloom on the left (confirmed peony). NOT in price list"
+      "notes": "Large pink bloom on the left (confirmed peony). NOT in price list",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-S",
@@ -2627,7 +2997,9 @@
       "category": "flower",
       "color": "White",
       "check": "ASSUMED PACK",
-      "notes": "Cream/blush hydrangea; list has no cream, closest is White. Broken into florets"
+      "notes": "Cream/blush hydrangea; list has no cream, closest is White. Broken into florets",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-PEACHY-S",
@@ -2640,7 +3012,9 @@
       "category": "packaging",
       "color": "Pink",
       "check": "OK",
-      "notes": "Translucent blush wrap, fan-pleated. NOT in price list; unit = 1 wrap"
+      "notes": "Translucent blush wrap, fan-pleated. NOT in price list; unit = 1 wrap",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-OTOÑO-L",
@@ -2648,12 +3022,14 @@
       "componentName": "ESPUMA FLORAL",
       "qty": 1.0,
       "unit": "pack",
-      "unitCost": 43.06666666666667,
-      "lineCost": 43.06666666666667,
+      "unitCost": 43.0666666666667,
+      "lineCost": 43.0666666666667,
       "category": "packaging",
       "color": "",
       "check": "OK",
-      "notes": ""
+      "notes": "",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-OTOÑO-L",
@@ -2666,7 +3042,9 @@
       "category": "flower",
       "color": "",
       "check": "SET PACK SIZE",
-      "notes": ""
+      "notes": "",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-OTOÑO-L",
@@ -2679,7 +3057,9 @@
       "category": "flower",
       "color": "",
       "check": "OK",
-      "notes": ""
+      "notes": "",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     },
     {
       "productSku": "PRD-OTOÑO-L",
@@ -2692,7 +3072,9 @@
       "category": "foliage",
       "color": "",
       "check": "SET PACK SIZE",
-      "notes": ""
+      "notes": "",
+      "version": "v1",
+      "effectiveFrom": "2026-10-01"
     }
   ],
   "products": [
@@ -2705,10 +3087,10 @@
       "otherMaterialsCost": 4.25,
       "totalCost": 407.95,
       "suggestedPriceBeforeIva": 1424.85,
-      "suggestedPriceWithIva": 1652.8259999999998,
+      "suggestedPriceWithIva": 1652.826,
       "actualPriceBeforeIva": 1700.0,
-      "actualPriceWithIva": 1971.9999999999998,
-      "marginPct": 0.7600294117647058,
+      "actualPriceWithIva": 1972.0,
+      "marginPct": 0.760029411764706,
       "linesToReview": 7,
       "description": "Peach and blush bouquet of roses, garden rose, lisianthus, peony and hydrangea, wrapped in blush paper."
     },
@@ -2721,10 +3103,10 @@
       "otherMaterialsCost": 4.25,
       "totalCost": 308.35,
       "suggestedPriceBeforeIva": 1076.25,
-      "suggestedPriceWithIva": 1248.4499999999998,
+      "suggestedPriceWithIva": 1248.45,
       "actualPriceBeforeIva": 1280.0,
       "actualPriceWithIva": 1484.8,
-      "marginPct": 0.7591015624999999,
+      "marginPct": 0.7591015625,
       "linesToReview": 6,
       "description": "Peach and blush bouquet of roses, garden rose, lisianthus, peony and hydrangea, wrapped in blush paper."
     },
@@ -2740,7 +3122,7 @@
       "suggestedPriceWithIva": 907.41,
       "actualPriceBeforeIva": 925.0,
       "actualPriceWithIva": 1073.0,
-      "marginPct": 0.7574594594594595,
+      "marginPct": 0.75745945945946,
       "linesToReview": 6,
       "description": "Peach and blush bouquet of roses, garden rose, lisianthus, peony and hydrangea, wrapped in blush paper."
     },
@@ -2750,13 +3132,13 @@
       "category": "Arrangement",
       "size": "Large",
       "flowersCost": 299.0,
-      "otherMaterialsCost": 138.06666666666666,
-      "totalCost": 437.06666666666666,
-      "suggestedPriceBeforeIva": 1433.0866666666666,
-      "suggestedPriceWithIva": 1662.3805333333332,
+      "otherMaterialsCost": 138.066666666667,
+      "totalCost": 437.066666666667,
+      "suggestedPriceBeforeIva": 1433.08666666667,
+      "suggestedPriceWithIva": 1662.38053333333,
       "actualPriceBeforeIva": 1500.0,
-      "actualPriceWithIva": 1739.9999999999998,
-      "marginPct": 0.7086222222222223,
+      "actualPriceWithIva": 1740.0,
+      "marginPct": 0.708622222222222,
       "linesToReview": 2,
       "description": ""
     }

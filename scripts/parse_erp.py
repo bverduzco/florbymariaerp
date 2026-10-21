@@ -1,6 +1,9 @@
 """
 Parse the Floristry ERP Excel file into a clean JSON seed file.
 Extracts: Suppliers, Materials, Recipes, Products.
+For ERP Zai v1+: also reads Supplier Prices (latest row) and Stock Movements (sum)
+to compute Pack Price and Current Stock — because those cells on the Materials tab
+are now formulas, not values.
 Output: /home/z/my-project/src/data/seed.json
 """
 import json
@@ -32,13 +35,52 @@ def to_num(v):
         return None
 
 
+def parse_supplier_prices(ws):
+    """Supplier Prices tab — header on row 4: Date | Material SKU | Supplier | Pack Price | Units per Pack | Is Latest | Notes.
+    Returns a map: { material_sku: { packPrice, unitsPerPack, supplier } } for the latest row only.
+    """
+    latest_by_sku = {}
+    for row in ws.iter_rows(min_row=5, values_only=True):
+        if not row or not row[0] or not row[1]:
+            continue
+        sku = to_str(row[1])
+        if not sku or sku == "Material SKU":
+            continue
+        is_latest = to_str(row[5]).lower() == "yes"
+        pack_price = to_num(row[3])
+        units_per_pack = to_num(row[4])
+        supplier = to_str(row[2])
+        # Always keep the most recent "yes" row; if no "yes" flag, keep the latest by date
+        if is_latest or sku not in latest_by_sku:
+            latest_by_sku[sku] = {
+                "packPrice": pack_price,
+                "unitsPerPack": units_per_pack,
+                "supplier": supplier,
+            }
+    return latest_by_sku
+
+
+def parse_stock_movements(ws):
+    """Stock Movements tab — header on row 4: Date | Material SKU | Packs | Reason | Ref | Notes.
+    Returns a map: { material_sku: sum_of_packs }.
+    """
+    stock_by_sku = {}
+    for row in ws.iter_rows(min_row=5, values_only=True):
+        if not row or not row[0] or not row[1]:
+            continue
+        sku = to_str(row[1])
+        if not sku or sku == "Material SKU":
+            continue
+        packs = to_num(row[2]) or 0
+        stock_by_sku[sku] = stock_by_sku.get(sku, 0) + packs
+    return stock_by_sku
+
+
 def parse_suppliers(ws):
-    """Suppliers sheet — header on row 2 (1-indexed). Real data starts at row 3;
-       but row 3 may contain placeholder header strings, so we skip any row whose
-       Supplier Name equals the column header text."""
+    """Suppliers sheet — header on row 4. Real data starts at row 5."""
     HEADER_NAME = "Supplier Name"
     suppliers = []
-    for row in ws.iter_rows(min_row=3, values_only=True):
+    for row in ws.iter_rows(min_row=5, values_only=True):
         name = to_str(row[0])
         if not name or name == HEADER_NAME:
             continue
@@ -54,42 +96,80 @@ def parse_suppliers(ws):
     return suppliers
 
 
-def parse_materials(ws):
-    """Materials sheet — header on row 2 (1-indexed):
+def parse_materials(ws, latest_prices, stock_sums):
+    """Materials sheet — header on row 4 (1-indexed):
        SKU, Item Name, Category, Unit, Unit Cost, Supplier, Current Stock, Reorder Level, Reorder Qty,
-       Stock Value, Status, Pack Price, Units per Pack, Colors Available, Photo, Notes.
+       Stock Value, Status, Pack Price, Units per Pack, Colors Available, Photo, Notes,
+       Type, Preferred Supplier (cols Q, R added in v1).
     """
     HEADER_SKU = "SKU"
     materials = []
-    for row in ws.iter_rows(min_row=3, values_only=True):
+    for row in ws.iter_rows(min_row=5, values_only=True):
         sku = to_str(row[0])
         if not sku or sku == HEADER_SKU:
             continue
+
+        # In ERP Zai v1+, Pack Price (col L) and Current Stock (col G) are formulas.
+        # Read actual values from the latest_prices and stock_sums maps instead.
+        # For pre-v1 files (no Supplier Prices tab), fall back to the cell value.
+        latest = latest_prices.get(sku, {})
+        pack_price = latest.get("packPrice") if latest else None
+        if pack_price is None:
+            pack_price = to_num(row[11])  # col L value (pre-v1: number, v1+: formula string → None)
+        units_per_pack = latest.get("unitsPerPack") if latest else None
+        if units_per_pack is None:
+            units_per_pack = to_num(row[12])  # col M
+        supplier_from_prices = latest.get("supplier") if latest else None
+
+        current_stock = stock_sums.get(sku) if stock_sums else None
+        if current_stock is None:
+            current_stock = to_num(row[6])  # col G (pre-v1: number, v1+: formula string → None)
+
+        # Compute unit cost
+        unit_cost = None
+        if pack_price is not None:
+            if units_per_pack and units_per_pack > 0:
+                unit_cost = pack_price / units_per_pack
+            else:
+                unit_cost = pack_price
+
         materials.append({
             "sku": sku,
             "name": to_str(row[1]),
             "category": to_str(row[2]).lower() or "other",
             "unit": to_str(row[3]) or "pack",
-            "unitCost": to_num(row[4]),
-            "supplier": to_str(row[5]),
-            "currentStockPacks": to_num(row[6]),
+            "unitCost": unit_cost,
+            "supplier": supplier_from_prices or to_str(row[5]),
+            "currentStockPacks": current_stock,
             "reorderLevelPacks": to_num(row[7]),
             "reorderQtyPacks": to_num(row[8]),
-            "packPrice": to_num(row[11]),
-            "unitsPerPack": to_num(row[12]) if to_num(row[12]) and to_num(row[12]) > 0 else None,
+            "packPrice": pack_price,
+            "unitsPerPack": units_per_pack,
             "colors": to_str(row[13]),
+            "type": to_str(row[16]) if len(row) > 16 and row[16] else _default_type(sku),
+            "preferredSupplier": to_str(row[17]) if len(row) > 17 and row[17] else "",
             "notes": to_str(row[15]),
         })
     return materials
 
 
+def _default_type(sku):
+    """Default Type based on SKU prefix (for pre-v1 files)."""
+    s = str(sku)
+    if s.startswith("FLR-") or s.startswith("FOL-"):
+        return "perishable"
+    if s.startswith("PKG-") or s.startswith("HARD-"):
+        return "consumable"
+    if s.startswith("TOOL-"):
+        return "tool"
+    return "perishable"
+
+
 def parse_recipes(ws):
-    """Recipes sheet — header on row 2:
-       Product SKU, Component SKU, Component Name, Qty Used, Unit, Unit Cost, Line Cost, Category, Color, Check, Notes.
-    """
+    """Recipes sheet — header on row 4. v1 adds Version (L) and Effective From (M) cols."""
     HEADER_PRODUCT_SKU = "Product SKU"
     recipes = []
-    for row in ws.iter_rows(min_row=3, values_only=True):
+    for row in ws.iter_rows(min_row=5, values_only=True):
         product_sku = to_str(row[0])
         component_sku = to_str(row[1])
         if not product_sku or not component_sku:
@@ -108,40 +188,21 @@ def parse_recipes(ws):
             "color": to_str(row[8]),
             "check": to_str(row[9]),
             "notes": to_str(row[10]),
+            "version": to_str(row[11]) if len(row) > 11 and row[11] else "v1",
+            "effectiveFrom": to_str(row[12]) if len(row) > 12 and row[12] else "",
         })
     return recipes
 
 
 def parse_products(ws):
-    """Products sheet — header on row 2 (two-row header). The actual product rows start at row 4 (1-indexed).
-       Columns:
-         0: Product SKU
-         1: Product Name
-         2: Category
-         3: Size
-         4: Flowers Cost
-         5: Other Materials Cost
-         6: Labor (min)
-         7: Labor Cost
-         8: Overhead / Unit
-         9: Total Cost
-         10: Flowers ×2.5
-         11: Other materials ×2
-         12: Labor & design +40%
-         13: Suggested price (flowers ×2.5) before IVA
-         14: Suggested ×2.5 with IVA
-         15: Suggested price (flowers ×4) before IVA
-         16: Suggested ×4 with IVA
-         17: Actual Price (before IVA)
-         18: Actual Price with IVA
-         19: Margin $
-         20: Margin %
-         21: Lines to Review
-         22: Description
-    """
+    """Products sheet — header on row 4 (two-row header). Data starts at row 5 in v1 (was row 4 pre-v1)."""
     HEADER_PRODUCT_SKU = "Product SKU"
     products = []
-    for row in ws.iter_rows(min_row=4, values_only=True):
+    # Try row 5 first (v1+); if empty, fall back to row 4
+    start_row = 5
+    if ws.cell(row=5, column=1).value is None or ws.cell(row=5, column=1).value == HEADER_PRODUCT_SKU:
+        start_row = 6 if ws.cell(row=6, column=1).value else 4
+    for row in ws.iter_rows(min_row=start_row, values_only=True):
         sku = to_str(row[0])
         if not sku or sku == HEADER_PRODUCT_SKU:
             continue
@@ -168,10 +229,24 @@ def main():
     if not os.path.exists(EXCEL_PATH):
         raise SystemExit(f"Excel file not found: {EXCEL_PATH}")
 
+    # Use data_only=True to read cached formula values (file must have been
+    # opened by LibreOffice/Excel first to cache the values).
+    # If a formula has no cached value (None), fall back to the formula string.
     wb = load_workbook(EXCEL_PATH, data_only=True)
+    wb_formulas = load_workbook(EXCEL_PATH, data_only=False)  # for fallback only
+
+    # Read the new v1+ tabs if they exist; otherwise pass empty dicts
+    latest_prices = {}
+    stock_sums = {}
+    if "Supplier Prices" in wb.sheetnames:
+        latest_prices = parse_supplier_prices(wb["Supplier Prices"])
+        print(f"  Read {len(latest_prices)} latest prices from Supplier Prices tab")
+    if "Stock Movements" in wb.sheetnames:
+        stock_sums = parse_stock_movements(wb["Stock Movements"])
+        print(f"  Read {len(stock_sums)} stock balances from Stock Movements tab")
 
     suppliers = parse_suppliers(wb["Suppliers"])
-    materials = parse_materials(wb["Materials"])
+    materials = parse_materials(wb["Materials"], latest_prices, stock_sums)
     recipes = parse_recipes(wb["Recipes"])
     products = parse_products(wb["Products"])
 
