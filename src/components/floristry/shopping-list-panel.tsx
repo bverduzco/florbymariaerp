@@ -30,6 +30,7 @@ interface UsedBy {
   productSku: string
   productName: string
   qty: number
+  deliveryDate: string | null
 }
 
 interface ShoppingLine {
@@ -106,7 +107,11 @@ export function ShoppingListPanel({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: items.map((i) => ({ productSku: i.productSku, qty: i.qty })),
+          items: items.map((i) => ({
+            productSku: i.productSku,
+            qty: i.qty,
+            deliveryDate: i.deliveryDate ?? null,
+          })),
           weekStartDate,
         }),
       })
@@ -120,17 +125,16 @@ export function ShoppingListPanel({
     }
   }
 
-  // Re-fetch when panel opens or plan items change
+  // Re-fetch when panel opens or plan items / delivery dates change
   useEffect(() => {
     if (open && items.length > 0) fetchPlan()
     if (items.length === 0) setData(null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, items.length, weekStartDate])
+  }, [open, items, weekStartDate])
 
   function downloadCsv() {
     if (!data) return
     const rows = [
-      ["Supplier", "Category", "Material SKU", "Material Name", "Unit", "Total Qty Needed", "Pack Size", "Packs to Buy", "Pack Price", "Total Pack Cost", "Warning", "Used By"],
+      ["Supplier", "Category", "Material SKU", "Material Name", "Unit", "Total Qty Needed", "Pack Size", "Packs to Buy", "Pack Price", "Total Pack Cost", "Warning", "Used By (with delivery dates)"],
       ...data.shoppingList.map((l) => [
         l.supplier,
         l.category,
@@ -143,7 +147,7 @@ export function ShoppingListPanel({
         l.packPrice?.toString() ?? "?",
         l.totalPackCost?.toFixed(2) ?? "?",
         l.warning ?? "",
-        l.usedBy.map((u) => `${u.productName} x${u.qty}`).join("; "),
+        l.usedBy.map((u) => `${u.productName} x${u.qty}${u.deliveryDate ? ` (delivery ${u.deliveryDate})` : ""}`).join("; "),
       ]),
     ]
     const csv = rows.map((r) => r.map((c) => `"${(c ?? "").toString().replace(/"/g, '""')}"`).join(",")).join("\n")
@@ -304,6 +308,11 @@ export function ShoppingListPanel({
                                   <span key={i}>
                                     {i > 0 && ", "}
                                     {u.productName} ×{u.qty}
+                                    {u.deliveryDate && (
+                                      <span className="text-rose-600 ml-1">
+                                        (deliver {new Date(u.deliveryDate + "T00:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" })})
+                                      </span>
+                                    )}
                                   </span>
                                 ))}
                               </div>

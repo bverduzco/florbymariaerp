@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Trash2, Minus, Plus, CalendarDays, ClipboardList } from "lucide-react"
+import { Trash2, Minus, Plus, CalendarDays, ClipboardList, CalendarClock } from "lucide-react"
 import { useCatalogue } from "@/lib/catalogue-store"
 import { usePlanStore } from "@/lib/plan-store"
 import { useMemo } from "react"
@@ -14,6 +14,7 @@ export function WeeklyPlan() {
   const products = useCatalogue((s) => s.products)
   const items = usePlanStore((s) => s.items)
   const setQty = usePlanStore((s) => s.setQty)
+  const setDeliveryDate = usePlanStore((s) => s.setDeliveryDate)
   const removeItem = usePlanStore((s) => s.removeItem)
   const clear = usePlanStore((s) => s.clear)
   const weekStartDate = usePlanStore((s) => s.weekStartDate)
@@ -28,9 +29,9 @@ export function WeeklyPlan() {
   const lineItems = items
     .map((it) => {
       const p = productBySku.get(it.productSku)
-      return p ? { product: p, qty: it.qty } : null
+      return p ? { product: p, qty: it.qty, deliveryDate: it.deliveryDate } : null
     })
-    .filter((x): x is { product: typeof products[number]; qty: number } => x !== null)
+    .filter((x): x is { product: typeof products[number]; qty: number; deliveryDate: string | null } => x !== null)
 
   const totalRevenue = lineItems.reduce(
     (sum, i) => sum + i.product.actualPriceBeforeIva * i.qty,
@@ -84,7 +85,7 @@ export function WeeklyPlan() {
         </div>
       ) : (
         <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1 -mr-1">
-          {lineItems.map(({ product, qty }) => (
+          {lineItems.map(({ product, qty, deliveryDate }) => (
             <div
               key={product.sku}
               className="rounded-lg border border-rose-200 bg-white p-2.5 text-sm"
@@ -136,6 +137,22 @@ export function WeeklyPlan() {
                 <span className="ml-auto font-semibold text-stone-800">
                   ${(product.actualPriceBeforeIva * qty).toLocaleString("es-MX")}
                 </span>
+              </div>
+              <div className="mt-2 flex items-center gap-1.5">
+                <CalendarClock className="h-3 w-3 text-stone-400 shrink-0" />
+                <Input
+                  type="date"
+                  value={deliveryDate ?? ""}
+                  onChange={(e) => setDeliveryDate(product.sku, e.target.value || null)}
+                  aria-label={`Delivery date for ${product.name}`}
+                  placeholder="Delivery date"
+                  className="h-7 text-xs bg-stone-50 border-stone-200 text-stone-700 flex-1"
+                />
+                {deliveryDate && (
+                  <Badge variant="outline" className="text-[10px] py-0 shrink-0">
+                    {new Date(deliveryDate + "T00:00:00").toLocaleDateString("es-MX", { weekday: "short", day: "numeric", month: "short" })}
+                  </Badge>
+                )}
               </div>
             </div>
           ))}

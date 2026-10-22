@@ -4,7 +4,8 @@ import { useMemo, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Plus, Sparkles, ShoppingBag } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Plus, Sparkles, ShoppingBag, CalendarClock } from "lucide-react"
 import { useCatalogue, type CatalogueProduct } from "@/lib/catalogue-store"
 import { usePlanStore } from "@/lib/plan-store"
 import {
@@ -18,8 +19,23 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 
 function ProductCard({ product }: { product: CatalogueProduct }) {
   const addItem = usePlanStore((s) => s.addItem)
+  const setDeliveryDate = usePlanStore((s) => s.setDeliveryDate)
   const items = usePlanStore((s) => s.items)
   const inCart = items.find((i) => i.productSku === product.sku)
+  // Local state for the date picker (mirrors store when in cart)
+  const [deliveryDate, setLocalDeliveryDate] = useState<string>("")
+
+  function handleAddToPlan() {
+    addItem(product.sku, 1, deliveryDate || null)
+  }
+
+  function handleDateChange(value: string) {
+    setLocalDeliveryDate(value)
+    // If already in plan, update the store live
+    if (inCart) {
+      setDeliveryDate(product.sku, value || null)
+    }
+  }
 
   // Pick a soft gradient based on category for visual variety
   const gradient =
@@ -81,14 +97,27 @@ function ProductCard({ product }: { product: CatalogueProduct }) {
       <div className="flex items-center gap-2">
         <Button
           size="sm"
-          onClick={() => addItem(product.sku, 1)}
-          className="flex-1 bg-rose-600 hover:bg-rose-700 text-white gap-1"
+          onClick={handleAddToPlan}
+          className="bg-rose-600 hover:bg-rose-700 text-white gap-1"
         >
           <Plus className="h-4 w-4" />
-          Add to weekly plan
+          Add
         </Button>
+
+        <div className="relative flex-1">
+          <CalendarClock className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-400 pointer-events-none" />
+          <Input
+            type="date"
+            value={deliveryDate || inCart?.deliveryDate || ""}
+            onChange={(e) => handleDateChange(e.target.value)}
+            placeholder="Delivery date"
+            aria-label={`Delivery date for ${product.name}`}
+            className="h-8 pl-7 pr-2 text-xs bg-white border-stone-200 text-stone-700"
+          />
+        </div>
+
         {inCart && (
-          <Badge className="bg-rose-100 text-rose-700 border border-rose-200 px-2">
+          <Badge className="bg-rose-100 text-rose-700 border border-rose-200 px-2 shrink-0">
             {inCart.qty} in plan
           </Badge>
         )}

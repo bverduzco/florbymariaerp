@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic"
  *   - byCategory: grouped by category (flowers / foliage / packaging)
  */
 
-type PlanItem = { productSku: string; qty: number }
+type PlanItem = { productSku: string; qty: number; deliveryDate?: string | null }
 
 interface PlanRequest {
   items: PlanItem[]
@@ -35,7 +35,7 @@ interface ShoppingLine {
   packsToBuy: number | null // null if pack size unknown
   packQtyRounded: number | null // ceil(packsToBuy)
   totalPackCost: number | null
-  usedBy: { productSku: string; productName: string; qty: number }[]
+  usedBy: { productSku: string; productName: string; qty: number; deliveryDate: string | null }[]
   warning: string | null
 }
 
@@ -51,10 +51,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Items array is required" }, { status: 400 })
   }
 
-  // Validate qty
+  // Validate qty (keep deliveryDate if provided)
   const items = body.items
     .filter((i) => i && typeof i.productSku === "string" && typeof i.qty === "number" && i.qty > 0)
-    .map((i) => ({ productSku: i.productSku, qty: Math.floor(i.qty) }))
+    .map((i) => ({
+      productSku: i.productSku,
+      qty: Math.floor(i.qty),
+      deliveryDate: typeof i.deliveryDate === "string" ? i.deliveryDate : null,
+    }))
 
   if (items.length === 0) {
     return NextResponse.json({ error: "No valid items in plan" }, { status: 400 })
@@ -107,6 +111,7 @@ export async function POST(request: Request) {
           productSku: product.sku,
           productName: `${product.name}${product.size ? ` (${product.size})` : ""}`,
           qty: item.qty,
+          deliveryDate: item.deliveryDate ?? null,
         })
       } else {
         const packPrice = m.packPrice
@@ -153,6 +158,7 @@ export async function POST(request: Request) {
               productSku: product.sku,
               productName: `${product.name}${product.size ? ` (${product.size})` : ""}`,
               qty: item.qty,
+              deliveryDate: item.deliveryDate ?? null,
             },
           ],
           warning,
