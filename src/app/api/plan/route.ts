@@ -87,6 +87,94 @@ export async function POST(request: Request) {
 
   for (const item of items) {
     const product = productBySku.get(item.productSku)
+
+    // For custom bouquets (PRD-CUSTOM-XXXX), the product won't be in the
+    // catalogue (recipe is hidden). Look up the CustomRecipe + its lines
+    // to find the matched ERP materials.
+    if (!product && item.productSku.startsWith("PRD-CUSTOM-")) {
+      const customRecipe = await db.customRecipe.findUnique({
+        where: { erpProductSku: item.productSku },
+        include: { lines: { include: { customMaterial: true } } },
+      })
+      if (!customRecipe) {
+        // Skip silently — unknown custom recipe
+        totalBouquets += item.qty
+        continue
+      }
+      totalRevenue += customRecipe.actualPrice * item.qty
+      totalBouquets += item.qty
+
+      // For each custom recipe line, resolve the ERP material via erpSku
+      for (const crl of customRecipe.lines) {
+        const erpSku = crl.customMaterial?.erpSku
+        if (!erpSku) continue
+        const m = await db.material.findUnique({ where: { sku: erpSku } })
+        if (!m) continue
+
+        const neededQty = crl.qty * item.qty
+        const existing = shoppingByMaterialSku.get(m.sku)
+        const productName = `Custom: ${customRecipe.name}`
+
+        if (existing) {
+          existing.totalQty += neededQty
+          existing.totalCost += neededQty * (m.unitCost ?? 0)
+          existing.usedBy.push({
+            productSku: item.productSku,
+            productName,
+            qty: item.qty,
+            deliveryDate: item.deliveryDate ?? null,
+            customerName: item.customerName ?? null,
+          })
+        } else {
+          const packPrice = m.packPrice
+          const unitsPerPack = m.unitsPerPack
+          const isPack = m.unit === "pack"
+
+          let packsToBuy: number | null = null
+          let packQtyRounded: number | null = null
+          let totalPackCost: number | null = null
+          let warning: string | null = null
+
+          if (isPack) {
+            packsToBuy = neededQty
+            packQtyRounded = Math.ceil(neededQty)
+            totalPackCost = packQtyRounded * (packPrice ?? 0)
+          } else if (unitsPerPack && unitsPerPack > 0) {
+            packsToBuy = neededQty / unitsPerPack
+            packQtyRounded = Math.ceil(packsToBuy)
+            totalPackCost = packQtyRounded * (packPrice ?? 0)
+          } else {
+            warning = "Pack size unknown — confirm with supplier before ordering"
+          }
+
+          shoppingByMaterialSku.set(m.sku, {
+            materialSku: m.sku,
+            materialName: m.name,
+            category: m.category,
+            supplier: m.supplier ?? "",
+            unit: m.unit,
+            totalQty: neededQty,
+            unitCost: m.unitCost ?? 0,
+            totalCost: neededQty * (m.unitCost ?? 0),
+            packPrice: packPrice ?? null,
+            unitsPerPack: unitsPerPack ?? null,
+            packsToBuy,
+            packQtyRounded,
+            totalPackCost,
+            usedBy: [{
+              productSku: item.productSku,
+              productName,
+              qty: item.qty,
+              deliveryDate: item.deliveryDate ?? null,
+              customerName: item.customerName ?? null,
+            }],
+            warning,
+          })
+        }
+      }
+      continue
+    }
+
     if (!product) {
       return NextResponse.json(
         { error: `Product not found: ${item.productSku}` },
