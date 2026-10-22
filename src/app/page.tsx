@@ -13,6 +13,7 @@ import { MoneysSection } from "@/components/floristry/moneys-section"
 import { OrdersTab } from "@/components/floristry/orders-tab"
 import { OrderIntakeForm } from "@/components/floristry/order-intake-form"
 import { GenerateDraftButton } from "@/components/floristry/generate-draft-button"
+import { CustomTab } from "@/components/floristry/custom-tab"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -24,9 +25,10 @@ import {
   CalendarDays,
   PlusCircle,
   FileSpreadsheet,
+  Wand2,
 } from "lucide-react"
 
-type TabKey = "catalogue" | "intake" | "orders" | "plan" | "customers" | "delivery"
+type TabKey = "catalogue" | "intake" | "orders" | "custom" | "plan" | "customers" | "delivery"
 
 export default function Home() {
   const fetchCatalogue = useCatalogue((s) => s.fetch)
@@ -43,7 +45,7 @@ export default function Home() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search)
       const tabParam = params.get("tab")
-      if (tabParam && ["catalogue", "intake", "orders", "plan", "customers", "delivery"].includes(tabParam)) {
+      if (tabParam && ["catalogue", "intake", "orders", "custom", "plan", "customers", "delivery"].includes(tabParam)) {
         // Strip ?tab= from URL so refresh doesn't keep switching
         window.history.replaceState({}, "", window.location.pathname)
         return tabParam as TabKey
@@ -116,6 +118,10 @@ export default function Home() {
               <ClipboardList className="h-4 w-4" />
               Orders
             </TabsTrigger>
+            <TabsTrigger value="custom" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+              <Wand2 className="h-4 w-4" />
+              Custom
+            </TabsTrigger>
             <TabsTrigger value="catalogue" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <Flower2 className="h-4 w-4" />
               Catalogue
@@ -155,6 +161,10 @@ export default function Home() {
 
           <TabsContent value="orders" className="mt-4">
             <OrdersTab />
+          </TabsContent>
+
+          <TabsContent value="custom" className="mt-4">
+            <CustomTab />
           </TabsContent>
 
           <TabsContent value="catalogue" className="mt-4">

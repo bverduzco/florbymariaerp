@@ -157,3 +157,64 @@ model OrderLineItem {
   unitPrice   Float // snapshot — locked at order time
   createdAt   DateTime @default(now())
 }
+
+/**
+ * Materials from external supplier catalogues (e.g. "El Gato" per-stem price list).
+ * Each item links to its best-matching ERP SKU via erpSku (may be empty if no match).
+ *
+ * Used by the Custom tab to build custom bouquets on the fly.
+ */
+model CustomMaterial {
+  id           String   @id @default(cuid())
+  name         String
+  pricePerStem Float
+  type         String   // flower | foliage
+  class        String?  // wild | garden | exotic | romantic
+  source       String   @default("El Gato") // which catalogue this came from
+  erpSku       String?  // best-matching ERP SKU (may be null)
+  erpName      String?  // for display, denormalized
+  matchScore   Float?   // 0=perfect, 1=worst
+  matchConfidence String? // HIGH | MEDIUM | LOW | VERY_LOW | NO_MATCH
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  customRecipeLines CustomRecipeLine[]
+}
+
+/**
+ * A custom bouquet built by the user in the Custom tab.
+ * When saved, also creates a Product + RecipeLine in the ERP tables
+ * so it appears in the Catalogue tab.
+ */
+model CustomRecipe {
+  id              String   @id @default(cuid())
+  name            String
+  size            String?  // Large | Medium | Small
+  description     String?
+  // Computed at save time using ERP pricing rules:
+  flowersCost     Float    @default(0)
+  otherMaterialsCost Float @default(0)
+  totalCost       Float    @default(0)
+  suggestedPrice  Float    @default(0)
+  actualPrice     Float    @default(0) // user-set
+  // Linked ERP product (created on save)
+  erpProductSku   String?  @unique
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  lines           CustomRecipeLine[]
+}
+
+model CustomRecipeLine {
+  id               String   @id @default(cuid())
+  customRecipeId   String
+  customRecipe     CustomRecipe @relation(fields: [customRecipeId], references: [id], onDelete: Cascade)
+  customMaterialId String
+  customMaterial   CustomMaterial @relation(fields: [customMaterialId], references: [id], onDelete: Cascade)
+  qty              Int
+  // Snapshot of the material at the time of recipe creation
+  materialName     String
+  materialPrice    Float
+  materialType     String // flower | foliage
+  createdAt        DateTime @default(now())
+}
