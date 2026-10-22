@@ -221,7 +221,7 @@ export function ShoppingListPanel({
           </SheetDescription>
         </SheetHeader>
 
-        {items.length === 0 ? (
+        {items.length === 0 && orders.length === 0 && !loading ? (
           <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
             <div className="text-center">
               <ShoppingCart className="h-12 w-12 mx-auto text-stone-300 mb-3" />
