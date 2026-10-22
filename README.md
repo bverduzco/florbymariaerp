@@ -178,3 +178,23 @@ See `git tag -l` for all available versions.
 ## License
 
 Private. © Flor by Maria.
+
+---
+
+## v1.5 update — Order intake + payment pipeline
+
+This version adds:
+
+- **Order model** in Prisma (replaces the localStorage plan store for order tracking)
+- **New Order tab** — customer + delivery + line items + notes + totals → saved as draft
+- **Orders tab** — order book with status filter chips (Drafts / Awaiting payment / Ready to buy / In production / Out for delivery / Fulfilled / Cancelled)
+- **Order Detail view** — sales pipeline visualization + payment tracking panel
+- **Generate Draft Excel button** — exports all orders + customers + line items to a reviewable .xlsx
+
+### Important: this still works with the Excel file
+
+The Excel `ERP Zai v1.2.xlsx` remains the source of truth for **materials, recipes, products, suppliers, purchase orders, stock movements, supplier prices** — all the slow-changing data. The app reads from Excel via the parser + seed script (run `bash setup.sh`).
+
+Orders and customers added through the UI live in the SQLite database. The **Generate Draft Excel** button exports them to a reviewable .xlsx file — review it, then promote it to be the new official ERP version (by appending the new Orders/Customers tabs to your master Excel).
+
+Nothing in this version writes back to the Excel file. Excel is read-only.
