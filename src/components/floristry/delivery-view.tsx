@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -35,6 +35,15 @@ export function DeliveryView() {
   const products = useCatalogue((s) => s.products)
   const items = usePlanStore((s) => s.items)
 
+  // Fetch real Orders from the API
+  const [orders, setOrders] = useState<any[]>([])
+  useEffect(() => {
+    fetch("/api/orders", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { orders: [] }))
+      .then((data) => setOrders(data.orders ?? []))
+      .catch(() => {})
+  }, [])
+
   // Default to current month
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(() => new Date().getMonth()) // 0-indexed
@@ -44,8 +53,44 @@ export function DeliveryView() {
   }, [products])
 
   // Build a map: ISO date -> DeliveryItem[]
+  // Sources: (1) Real Orders from DB, (2) legacy localStorage plan items
   const deliveriesByDate = useMemo(() => {
     const m = new Map<string, DeliveryItem[]>()
+
+    // Source 1: Real Orders
+    for (const o of orders) {
+      if (!o.deliveryDate) continue
+      for (const li of o.lineItems ?? []) {
+        // For custom bouquets, use the line item data directly
+        if (li.productSku?.startsWith("PRD-CUSTOM-")) {
+          const existing = m.get(o.deliveryDate) ?? []
+          existing.push({
+            productSku: li.productSku,
+            productName: li.productName,
+            productSize: li.productSize ?? "",
+            qty: li.qty,
+            customerName: o.customerName,
+            price: li.unitPrice,
+          })
+          m.set(o.deliveryDate, existing)
+          continue
+        }
+        // For catalogue products, look up the product
+        const product = productBySku.get(li.productSku)
+        const existing = m.get(o.deliveryDate) ?? []
+        existing.push({
+          productSku: li.productSku,
+          productName: product?.name ?? li.productName,
+          productSize: product?.size ?? li.productSize ?? "",
+          qty: li.qty,
+          customerName: o.customerName,
+          price: product?.actualPriceBeforeIva ?? li.unitPrice,
+        })
+        m.set(o.deliveryDate, existing)
+      }
+    }
+
+    // Source 2: Legacy localStorage plan items
     for (const item of items) {
       if (!item.deliveryDate) continue
       const product = productBySku.get(item.productSku)
@@ -62,7 +107,7 @@ export function DeliveryView() {
       m.set(item.deliveryDate, existing)
     }
     return m
-  }, [items, productBySku])
+  }, [orders, items, productBySku])
 
   // Generate the calendar grid for the current view month
   // Layout: weeks starting Monday. Each week has 7 cells.

@@ -680,21 +680,32 @@ export function OrderDetail({
               <h2 className="text-xl font-semibold text-stone-800">{order.orderNumber}</h2>
               <Badge variant="outline" className={badge.className}>{badge.label}</Badge>
             </div>
-            <p className="text-xs text-stone-500 mt-0.5">
-              Created {new Date(order.createdAt).toLocaleString("es-MX")}
-            </p>
-          </div>
-          {order.deliveryDate && (
-            <div className="text-right">
-              <div className="text-[10px] uppercase tracking-wide text-stone-500">Delivery date</div>
-              <div className="text-sm font-semibold text-rose-700 flex items-center gap-1.5 justify-end">
-                <CalendarClock className="h-4 w-4" />
-                {new Date(order.deliveryDate + "T00:00:00").toLocaleDateString("es-MX", {
-                  weekday: "long", day: "numeric", month: "long", year: "numeric",
-                })}
+            <div className="mt-2 space-y-0.5 text-xs text-stone-500">
+              <div className="flex items-center gap-1.5">
+                <span className="font-medium text-stone-600">Created on:</span>
+                <span>{new Date(order.createdAt).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })}</span>
+                <span className="text-stone-400">at {new Date(order.createdAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}</span>
               </div>
+              {order.deliveryDate && (
+                <div className="flex items-center gap-1.5">
+                  <span className="font-medium text-rose-700">Deliver on:</span>
+                  <span className="text-rose-700 font-semibold">
+                    {new Date(order.deliveryDate + "T00:00:00").toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+                  </span>
+                </div>
+              )}
+              {order.updatedAt && order.updatedAt !== order.createdAt && (
+                <div className="flex items-center gap-1.5">
+                  <span className="font-medium text-stone-600">Last modified:</span>
+                  <span>{new Date(order.updatedAt).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })}</span>
+                  <span className="text-stone-400">at {new Date(order.updatedAt).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}</span>
+                  {order.paymentStatus === "confirmed" && order.paymentConfirmedAt && (
+                    <span className="text-emerald-600 ml-1">· payment confirmed {new Date(order.paymentConfirmedAt).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}</span>
+                  )}
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </Card>
 
