@@ -12,7 +12,6 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   ShoppingCart,
   Truck,
@@ -162,8 +161,8 @@ export function ShoppingListPanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
-        <SheetHeader className="p-5 pb-3 border-b border-stone-200">
+      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 gap-0 flex flex-col overflow-hidden">
+        <SheetHeader className="p-5 pb-3 border-b border-stone-200 shrink-0">
           <SheetTitle className="flex items-center gap-2 text-xl">
             <ShoppingCart className="h-5 w-5 text-rose-600" />
             Shopping List
@@ -174,7 +173,7 @@ export function ShoppingListPanel({
         </SheetHeader>
 
         {items.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center p-8">
+          <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
             <div className="text-center">
               <ShoppingCart className="h-12 w-12 mx-auto text-stone-300 mb-3" />
               <p className="text-stone-600 font-medium">Your plan is empty</p>
@@ -182,13 +181,13 @@ export function ShoppingListPanel({
             </div>
           </div>
         ) : loading ? (
-          <div className="p-5 space-y-3">
+          <div className="p-5 space-y-3 overflow-y-auto">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
         ) : error ? (
-          <div className="p-5">
+          <div className="p-5 overflow-y-auto">
             <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-red-700">
               <p className="font-medium">Failed to generate shopping list</p>
               <p className="text-sm mt-1">{error}</p>
@@ -197,7 +196,7 @@ export function ShoppingListPanel({
         ) : data ? (
           <>
             {/* Summary card */}
-            <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-3 border-b border-stone-200">
+            <div className="p-5 grid grid-cols-2 sm:grid-cols-4 gap-3 border-b border-stone-200 shrink-0">
               <StatCard label="Bouquets" value={String(data.planSummary.totalBouquets)} />
               <StatCard label="Materials" value={String(data.planSummary.distinctMaterials)} />
               <StatCard label="Suppliers" value={String(data.planSummary.distinctSuppliers)} />
@@ -216,7 +215,7 @@ export function ShoppingListPanel({
             </div>
 
             {/* Toolbar */}
-            <div className="px-5 py-2 border-b border-stone-200 flex justify-end gap-2">
+            <div className="px-5 py-2 border-b border-stone-200 flex justify-end gap-2 shrink-0">
               <Button variant="outline" size="sm" onClick={fetchPlan} className="gap-1.5 text-xs">
                 <RefreshCw className="h-3.5 w-3.5" /> Refresh
               </Button>
@@ -225,8 +224,8 @@ export function ShoppingListPanel({
               </Button>
             </div>
 
-            {/* Body — grouped by supplier */}
-            <ScrollArea className="flex-1">
+            {/* Body — grouped by supplier; scrollable */}
+            <div className="flex-1 overflow-y-auto">
               <div className="p-5 space-y-6">
                 {Object.entries(data.bySupplier)
                   .sort(([a], [b]) => a.localeCompare(b))
@@ -323,7 +322,7 @@ export function ShoppingListPanel({
                     </div>
                   ))}
               </div>
-            </ScrollArea>
+            </div>
           </>
         ) : null}
       </SheetContent>
