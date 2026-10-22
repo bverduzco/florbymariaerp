@@ -92,11 +92,46 @@ export function ShoppingListPanel({
   const weekStartDate = usePlanStore((s) => s.weekStartDate)
 
   const [data, setData] = useState<PlanResponse | null>(null)
+  const [orders, setOrders] = useState<any[]>([])
+
+  // Fetch orders from DB whenever the panel opens
+  useEffect(() => {
+    if (open) {
+      fetch("/api/orders", { cache: "no-store" })
+        .then((r) => (r.ok ? r.json() : { orders: [] }))
+        .then((data) => setOrders(data.orders ?? []))
+        .catch(() => {})
+    }
+  }, [open])
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   async function fetchPlan() {
-    if (items.length === 0) {
+    // Combine localStorage plan items + order line items from DB
+    const planItems = items.map((i) => ({
+      productSku: i.productSku,
+      qty: i.qty,
+      deliveryDate: i.deliveryDate ?? null,
+      customerName: i.customerName ?? null,
+    }))
+
+    // Add order line items — for custom bouquets, use the productSku as-is
+    // (the /api/plan endpoint will try to look up the recipe; if the SKU is a
+    // custom hidden recipe, it won't find recipe lines, but at least the
+    // qty/revenue will be counted)
+    const orderItems = orders.flatMap((o: any) =>
+      (o.lineItems ?? []).map((li: any) => ({
+        productSku: li.productSku,
+        qty: li.qty,
+        deliveryDate: o.deliveryDate ?? null,
+        customerName: o.customerName ?? null,
+      })),
+    )
+
+    const allItems = [...planItems, ...orderItems]
+
+    if (allItems.length === 0) {
       setData(null)
       return
     }
@@ -107,12 +142,7 @@ export function ShoppingListPanel({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: items.map((i) => ({
-            productSku: i.productSku,
-            qty: i.qty,
-            deliveryDate: i.deliveryDate ?? null,
-            customerName: i.customerName ?? null,
-          })),
+          items: allItems,
           weekStartDate,
         }),
       })
@@ -126,11 +156,11 @@ export function ShoppingListPanel({
     }
   }
 
-  // Re-fetch when panel opens or plan items / delivery dates change
+  // Re-fetch when panel opens, or when items / orders / delivery dates change
   useEffect(() => {
-    if (open && items.length > 0) fetchPlan()
-    if (items.length === 0) setData(null)
-  }, [open, items, weekStartDate])
+    if (open && (items.length > 0 || orders.length > 0)) fetchPlan()
+    if (items.length === 0 && orders.length === 0) setData(null)
+  }, [open, items, orders, weekStartDate])
 
   function downloadCsv() {
     if (!data) return
