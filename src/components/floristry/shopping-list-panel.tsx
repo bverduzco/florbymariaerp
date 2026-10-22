@@ -22,8 +22,11 @@ import {
   Flower2,
   Leaf,
   Gift,
+  FileDown,
+  Loader2,
 } from "lucide-react"
 import { usePlanStore } from "@/lib/plan-store"
+import { toast } from "sonner"
 
 interface UsedBy {
   productSku: string
@@ -94,6 +97,7 @@ export function ShoppingListPanel({
   const [data, setData] = useState<PlanResponse | null>(null)
   const [orders, setOrders] = useState<any[]>([])
   const [ordersLoaded, setOrdersLoaded] = useState(false)
+  const [printingPdf, setPrintingPdf] = useState(false)
 
   // Fetch orders from DB whenever the panel opens
   useEffect(() => {
@@ -208,6 +212,57 @@ export function ShoppingListPanel({
     URL.revokeObjectURL(url)
   }
 
+  async function printPdf() {
+    setPrintingPdf(true)
+    try {
+      // Build the same items payload that fetchPlan uses
+      const planItems = items.map((i) => ({
+        productSku: i.productSku,
+        qty: i.qty,
+        deliveryDate: i.deliveryDate ?? null,
+        customerName: i.customerName ?? null,
+      }))
+      const orderItems = orders.flatMap((o: any) =>
+        (o.lineItems ?? []).map((li: any) => ({
+          productSku: li.productSku,
+          qty: li.qty,
+          deliveryDate: o.deliveryDate ?? null,
+          customerName: o.customerName ?? null,
+        })),
+      )
+      const allItems = [...planItems, ...orderItems]
+
+      const res = await fetch("/api/plan/pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: allItems, weekStartDate }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `HTTP ${res.status}`)
+      }
+      const result = await res.json()
+      toast.success("Shopping list PDF generated", {
+        description: result.fileName,
+        duration: 5000,
+      })
+      // Trigger browser download
+      const link = document.createElement("a")
+      link.href = `/download/${encodeURIComponent(result.fileName)}`
+      link.download = result.fileName
+      link.target = "_blank"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (e) {
+      toast.error("Failed to generate PDF", {
+        description: e instanceof Error ? e.message : String(e),
+      })
+    } finally {
+      setPrintingPdf(false)
+    }
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-2xl p-0 gap-0 flex flex-col overflow-hidden">
@@ -270,6 +325,10 @@ export function ShoppingListPanel({
               </Button>
               <Button variant="outline" size="sm" onClick={downloadCsv} className="gap-1.5 text-xs">
                 <Download className="h-3.5 w-3.5" /> Download CSV
+              </Button>
+              <Button variant="outline" size="sm" onClick={printPdf} disabled={printingPdf} className="gap-1.5 text-xs">
+                {printingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
+                Print PDF
               </Button>
             </div>
 
