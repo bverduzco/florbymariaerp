@@ -9,6 +9,7 @@ import { WeeklyPlan } from "@/components/floristry/weekly-plan"
 import { ShoppingListPanel } from "@/components/floristry/shopping-list-panel"
 import { CustomersTab } from "@/components/floristry/customers-tab"
 import { DeliveryView } from "@/components/floristry/delivery-view"
+import { MoneysSection } from "@/components/floristry/moneys-section"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -140,6 +141,7 @@ export default function Home() {
               )}
             </div>
             <CatalogueGrid />
+            <MoneysSection />
           </TabsContent>
 
           <TabsContent value="plan" className="mt-4">

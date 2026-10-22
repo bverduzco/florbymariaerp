@@ -12,11 +12,11 @@ import {
   CalendarDays,
   ClipboardList,
   CalendarClock,
-  User,
   ShoppingCart,
 } from "lucide-react"
 import { useCatalogue } from "@/lib/catalogue-store"
 import { usePlanStore } from "@/lib/plan-store"
+import { CustomerInput } from "@/components/floristry/customer-input"
 import { useMemo } from "react"
 
 function nextMondayIso() {
@@ -213,26 +213,22 @@ export function WeeklyPlan() {
 
                 {/* Customer + delivery date row */}
                 <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <CustomerInput
+                    value={customerName ?? ""}
+                    onChange={(v) => setCustomerName(product.sku, v || null)}
+                    placeholder="Customer name"
+                    ariaLabel={`Customer name for ${product.name}`}
+                    className="h-7 pl-7 pr-2 text-xs bg-stone-50 border-stone-200 text-stone-700"
+                  />
                   <div className="relative">
-                    <User className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-stone-400 pointer-events-none" />
-                    <Input
-                      type="text"
-                      value={customerName ?? ""}
-                      onChange={(e) => setCustomerName(product.sku, e.target.value || null)}
-                      placeholder="Customer name"
-                      aria-label={`Customer name for ${product.name}`}
-                      className="h-7 pl-7 pr-2 text-xs bg-stone-50 border-stone-200 text-stone-700"
-                    />
-                  </div>
-                  <div className="relative">
-                    <CalendarClock className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-stone-400 pointer-events-none" />
+                    <CalendarClock className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-stone-400 pointer-events-none z-10" />
                     <Input
                       type="date"
                       value={deliveryDate ?? ""}
                       onChange={(e) => setDeliveryDate(product.sku, e.target.value || null)}
                       aria-label={`Delivery date for ${product.name}`}
                       placeholder="Delivery date"
-                      className="h-7 pl-7 pr-2 text-xs bg-stone-50 border-stone-200 text-stone-700"
+                      className="h-7 pl-7 pr-7 text-xs bg-stone-50 border-stone-200 text-stone-700 w-full cursor-pointer"
                     />
                   </div>
                 </div>

@@ -5,9 +5,10 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Sparkles, ShoppingBag, CalendarClock, User } from "lucide-react"
+import { Plus, Sparkles, ShoppingBag, CalendarClock } from "lucide-react"
 import { useCatalogue, type CatalogueProduct } from "@/lib/catalogue-store"
 import { usePlanStore } from "@/lib/plan-store"
+import { CustomerInput } from "@/components/floristry/customer-input"
 import {
   Sheet,
   SheetContent,
@@ -107,33 +108,31 @@ function ProductCard({ product }: { product: CatalogueProduct }) {
         <Button
           size="sm"
           onClick={handleAddToPlan}
-          className="bg-rose-600 hover:bg-rose-700 text-white gap-1"
+          className="bg-rose-600 hover:bg-rose-700 text-white gap-1 shrink-0"
         >
           <Plus className="h-4 w-4" />
           Add
         </Button>
 
-        <div className="relative flex-1 min-w-0">
-          <User className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-400 pointer-events-none" />
-          <Input
-            type="text"
+        <div className="flex-1 min-w-[110px]">
+          <CustomerInput
             value={customerName || inCart?.customerName || ""}
-            onChange={(e) => handleCustomerChange(e.target.value)}
+            onChange={(v) => handleCustomerChange(v)}
             placeholder="Customer"
-            aria-label={`Customer name for ${product.name}`}
+            ariaLabel={`Customer name for ${product.name}`}
             className="h-8 pl-7 pr-2 text-xs bg-white border-stone-200 text-stone-700"
           />
         </div>
 
-        <div className="relative flex-1 min-w-0">
-          <CalendarClock className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-400 pointer-events-none" />
+        <div className="relative flex-1 min-w-[130px]">
+          <CalendarClock className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-400 pointer-events-none z-10" />
           <Input
             type="date"
             value={deliveryDate || inCart?.deliveryDate || ""}
             onChange={(e) => handleDateChange(e.target.value)}
             placeholder="Delivery date"
             aria-label={`Delivery date for ${product.name}`}
-            className="h-8 pl-7 pr-2 text-xs bg-white border-stone-200 text-stone-700"
+            className="h-8 pl-7 pr-7 text-xs bg-white border-stone-200 text-stone-700 w-full cursor-pointer"
           />
         </div>
 
