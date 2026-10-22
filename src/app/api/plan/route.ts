@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic"
  *   - byCategory: grouped by category (flowers / foliage / packaging)
  */
 
-type PlanItem = { productSku: string; qty: number; deliveryDate?: string | null }
+type PlanItem = { productSku: string; qty: number; deliveryDate?: string | null; customerName?: string | null }
 
 interface PlanRequest {
   items: PlanItem[]
@@ -35,7 +35,7 @@ interface ShoppingLine {
   packsToBuy: number | null // null if pack size unknown
   packQtyRounded: number | null // ceil(packsToBuy)
   totalPackCost: number | null
-  usedBy: { productSku: string; productName: string; qty: number; deliveryDate: string | null }[]
+  usedBy: { productSku: string; productName: string; qty: number; deliveryDate: string | null; customerName: string | null }[]
   warning: string | null
 }
 
@@ -51,13 +51,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Items array is required" }, { status: 400 })
   }
 
-  // Validate qty (keep deliveryDate if provided)
+  // Validate qty (keep deliveryDate + customerName if provided)
   const items = body.items
     .filter((i) => i && typeof i.productSku === "string" && typeof i.qty === "number" && i.qty > 0)
     .map((i) => ({
       productSku: i.productSku,
       qty: Math.floor(i.qty),
       deliveryDate: typeof i.deliveryDate === "string" ? i.deliveryDate : null,
+      customerName: typeof i.customerName === "string" ? i.customerName : null,
     }))
 
   if (items.length === 0) {
@@ -112,6 +113,7 @@ export async function POST(request: Request) {
           productName: `${product.name}${product.size ? ` (${product.size})` : ""}`,
           qty: item.qty,
           deliveryDate: item.deliveryDate ?? null,
+          customerName: item.customerName ?? null,
         })
       } else {
         const packPrice = m.packPrice
@@ -159,6 +161,7 @@ export async function POST(request: Request) {
               productName: `${product.name}${product.size ? ` (${product.size})` : ""}`,
               qty: item.qty,
               deliveryDate: item.deliveryDate ?? null,
+              customerName: item.customerName ?? null,
             },
           ],
           warning,

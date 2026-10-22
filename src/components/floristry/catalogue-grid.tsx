@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Plus, Sparkles, ShoppingBag, CalendarClock } from "lucide-react"
+import { Plus, Sparkles, ShoppingBag, CalendarClock, User } from "lucide-react"
 import { useCatalogue, type CatalogueProduct } from "@/lib/catalogue-store"
 import { usePlanStore } from "@/lib/plan-store"
 import {
@@ -20,13 +20,15 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 function ProductCard({ product }: { product: CatalogueProduct }) {
   const addItem = usePlanStore((s) => s.addItem)
   const setDeliveryDate = usePlanStore((s) => s.setDeliveryDate)
+  const setCustomerName = usePlanStore((s) => s.setCustomerName)
   const items = usePlanStore((s) => s.items)
   const inCart = items.find((i) => i.productSku === product.sku)
-  // Local state for the date picker (mirrors store when in cart)
+  // Local state for date + customer name (mirrors store when in cart)
   const [deliveryDate, setLocalDeliveryDate] = useState<string>("")
+  const [customerName, setLocalCustomerName] = useState<string>("")
 
   function handleAddToPlan() {
-    addItem(product.sku, 1, deliveryDate || null)
+    addItem(product.sku, 1, deliveryDate || null, customerName || null)
   }
 
   function handleDateChange(value: string) {
@@ -34,6 +36,13 @@ function ProductCard({ product }: { product: CatalogueProduct }) {
     // If already in plan, update the store live
     if (inCart) {
       setDeliveryDate(product.sku, value || null)
+    }
+  }
+
+  function handleCustomerChange(value: string) {
+    setLocalCustomerName(value)
+    if (inCart) {
+      setCustomerName(product.sku, value || null)
     }
   }
 
@@ -104,7 +113,19 @@ function ProductCard({ product }: { product: CatalogueProduct }) {
           Add
         </Button>
 
-        <div className="relative flex-1">
+        <div className="relative flex-1 min-w-0">
+          <User className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-400 pointer-events-none" />
+          <Input
+            type="text"
+            value={customerName || inCart?.customerName || ""}
+            onChange={(e) => handleCustomerChange(e.target.value)}
+            placeholder="Customer"
+            aria-label={`Customer name for ${product.name}`}
+            className="h-8 pl-7 pr-2 text-xs bg-white border-stone-200 text-stone-700"
+          />
+        </div>
+
+        <div className="relative flex-1 min-w-0">
           <CalendarClock className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-400 pointer-events-none" />
           <Input
             type="date"

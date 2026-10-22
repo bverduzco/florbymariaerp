@@ -30,6 +30,7 @@ interface UsedBy {
   productName: string
   qty: number
   deliveryDate: string | null
+  customerName: string | null
 }
 
 interface ShoppingLine {
@@ -110,6 +111,7 @@ export function ShoppingListPanel({
             productSku: i.productSku,
             qty: i.qty,
             deliveryDate: i.deliveryDate ?? null,
+            customerName: i.customerName ?? null,
           })),
           weekStartDate,
         }),
@@ -133,7 +135,7 @@ export function ShoppingListPanel({
   function downloadCsv() {
     if (!data) return
     const rows = [
-      ["Supplier", "Category", "Material SKU", "Material Name", "Unit", "Total Qty Needed", "Pack Size", "Packs to Buy", "Pack Price", "Total Pack Cost", "Warning", "Used By (with delivery dates)"],
+      ["Supplier", "Category", "Material SKU", "Material Name", "Unit", "Total Qty Needed", "Pack Size", "Packs to Buy", "Pack Price", "Total Pack Cost", "Warning", "Used By (with customer + delivery dates)"],
       ...data.shoppingList.map((l) => [
         l.supplier,
         l.category,
@@ -146,7 +148,12 @@ export function ShoppingListPanel({
         l.packPrice?.toString() ?? "?",
         l.totalPackCost?.toFixed(2) ?? "?",
         l.warning ?? "",
-        l.usedBy.map((u) => `${u.productName} x${u.qty}${u.deliveryDate ? ` (delivery ${u.deliveryDate})` : ""}`).join("; "),
+        l.usedBy.map((u) => {
+          const parts = [u.productName, `x${u.qty}`]
+          if (u.customerName) parts.push(`[customer: ${u.customerName}]`)
+          if (u.deliveryDate) parts.push(`(delivery ${u.deliveryDate})`)
+          return parts.join(" ")
+        }).join("; "),
       ]),
     ]
     const csv = rows.map((r) => r.map((c) => `"${(c ?? "").toString().replace(/"/g, '""')}"`).join(",")).join("\n")
@@ -306,6 +313,9 @@ export function ShoppingListPanel({
                                 {line.usedBy.map((u, i) => (
                                   <span key={i}>
                                     {i > 0 && ", "}
+                                    {u.customerName && (
+                                      <span className="text-stone-600 font-medium">{u.customerName}</span>
+                                    )}{" "}
                                     {u.productName} ×{u.qty}
                                     {u.deliveryDate && (
                                       <span className="text-rose-600 ml-1">

@@ -8,6 +8,8 @@ export interface PlanItem {
   qty: number
   /** ISO date (yyyy-mm-dd) when the customer wants the product delivered. Optional. */
   deliveryDate: string | null
+  /** Customer name (free-text). Optional. */
+  customerName: string | null
 }
 
 interface PlanStore {
@@ -18,10 +20,11 @@ interface PlanStore {
   /** Whether the shopping list panel is open */
   shoppingListOpen: boolean
 
-  addItem: (sku: string, qty?: number, deliveryDate?: string | null) => void
+  addItem: (sku: string, qty?: number, deliveryDate?: string | null, customerName?: string | null) => void
   removeItem: (sku: string) => void
   setQty: (sku: string, qty: number) => void
   setDeliveryDate: (sku: string, date: string | null) => void
+  setCustomerName: (sku: string, name: string | null) => void
   clear: () => void
   setWeekStartDate: (date: string | null) => void
   setShoppingListOpen: (open: boolean) => void
@@ -33,11 +36,11 @@ export const usePlanStore = create<PlanStore>()(
       items: [],
       weekStartDate: null,
       shoppingListOpen: false,
-      addItem: (sku, qty = 1, deliveryDate = null) =>
+      addItem: (sku, qty = 1, deliveryDate = null, customerName = null) =>
         set((state) => {
           const existing = state.items.find((i) => i.productSku === sku)
           if (existing) {
-            // If adding with a deliveryDate, keep the existing one unless explicitly provided
+            // If adding with deliveryDate/customerName, keep existing ones unless explicitly provided
             return {
               items: state.items.map((i) =>
                 i.productSku === sku
@@ -45,12 +48,13 @@ export const usePlanStore = create<PlanStore>()(
                       ...i,
                       qty: i.qty + qty,
                       deliveryDate: deliveryDate !== null ? deliveryDate : i.deliveryDate,
+                      customerName: customerName !== null && customerName !== "" ? customerName : i.customerName,
                     }
                   : i,
               ),
             }
           }
-          return { items: [...state.items, { productSku: sku, qty, deliveryDate }] }
+          return { items: [...state.items, { productSku: sku, qty, deliveryDate, customerName }] }
         }),
       removeItem: (sku) =>
         set((state) => ({
@@ -66,6 +70,12 @@ export const usePlanStore = create<PlanStore>()(
         set((state) => ({
           items: state.items.map((i) =>
             i.productSku === sku ? { ...i, deliveryDate: date } : i,
+          ),
+        })),
+      setCustomerName: (sku, name) =>
+        set((state) => ({
+          items: state.items.map((i) =>
+            i.productSku === sku ? { ...i, customerName: name } : i,
           ),
         })),
       clear: () => set({ items: [] }),

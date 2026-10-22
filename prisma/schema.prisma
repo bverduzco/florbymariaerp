@@ -85,3 +85,16 @@ model RecipeLine {
   notes         String?
   createdAt     DateTime @default(now())
 }
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, phone])
+}

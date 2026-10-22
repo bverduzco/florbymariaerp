@@ -1,15 +1,27 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useCatalogue } from "@/lib/catalogue-store"
 import { usePlanStore } from "@/lib/plan-store"
 import { ErpUploadButton } from "@/components/floristry/erp-upload-button"
 import { CatalogueGrid } from "@/components/floristry/catalogue-grid"
 import { WeeklyPlan } from "@/components/floristry/weekly-plan"
 import { ShoppingListPanel } from "@/components/floristry/shopping-list-panel"
+import { CustomersTab } from "@/components/floristry/customers-tab"
+import { DeliveryView } from "@/components/floristry/delivery-view"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Flower2, ShoppingCart, Sparkles } from "lucide-react"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import {
+  Flower2,
+  ShoppingCart,
+  Sparkles,
+  ClipboardList,
+  Users,
+  CalendarDays,
+} from "lucide-react"
+
+type TabKey = "catalogue" | "plan" | "customers" | "delivery"
 
 export default function Home() {
   const fetchCatalogue = useCatalogue((s) => s.fetch)
@@ -21,7 +33,10 @@ export default function Home() {
   const setShoppingListOpen = usePlanStore((s) => s.setShoppingListOpen)
   const shoppingListOpen = usePlanStore((s) => s.shoppingListOpen)
 
+  const [tab, setTab] = useState<TabKey>("catalogue")
+
   const totalPlanQty = planItems.reduce((s, i) => s + i.qty, 0)
+  const planWithDeliveries = planItems.filter((i) => i.deliveryDate).length
 
   // Initial load
   useEffect(() => {
@@ -77,18 +92,47 @@ export default function Home() {
                 Plan your week, buy what you need
               </h2>
               <p className="text-sm text-stone-600 mt-0.5 max-w-2xl">
-                Browse the bouquet catalogue, add what you&apos;re selling this week, and we&apos;ll expand
-                each recipe from your ERP into a single shopping list grouped by supplier — with pack quantities.
+                Browse the catalogue, plan your week, manage customers, and see all your
+                deliveries on a monthly calendar.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Main */}
+      {/* Main — tabbed */}
       <main className="flex-1 mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
-          <section>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
+          <TabsList className="bg-white border border-rose-100 p-1 h-auto flex-wrap">
+            <TabsTrigger value="catalogue" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+              <Flower2 className="h-4 w-4" />
+              Catalogue
+            </TabsTrigger>
+            <TabsTrigger value="plan" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+              <ClipboardList className="h-4 w-4" />
+              Weekly Plan
+              {totalPlanQty > 0 && (
+                <Badge className="ml-1 bg-rose-100 text-rose-700 px-1.5 py-0 text-[10px]">
+                  {totalPlanQty}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="customers" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+              <Users className="h-4 w-4" />
+              Customers
+            </TabsTrigger>
+            <TabsTrigger value="delivery" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+              <CalendarDays className="h-4 w-4" />
+              Delivery View
+              {planWithDeliveries > 0 && (
+                <Badge className="ml-1 bg-rose-100 text-rose-700 px-1.5 py-0 text-[10px]">
+                  {planWithDeliveries}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="catalogue" className="mt-4">
             <div className="mb-3 flex items-baseline justify-between">
               <h2 className="text-lg font-semibold text-stone-800">Catalogue</h2>
               {catalogueLoading && (
@@ -96,12 +140,20 @@ export default function Home() {
               )}
             </div>
             <CatalogueGrid />
-          </section>
+          </TabsContent>
 
-          <aside>
+          <TabsContent value="plan" className="mt-4">
             <WeeklyPlan />
-          </aside>
-        </div>
+          </TabsContent>
+
+          <TabsContent value="customers" className="mt-4">
+            <CustomersTab />
+          </TabsContent>
+
+          <TabsContent value="delivery" className="mt-4">
+            <DeliveryView />
+          </TabsContent>
+        </Tabs>
       </main>
 
       {/* Footer */}
@@ -112,7 +164,7 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Slide-over shopping list */}
+      {/* Slide-over shopping list (works from any tab) */}
       <ShoppingListPanel
         open={shoppingListOpen}
         onOpenChange={setShoppingListOpen}
