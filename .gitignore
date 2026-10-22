@@ -56,16 +56,22 @@ server.log
 # === Floristry app v1 additions ===
 # Backups folder (snapshot copies, not source-controlled)
 /backups/
-# SQLite database (binary, regenerable from Excel via seed script)
-/db/
+# SQLite database (binary, regenerable from Excel via seed script — but tracked for v1-demo)
+# /db/
 # Download folder (output artifacts)
 /download/
 # Upload folder (user-uploaded Excel files)
 /upload/
 # Worklog (session log, not part of source)
 /worklog.md
-# Build scripts directory (build artifacts, kept locally only)
-/scripts/
+# Build scripts directory — for v1-demo, we track parse_erp.py, seed.ts, recalc_xlsx.py
+# (other build_vXX.py and fix_vXX_*.py scripts are not tracked — they were one-time)
+# /scripts/
+# Explicitly ignore one-time build/fix/inspect scripts (not needed for fresh clones)
+/scripts/build_*.py
+/scripts/fix_*.py
+/scripts/inspect_*.py
+/scripts/extend_erp.py
 # Sandvox zscripts (dev server management, not part of source)
 /.zscripts/
 # Skills (AI skill files, not part of source)
