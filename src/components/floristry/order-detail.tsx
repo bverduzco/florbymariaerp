@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -29,7 +29,10 @@ import {
   CreditCard,
   CheckCircle2,
   ArrowRight,
+  Pencil,
+  AlertTriangle,
   MessageCircle,
+  FileDown,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -139,13 +142,42 @@ export function OrderDetail({
   const [cancelling, setCancelling] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [savingEdits, setSavingEdits] = useState(false)
+  const [generatingPdf, setGeneratingPdf] = useState(false)
 
-  // Editable fields
+  // Editable fields (current values shown in detail view)
   const [deliveryFee, setDeliveryFee] = useState(order.deliveryFee)
   const [discount, setDiscount] = useState(order.discount)
   const [paymentMethod, setPaymentMethod] = useState(order.paymentMethod ?? "")
   const [paymentReference, setPaymentReference] = useState(order.paymentReference ?? "")
   const [quoteSentVia, setQuoteSentVia] = useState(order.quoteSentVia ?? "whatsapp")
+
+  // Edit dialog form state (separate from above so we can cancel without applying)
+  const [editDeliveryDate, setEditDeliveryDate] = useState(order.deliveryDate ?? "")
+  const [editDeliveryAddress, setEditDeliveryAddress] = useState(order.deliveryAddress ?? order.customerAddress ?? "")
+  const [editCardMessage, setEditCardMessage] = useState(order.cardMessage ?? "")
+  const [editDeliveryNotes, setEditDeliveryNotes] = useState(order.deliveryNotes ?? "")
+  const [editInternalNotes, setEditInternalNotes] = useState(order.internalNotes ?? "")
+  const [editDeliveryFee, setEditDeliveryFee] = useState(order.deliveryFee)
+  const [editDiscount, setEditDiscount] = useState(order.discount)
+  const [editLineItems, setEditLineItems] = useState<Record<string, number>>(
+    () => Object.fromEntries(order.lineItems.map((li) => [li.id, li.qty])),
+  )
+
+  // When the Edit dialog opens, refresh form state from the latest order
+  useEffect(() => {
+    if (editOpen) {
+      setEditDeliveryDate(order.deliveryDate ?? "")
+      setEditDeliveryAddress(order.deliveryAddress ?? order.customerAddress ?? "")
+      setEditCardMessage(order.cardMessage ?? "")
+      setEditDeliveryNotes(order.deliveryNotes ?? "")
+      setEditInternalNotes(order.internalNotes ?? "")
+      setEditDeliveryFee(order.deliveryFee)
+      setEditDiscount(order.discount)
+      setEditLineItems(Object.fromEntries(order.lineItems.map((li) => [li.id, li.qty])))
+    }
+  }, [editOpen, order])
 
   // Subtotals
   const subtotal = order.lineItems.reduce((s, li) => s + li.lineTotal, 0)
@@ -290,6 +322,57 @@ export function OrderDetail({
     }
   }
 
+  async function saveEdits() {
+    setSavingEdits(true)
+    try {
+      // Step 1: update order-level fields via PATCH /api/orders/[id]
+      const orderRes = await fetch(`/api/orders/${order.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deliveryDate: editDeliveryDate || null,
+          deliveryAddress: editDeliveryAddress || null,
+          cardMessage: editCardMessage || null,
+          deliveryNotes: editDeliveryNotes || null,
+          internalNotes: editInternalNotes || null,
+          deliveryFee: editDeliveryFee ?? 0,
+          discount: editDiscount ?? 0,
+        }),
+      })
+      if (!orderRes.ok) {
+        const err = await orderRes.json().catch(() => ({}))
+        throw new Error(err.error || `HTTP ${orderRes.status}`)
+      }
+      const orderData = await orderRes.json()
+
+      // Step 2: update line items via PATCH /api/orders/[id]/line-items
+      const lineItemsPayload = Object.entries(editLineItems).map(([liId, qty]) => ({
+        id: liId,
+        qty,
+      }))
+      const liRes = await fetch(`/api/orders/${order.id}/line-items`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lineItems: lineItemsPayload }),
+      })
+      if (!liRes.ok) {
+        const err = await liRes.json().catch(() => ({}))
+        throw new Error(err.error || `HTTP ${liRes.status}`)
+      }
+      const liData = await liRes.json()
+
+      onUpdated(liData.order ?? orderData.order)
+      setEditOpen(false)
+      toast.success("Order updated")
+    } catch (e) {
+      toast.error("Failed to save edits", {
+        description: e instanceof Error ? e.message : String(e),
+      })
+    } finally {
+      setSavingEdits(false)
+    }
+  }
+
   async function deleteOrder() {
     setDeleting(true)
     try {
@@ -303,6 +386,37 @@ export function OrderDetail({
       toast.error("Failed to delete", { description: e instanceof Error ? e.message : String(e) })
     } finally {
       setDeleting(false)
+    }
+  }
+
+  async function downloadPdf() {
+    setGeneratingPdf(true)
+    try {
+      const res = await fetch(`/api/orders/${order.id}/pdf`)
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `HTTP ${res.status}`)
+      }
+      const data = await res.json()
+      toast.success(`Invoice ${data.orderNumber} generated`, {
+        description: `File: ${data.fileName} — saved in /download folder`,
+        duration: 5000,
+      })
+      // Trigger browser download by opening the file URL in a new tab
+      // (works for files served from /download via the static file server)
+      const link = document.createElement("a")
+      link.href = `/download/${encodeURIComponent(data.fileName)}`
+      link.download = data.fileName
+      link.target = "_blank"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (e) {
+      toast.error("Failed to generate PDF", {
+        description: e instanceof Error ? e.message : String(e),
+      })
+    } finally {
+      setGeneratingPdf(false)
     }
   }
 
@@ -329,6 +443,202 @@ export function OrderDetail({
               Cancel order
             </Button>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={downloadPdf}
+            disabled={generatingPdf}
+            className="gap-1.5"
+            title="Generate customer-facing PDF invoice"
+          >
+            {generatingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
+            Print to PDF
+          </Button>
+          <Dialog open={editOpen} onOpenChange={setEditOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5">
+                <Pencil className="h-3.5 w-3.5" />
+                Edit
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Edit order {order.orderNumber}</DialogTitle>
+                <DialogDescription>
+                  Update customer, delivery, line items, and notes.
+                </DialogDescription>
+              </DialogHeader>
+
+              {order.paymentStatus === "confirmed" && (
+                <div className="rounded-md bg-amber-50 border border-amber-300 p-3 text-sm text-amber-900 flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-semibold">Payment already confirmed</div>
+                    <div className="text-xs text-amber-800 mt-0.5">
+                      This order&apos;s payment was confirmed on{" "}
+                      {order.paymentConfirmedAt && (
+                        <strong>
+                          {new Date(order.paymentConfirmedAt).toLocaleDateString("es-MX")}
+                        </strong>
+                      )}.
+                      Editing the line items, delivery fee, or discount will change the
+                      total amount due. If you increase the total, you&apos;ll need to
+                      request additional payment. If you decrease it, you may owe the
+                      customer a refund.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                {/* Customer (read-only — to change customer, recreate order) */}
+                <div>
+                  <Label className="text-xs text-stone-500">Customer</Label>
+                  <Input value={order.customerName ?? ""} disabled className="bg-stone-50" />
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="edit-date" className="text-xs">Delivery date</Label>
+                    <Input
+                      id="edit-date"
+                      type="date"
+                      value={editDeliveryDate}
+                      onChange={(e) => setEditDeliveryDate(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-addr" className="text-xs">Delivery address</Label>
+                    <Input
+                      id="edit-addr"
+                      value={editDeliveryAddress}
+                      onChange={(e) => setEditDeliveryAddress(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Line items */}
+                <div>
+                  <Label className="text-xs">Line items (set qty to 0 to remove)</Label>
+                  <div className="space-y-1.5 mt-1">
+                    {order.lineItems.map((li) => {
+                      const qty = editLineItems[li.id] ?? li.qty
+                      return (
+                        <div
+                          key={li.id}
+                          className="flex items-center gap-2 rounded-md border border-stone-200 px-2 py-1.5 text-sm"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-stone-800 truncate">
+                              {li.productName}
+                              {li.productSize && (
+                                <Badge variant="outline" className="ml-1.5 text-[10px] py-0">{li.productSize}</Badge>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-stone-500">
+                              ${li.unitPrice.toLocaleString("es-MX")} ea
+                            </div>
+                          </div>
+                          <div className="flex items-center rounded-md border border-stone-200 bg-stone-50 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setEditLineItems((prev) => ({ ...prev, [li.id]: Math.max(0, qty - 1) }))}
+                              className="p-1.5 hover:bg-stone-200 rounded-l-md"
+                            >−</button>
+                            <Input
+                              type="number"
+                              min={0}
+                              value={qty}
+                              onChange={(e) => setEditLineItems((prev) => ({ ...prev, [li.id]: parseInt(e.target.value) || 0 }))}
+                              className="w-14 h-7 text-center text-sm border-0 bg-transparent px-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setEditLineItems((prev) => ({ ...prev, [li.id]: qty + 1 }))}
+                              className="p-1.5 hover:bg-stone-200 rounded-r-md"
+                            >+</button>
+                          </div>
+                          <div className="w-20 text-right font-semibold text-stone-900 shrink-0">
+                            ${(li.unitPrice * qty).toLocaleString("es-MX")}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Notes */}
+                <div>
+                  <Label htmlFor="edit-card" className="text-xs text-rose-700">Card message</Label>
+                  <Textarea
+                    id="edit-card"
+                    value={editCardMessage}
+                    onChange={(e) => setEditCardMessage(e.target.value)}
+                    rows={2}
+                    className="text-sm"
+                  />
+                </div>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  <div>
+                    <Label htmlFor="edit-dnotes" className="text-xs">Delivery notes</Label>
+                    <Textarea
+                      id="edit-dnotes"
+                      value={editDeliveryNotes}
+                      onChange={(e) => setEditDeliveryNotes(e.target.value)}
+                      rows={2}
+                      className="text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-inotes" className="text-xs text-amber-700">Internal notes</Label>
+                    <Textarea
+                      id="edit-inotes"
+                      value={editInternalNotes}
+                      onChange={(e) => setEditInternalNotes(e.target.value)}
+                      rows={2}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Money */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="edit-fee" className="text-xs">Delivery fee (MXN)</Label>
+                    <Input
+                      id="edit-fee"
+                      type="number"
+                      value={editDeliveryFee}
+                      onChange={(e) => setEditDeliveryFee(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-disc" className="text-xs">Discount (MXN)</Label>
+                    <Input
+                      id="edit-disc"
+                      type="number"
+                      value={editDiscount}
+                      onChange={(e) => setEditDiscount(parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditOpen(false)} disabled={savingEdits}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={saveEdits}
+                  disabled={savingEdits}
+                  className="bg-rose-600 hover:bg-rose-700 text-white gap-1.5"
+                >
+                  {savingEdits && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Save changes
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
           <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm" className="text-rose-700 hover:bg-rose-50">

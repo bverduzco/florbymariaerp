@@ -13,11 +13,31 @@ import {
   ClipboardList,
   CalendarClock,
   ShoppingCart,
+  RefreshCw,
 } from "lucide-react"
 import { useCatalogue } from "@/lib/catalogue-store"
 import { usePlanStore } from "@/lib/plan-store"
 import { CustomerInput } from "@/components/floristry/customer-input"
-import { useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
+
+interface OrderLineItem {
+  id: string
+  productSku: string
+  productName: string
+  productSize: string | null
+  qty: number
+  unitPrice: number
+  lineTotal: number
+}
+
+interface Order {
+  id: string
+  orderNumber: string
+  status: string
+  customerName: string | null
+  deliveryDate: string | null
+  lineItems: OrderLineItem[]
+}
 
 function nextMondayIso() {
   const d = new Date()
@@ -27,18 +47,38 @@ function nextMondayIso() {
   return d.toISOString().split("T")[0]
 }
 
-/** Format ISO yyyy-mm-dd as dd-mm-yyyy (Mexican style). */
 function isoToDdMmYyyy(iso: string): string {
   const [y, m, d] = iso.split("-")
   return `${d}-${m}-${y}`
 }
 
-/** Given a Monday ISO date, return the Sunday ISO date 6 days later. */
 function weekEndIso(mondayIso: string): string {
   const d = new Date(mondayIso + "T00:00:00")
   d.setDate(d.getDate() + 6)
   return d.toISOString().split("T")[0]
 }
+
+type LineItem =
+  | {
+      source: "order"
+      id: string
+      orderNumber: string
+      status: string
+      product: ReturnType<typeof useCatalogue.getState>["products"][number]
+      qty: number
+      deliveryDate: string | null
+      customerName: string | null
+    }
+  | {
+      source: "manual"
+      id: string
+      orderNumber: null
+      status: null
+      product: ReturnType<typeof useCatalogue.getState>["products"][number]
+      qty: number
+      deliveryDate: string | null
+      customerName: string | null
+    }
 
 export function WeeklyPlan() {
   const products = useCatalogue((s) => s.products)
@@ -52,29 +92,66 @@ export function WeeklyPlan() {
   const setWeekStartDate = usePlanStore((s) => s.setWeekStartDate)
   const setShoppingListOpen = usePlanStore((s) => s.setShoppingListOpen)
 
+  const [orders, setOrders] = useState<Order[]>([])
+  const [ordersLoading, setOrdersLoading] = useState(false)
+
+  async function fetchOrders() {
+    setOrdersLoading(true)
+    try {
+      const res = await fetch("/api/orders", { cache: "no-store" })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setOrders(data.orders ?? [])
+    } catch (e) {
+      console.warn("Failed to load orders for weekly plan:", e)
+    } finally {
+      setOrdersLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchOrders()
+  }, [])
+
   const productBySku = useMemo(() => {
     return new Map(products.map((p) => [p.sku, p]))
   }, [products])
 
-  const lineItems = items
+  const manualLineItems: LineItem[] = items
     .map((it) => {
       const p = productBySku.get(it.productSku)
       if (!p) return null
       return {
+        source: "manual" as const,
+        id: `manual-${it.productSku}`,
+        orderNumber: null,
+        status: null,
         product: p,
         qty: it.qty,
         deliveryDate: it.deliveryDate,
         customerName: it.customerName,
       }
     })
-    .filter(
-      (x): x is {
-        product: typeof products[number]
-        qty: number
-        deliveryDate: string | null
-        customerName: string | null
-      } => x !== null,
-    )
+    .filter((x): x is LineItem => x !== null)
+
+  const orderLineItems: LineItem[] = orders.flatMap((o) =>
+    o.lineItems.map((li) => {
+      const p = productBySku.get(li.productSku)
+      if (!p) return null
+      return {
+        source: "order" as const,
+        id: `order-${o.id}-${li.id}`,
+        orderNumber: o.orderNumber,
+        status: o.status,
+        product: p,
+        qty: li.qty,
+        deliveryDate: o.deliveryDate,
+        customerName: o.customerName,
+      }
+    }),
+  ).filter((x): x is LineItem => x !== null)
+
+  const lineItems = [...orderLineItems, ...manualLineItems]
 
   const totalRevenue = lineItems.reduce(
     (sum, i) => sum + i.product.actualPriceBeforeIva * i.qty,
@@ -83,7 +160,6 @@ export function WeeklyPlan() {
   const totalCost = lineItems.reduce((sum, i) => sum + i.product.totalCost * i.qty, 0)
   const totalBouquets = lineItems.reduce((sum, i) => sum + i.qty, 0)
 
-  // Resolve week start; show date range "26-10-2026 to 01-11-2026"
   const mondayIso = weekStartDate ?? nextMondayIso()
   const sundayIso = weekEndIso(mondayIso)
   const weekRangeLabel = `${isoToDdMmYyyy(mondayIso)} to ${isoToDdMmYyyy(sundayIso)}`
@@ -96,8 +172,29 @@ export function WeeklyPlan() {
           <div className="flex items-center gap-2">
             <ClipboardList className="h-5 w-5 text-rose-700" />
             <h2 className="text-lg font-semibold text-stone-800">Weekly Plan</h2>
+            {orderLineItems.length > 0 && (
+              <Badge variant="outline" className="text-[10px] border-blue-200 bg-blue-50 text-blue-800">
+                {orderLineItems.length} from orders
+              </Badge>
+            )}
+            {manualLineItems.length > 0 && (
+              <Badge variant="outline" className="text-[10px]">
+                {manualLineItems.length} manual
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchOrders}
+              disabled={ordersLoading}
+              className="text-xs gap-1.5"
+              title="Refresh orders from the database"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${ordersLoading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
             {items.length > 0 && (
               <Button
                 variant="ghost"
@@ -105,27 +202,29 @@ export function WeeklyPlan() {
                 onClick={clear}
                 className="text-xs text-stone-500 hover:text-rose-700"
               >
-                Clear
+                Clear manual
               </Button>
             )}
             <Button
               size="sm"
               onClick={() => setShoppingListOpen(true)}
-              disabled={items.length === 0}
+              disabled={lineItems.length === 0}
               className="bg-rose-600 hover:bg-rose-700 text-white gap-1.5"
             >
               <ShoppingCart className="h-4 w-4" />
               Shopping List
+              {totalBouquets > 0 && (
+                <span className="ml-1 inline-flex items-center justify-center min-w-[20px] h-5 px-1 text-[10px] rounded-full bg-white text-rose-700 font-semibold">
+                  {totalBouquets}
+                </span>
+              )}
             </Button>
           </div>
         </div>
 
         <div className="grid sm:grid-cols-[200px_1fr] gap-3 items-end">
           <div>
-            <Label
-              htmlFor="week-start"
-              className="text-xs text-stone-600 flex items-center gap-1.5 mb-1.5"
-            >
+            <Label htmlFor="week-start" className="text-xs text-stone-600 flex items-center gap-1.5 mb-1.5">
               <CalendarDays className="h-3.5 w-3.5" /> Week starting (Monday)
             </Label>
             <Input
@@ -150,101 +249,142 @@ export function WeeklyPlan() {
             <ClipboardList className="h-10 w-10 mx-auto text-stone-300 mb-3" />
             <p className="text-sm text-stone-500 font-medium">No bouquets yet</p>
             <p className="text-xs text-stone-400 mt-1">
-              Go to the Catalogue tab to add bouquets to your weekly plan.
+              Create an order in the New Order tab, or add bouquets manually from the Catalogue tab.
             </p>
           </div>
         ) : (
           <div className="space-y-2">
-            {lineItems.map(({ product, qty, deliveryDate, customerName }) => (
-              <div
-                key={product.sku}
-                className="rounded-lg border border-rose-200 bg-white p-3 text-sm"
-              >
-                <div className="flex justify-between items-start gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="font-medium text-stone-800 truncate">{product.name}</div>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      {product.size && (
-                        <Badge variant="outline" className="text-[10px] py-0">
-                          {product.size}
-                        </Badge>
-                      )}
-                      <span className="text-xs text-stone-500">
-                        ${product.actualPriceBeforeIva.toLocaleString("es-MX")} ea
-                      </span>
+            {lineItems.map((item) => {
+              const { product, qty, deliveryDate, customerName } = item
+              const isOrder = item.source === "order"
+              return (
+                <div
+                  key={item.id}
+                  className={`rounded-lg border p-3 text-sm ${
+                    isOrder ? "border-blue-200 bg-blue-50/30" : "border-rose-200 bg-white"
+                  }`}
+                >
+                  {isOrder && (
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[10px] text-blue-700 flex-wrap">
+                      <Badge variant="outline" className="text-[10px] py-0 border-blue-200 bg-blue-100 text-blue-800">
+                        {item.orderNumber}
+                      </Badge>
+                      <span className="text-blue-600">· {item.status.replace(/_/g, " ")}</span>
+                      <span className="text-stone-400 ml-auto">From Orders tab (read-only here)</span>
                     </div>
+                  )}
+                  {!isOrder && (
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[10px] text-stone-400">
+                      <span className="italic">Manual entry</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-stone-800 truncate">{product.name}</div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {product.size && (
+                          <Badge variant="outline" className="text-[10px] py-0">
+                            {product.size}
+                          </Badge>
+                        )}
+                        <span className="text-xs text-stone-500">
+                          ${product.actualPriceBeforeIva.toLocaleString("es-MX")} ea
+                        </span>
+                      </div>
+                    </div>
+                    {!isOrder && (
+                      <button
+                        onClick={() => removeItem(product.sku)}
+                        className="text-stone-300 hover:text-rose-600 transition-colors p-1"
+                        aria-label="Remove"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
-                  <button
-                    onClick={() => removeItem(product.sku)}
-                    className="text-stone-300 hover:text-rose-600 transition-colors p-1"
-                    aria-label="Remove"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="mt-2 flex items-center gap-2">
-                  <div className="flex items-center rounded-md border border-stone-200 bg-stone-50">
-                    <button
-                      onClick={() => setQty(product.sku, qty - 1)}
-                      className="p-1.5 hover:bg-stone-200 rounded-l-md transition-colors"
-                      aria-label="Decrease"
-                    >
-                      <Minus className="h-3 w-3" />
-                    </button>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={qty}
-                      onChange={(e) => setQty(product.sku, parseInt(e.target.value) || 0)}
-                      className="w-12 h-7 text-center border-0 bg-transparent px-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    />
-                    <button
-                      onClick={() => setQty(product.sku, qty + 1)}
-                      className="p-1.5 hover:bg-stone-200 rounded-r-md transition-colors"
-                      aria-label="Increase"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </button>
+                  <div className="mt-2 flex items-center gap-2">
+                    {isOrder ? (
+                      <span className="text-sm font-semibold text-stone-800">×{qty}</span>
+                    ) : (
+                      <div className="flex items-center rounded-md border border-stone-200 bg-stone-50">
+                        <button
+                          onClick={() => setQty(product.sku, qty - 1)}
+                          className="p-1.5 hover:bg-stone-200 rounded-l-md transition-colors"
+                          aria-label="Decrease"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </button>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={qty}
+                          onChange={(e) => setQty(product.sku, parseInt(e.target.value) || 0)}
+                          className="w-12 h-7 text-center border-0 bg-transparent px-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
+                        <button
+                          onClick={() => setQty(product.sku, qty + 1)}
+                          className="p-1.5 hover:bg-stone-200 rounded-r-md transition-colors"
+                          aria-label="Increase"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
+                    <span className="ml-auto font-semibold text-stone-800">
+                      ${(product.actualPriceBeforeIva * qty).toLocaleString("es-MX")}
+                    </span>
                   </div>
-                  <span className="ml-auto font-semibold text-stone-800">
-                    ${(product.actualPriceBeforeIva * qty).toLocaleString("es-MX")}
-                  </span>
-                </div>
 
-                {/* Customer + delivery date row */}
-                <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <CustomerInput
-                    value={customerName ?? ""}
-                    onChange={(v) => setCustomerName(product.sku, v || null)}
-                    placeholder="Customer name"
-                    ariaLabel={`Customer name for ${product.name}`}
-                    className="h-7 pl-7 pr-2 text-xs bg-stone-50 border-stone-200 text-stone-700"
-                  />
-                  <div className="relative">
-                    <CalendarClock className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-stone-400 pointer-events-none z-10" />
-                    <Input
-                      type="date"
-                      value={deliveryDate ?? ""}
-                      onChange={(e) => setDeliveryDate(product.sku, e.target.value || null)}
-                      aria-label={`Delivery date for ${product.name}`}
-                      placeholder="Delivery date"
-                      className="h-7 pl-7 pr-7 text-xs bg-stone-50 border-stone-200 text-stone-700 w-full cursor-pointer"
-                    />
-                  </div>
+                  {/* Customer + delivery date row */}
+                  {isOrder ? (
+                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="text-xs text-stone-600 flex items-center gap-1.5">
+                        <span className="text-stone-400">Customer:</span>
+                        <span className="font-medium">{customerName ?? "—"}</span>
+                      </div>
+                      {deliveryDate && (
+                        <div className="text-xs text-rose-700 flex items-center gap-1.5">
+                          <CalendarClock className="h-3 w-3" />
+                          {new Date(deliveryDate + "T00:00:00").toLocaleDateString("es-MX", {
+                            weekday: "short", day: "numeric", month: "short",
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <CustomerInput
+                        value={customerName ?? ""}
+                        onChange={(v) => setCustomerName(product.sku, v || null)}
+                        placeholder="Customer name"
+                        ariaLabel={`Customer name for ${product.name}`}
+                        className="h-7 pl-7 pr-2 text-xs bg-stone-50 border-stone-200 text-stone-700"
+                      />
+                      <div className="relative">
+                        <CalendarClock className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-stone-400 pointer-events-none z-10" />
+                        <Input
+                          type="date"
+                          value={deliveryDate ?? ""}
+                          onChange={(e) => setDeliveryDate(product.sku, e.target.value || null)}
+                          aria-label={`Delivery date for ${product.name}`}
+                          placeholder="Delivery date"
+                          className="h-7 pl-7 pr-7 text-xs bg-stone-50 border-stone-200 text-stone-700 w-full cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {!isOrder && deliveryDate && (
+                    <div className="mt-1.5">
+                      <Badge variant="outline" className="text-[10px] py-0">
+                        {new Date(deliveryDate + "T00:00:00").toLocaleDateString("es-MX", {
+                          weekday: "short", day: "numeric", month: "short",
+                        })}
+                      </Badge>
+                    </div>
+                  )}
                 </div>
-                {deliveryDate && (
-                  <div className="mt-1.5">
-                    <Badge variant="outline" className="text-[10px] py-0">
-                      {new Date(deliveryDate + "T00:00:00").toLocaleDateString("es-MX", {
-                        weekday: "short",
-                        day: "numeric",
-                        month: "short",
-                      })}
-                    </Badge>
-                  </div>
-                )}
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </Card>

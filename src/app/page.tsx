@@ -18,7 +18,6 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import {
   Flower2,
-  ShoppingCart,
   Sparkles,
   ClipboardList,
   Users,
@@ -83,19 +82,6 @@ export default function Home() {
               </Badge>
             )}
             <ErpUploadButton />
-            <Button
-              onClick={() => setShoppingListOpen(true)}
-              className="bg-rose-600 hover:bg-rose-700 text-white gap-1.5"
-              size="sm"
-            >
-              <ShoppingCart className="h-4 w-4" />
-              Shopping List
-              {totalPlanQty > 0 && (
-                <span className="ml-1 inline-flex items-center justify-center min-w-[20px] h-5 px-1 text-[10px] rounded-full bg-white text-rose-700 font-semibold">
-                  {totalPlanQty}
-                </span>
-              )}
-            </Button>
           </div>
         </div>
       </header>
