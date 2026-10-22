@@ -59,95 +59,104 @@ function ProductCard({ product }: { product: CatalogueProduct }) {
 
   return (
     <Card
-      className={`relative flex flex-col gap-3 p-4 bg-gradient-to-br ${gradient} border-rose-100 hover:border-rose-300 hover:shadow-md transition-all`}
+      className={`relative flex flex-col sm:flex-row gap-4 p-4 bg-gradient-to-br ${gradient} border-rose-100 hover:border-rose-300 hover:shadow-md transition-all`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h3 className="text-base font-semibold text-stone-800 leading-tight">{product.name}</h3>
-          <div className="mt-1 flex items-center gap-2 flex-wrap">
-            <Badge variant="secondary" className="text-xs">
-              {product.category}
-            </Badge>
-            {product.size && (
-              <Badge variant="outline" className="text-xs">
-                {product.size}
+      {/* Thumbnail area — reserved for future bouquet photo. Currently a soft placeholder. */}
+      <div className="shrink-0 w-full sm:w-32 h-32 rounded-lg bg-white/50 border border-white/80 flex items-center justify-center overflow-hidden">
+        <Sparkles className="h-8 w-8 text-rose-300/60" />
+      </div>
+
+      {/* Card content — takes remaining width */}
+      <div className="flex-1 min-w-0 flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold text-stone-800 leading-tight truncate">{product.name}</h3>
+            <div className="mt-1 flex items-center gap-2 flex-wrap">
+              <Badge variant="secondary" className="text-xs">
+                {product.category}
               </Badge>
-            )}
+              {product.size && (
+                <Badge variant="outline" className="text-xs">
+                  {product.size}
+                </Badge>
+              )}
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <div className="text-lg font-bold text-stone-900">
+              ${product.actualPriceBeforeIva.toLocaleString("es-MX")}
+            </div>
+            <div className="text-[10px] text-stone-500">MXN · before IVA</div>
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-lg font-bold text-stone-900">
-            ${product.actualPriceBeforeIva.toLocaleString("es-MX")}
+
+        {product.description && (
+          <p className="text-xs text-stone-600 line-clamp-2 leading-relaxed">{product.description}</p>
+        )}
+
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <div className="rounded-md bg-white/70 px-2 py-1.5">
+            <div className="text-stone-500">Cost</div>
+            <div className="font-semibold text-stone-700">
+              ${Math.round(product.totalCost).toLocaleString("es-MX")}
+            </div>
           </div>
-          <div className="text-[10px] text-stone-500">MXN · before IVA</div>
-        </div>
-      </div>
-
-      {product.description && (
-        <p className="text-xs text-stone-600 line-clamp-3 leading-relaxed">{product.description}</p>
-      )}
-
-      <div className="mt-1 grid grid-cols-3 gap-2 text-xs">
-        <div className="rounded-md bg-white/70 px-2 py-1.5">
-          <div className="text-stone-500">Cost</div>
-          <div className="font-semibold text-stone-700">
-            ${Math.round(product.totalCost).toLocaleString("es-MX")}
+          <div className="rounded-md bg-white/70 px-2 py-1.5">
+            <div className="text-stone-500">Margin</div>
+            <div className="font-semibold text-emerald-700">{(product.marginPct * 100).toFixed(0)}%</div>
+          </div>
+          <div className="rounded-md bg-white/70 px-2 py-1.5">
+            <div className="text-stone-500">Recipe</div>
+            <div className="font-semibold text-stone-700">{product.recipeLines.length} items</div>
           </div>
         </div>
-        <div className="rounded-md bg-white/70 px-2 py-1.5">
-          <div className="text-stone-500">Margin</div>
-          <div className="font-semibold text-emerald-700">{(product.marginPct * 100).toFixed(0)}%</div>
-        </div>
-        <div className="rounded-md bg-white/70 px-2 py-1.5">
-          <div className="text-stone-500">Recipe</div>
-          <div className="font-semibold text-stone-700">{product.recipeLines.length} items</div>
-        </div>
-      </div>
 
-      <div className="flex items-center gap-2">
-        <Button
-          size="sm"
-          onClick={handleAddToPlan}
-          className="bg-rose-600 hover:bg-rose-700 text-white gap-1 shrink-0"
-        >
-          <Plus className="h-4 w-4" />
-          Add
-        </Button>
+        {/* Action row — wraps on narrow widths */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button
+            size="sm"
+            onClick={handleAddToPlan}
+            className="bg-rose-600 hover:bg-rose-700 text-white gap-1 shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+            Add
+          </Button>
 
-        <div className="flex-1 min-w-[110px]">
-          <CustomerInput
-            value={customerName || inCart?.customerName || ""}
-            onChange={(v) => handleCustomerChange(v)}
-            placeholder="Customer"
-            ariaLabel={`Customer name for ${product.name}`}
-            className="h-8 pl-7 pr-2 text-xs bg-white border-stone-200 text-stone-700"
-          />
+          <div className="flex-1 min-w-[140px]">
+            <CustomerInput
+              value={customerName || inCart?.customerName || ""}
+              onChange={(v) => handleCustomerChange(v)}
+              placeholder="Customer"
+              ariaLabel={`Customer name for ${product.name}`}
+              className="h-8 pl-7 pr-2 text-xs bg-white border-stone-200 text-stone-700"
+            />
+          </div>
+
+          <div className="relative flex-1 min-w-[160px]">
+            <CalendarClock className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-400 pointer-events-none z-10" />
+            <Input
+              type="date"
+              value={deliveryDate || inCart?.deliveryDate || ""}
+              onChange={(e) => handleDateChange(e.target.value)}
+              placeholder="Delivery date"
+              aria-label={`Delivery date for ${product.name}`}
+              className="h-8 pl-7 pr-8 text-xs bg-white border-stone-200 text-stone-700 w-full cursor-pointer"
+            />
+          </div>
+
+          {inCart && (
+            <Badge className="bg-rose-100 text-rose-700 border border-rose-200 px-2 shrink-0">
+              {inCart.qty} in plan
+            </Badge>
+          )}
         </div>
 
-        <div className="relative flex-1 min-w-[130px]">
-          <CalendarClock className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-400 pointer-events-none z-10" />
-          <Input
-            type="date"
-            value={deliveryDate || inCart?.deliveryDate || ""}
-            onChange={(e) => handleDateChange(e.target.value)}
-            placeholder="Delivery date"
-            aria-label={`Delivery date for ${product.name}`}
-            className="h-8 pl-7 pr-7 text-xs bg-white border-stone-200 text-stone-700 w-full cursor-pointer"
-          />
-        </div>
-
-        {inCart && (
-          <Badge className="bg-rose-100 text-rose-700 border border-rose-200 px-2 shrink-0">
-            {inCart.qty} in plan
-          </Badge>
+        {product.linesToReview > 0 && (
+          <div className="text-[10px] text-amber-700 bg-amber-50 rounded px-2 py-1">
+            {product.linesToReview} recipe line{product.linesToReview > 1 ? "s" : ""} need attention (see ERP)
+          </div>
         )}
       </div>
-
-      {product.linesToReview > 0 && (
-        <div className="text-[10px] text-amber-700 bg-amber-50 rounded px-2 py-1">
-          {product.linesToReview} recipe line{product.linesToReview > 1 ? "s" : ""} need attention (see ERP)
-        </div>
-      )}
     </Card>
   )
 }
@@ -203,9 +212,9 @@ export function CatalogueGrid() {
 
   if (loading && products.length === 0) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <div key={i} className="h-64 rounded-xl bg-stone-100 animate-pulse" />
+      <div className="space-y-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-40 rounded-xl bg-stone-100 animate-pulse" />
         ))}
       </div>
     )
@@ -231,13 +240,14 @@ export function CatalogueGrid() {
               {sizes.length} size{sizes.length > 1 ? "s" : ""}
             </span>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Single-column layout — full width of container so date picker never clips */}
+          <div className="space-y-4">
             {sizes.map((p) => (
               <Sheet key={p.sku} open={selected === p.sku} onOpenChange={(o) => setSelected(o ? p.sku : null)}>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1">
                   <ProductCard product={p} />
                   <SheetTrigger asChild>
-                    <Button variant="link" size="sm" className="text-xs text-stone-500">
+                    <Button variant="link" size="sm" className="text-xs text-stone-500 self-start">
                       View recipe ({p.recipeLines.length} components)
                     </Button>
                   </SheetTrigger>

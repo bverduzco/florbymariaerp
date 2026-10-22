@@ -70,38 +70,42 @@ export function MoneysSection() {
         </Badge>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <MoneyCell
+      {/* Vertical stack of money rows */}
+      <div className="space-y-2">
+        <MoneyRow
           label="Bouquets"
           value={String(totals.bouquets)}
-          icon={<Package className="h-3.5 w-3.5 text-stone-400" />}
+          icon={<Package className="h-4 w-4 text-stone-400" />}
         />
-        <MoneyCell
+        <MoneyRow
           label="Est. Cost"
           value={`$${Math.round(totals.estCost).toLocaleString("es-MX")}`}
           sublabel="materials"
-          icon={<ShoppingCart className="h-3.5 w-3.5 text-stone-400" />}
+          icon={<ShoppingCart className="h-4 w-4 text-stone-400" />}
         />
-        <MoneyCell
+        <MoneyRow
           label="Subtotal"
           value={`$${Math.round(totals.subtotal).toLocaleString("es-MX")}`}
           sublabel="pre-IVA"
-          icon={<DollarSign className="h-3.5 w-3.5 text-stone-400" />}
+          icon={<DollarSign className="h-4 w-4 text-stone-400" />}
         />
-        <MoneyCell
+        <MoneyRow
           label="Delivery"
           value={`$${totals.delivery.toLocaleString("es-MX")}`}
           sublabel={`${totals.deliveryAddresses} address${totals.deliveryAddresses !== 1 ? "es" : ""} × $${DELIVERY_FLAT_RATE_PER_ADDRESS}`}
-          icon={<Truck className="h-3.5 w-3.5 text-stone-400" />}
+          icon={<Truck className="h-4 w-4 text-stone-400" />}
         />
 
         {/* Discount — editable */}
-        <div className="rounded-lg bg-white/70 border border-stone-200 p-2.5">
-          <div className="text-[10px] uppercase tracking-wide text-stone-500 flex items-center gap-1">
-            <Percent className="h-3.5 w-3.5 text-stone-400" />
-            Discount
+        <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-md bg-white/70 border border-stone-200">
+          <div className="flex items-center gap-2">
+            <Percent className="h-4 w-4 text-stone-400" />
+            <div>
+              <div className="text-sm font-medium text-stone-700">Discount</div>
+              <div className="text-[10px] text-stone-500">applied to subtotal</div>
+            </div>
           </div>
-          <div className="mt-1 flex items-center gap-1">
+          <div className="flex items-center gap-1 max-w-[140px]">
             <span className="text-stone-500 text-sm">$</span>
             <Input
               type="number"
@@ -110,18 +114,23 @@ export function MoneysSection() {
               onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
               placeholder="0"
               aria-label="Discount amount"
-              className="h-7 text-sm font-semibold text-stone-800 border-0 bg-transparent px-0 focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-full"
+              className="h-7 text-sm font-semibold text-stone-800 border-0 bg-transparent px-0 focus-visible:ring-0 text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none w-full"
             />
           </div>
         </div>
 
-        {/* Est. profit */}
-        <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-2.5">
-          <div className="text-[10px] uppercase tracking-wide text-emerald-700 flex items-center gap-1">
-            <TrendingUp className="h-3.5 w-3.5" />
-            Est. profit
+        {/* Est. profit — emphasized */}
+        <div className="flex items-center justify-between gap-3 py-3 px-3 rounded-md bg-emerald-50 border border-emerald-300 mt-2">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-emerald-700" />
+            <div>
+              <div className="text-sm font-semibold text-emerald-800">Est. profit</div>
+              <div className="text-[10px] text-emerald-700">
+                subtotal − cost − delivery − discount
+              </div>
+            </div>
           </div>
-          <div className="mt-1 text-lg font-bold text-emerald-800">
+          <div className="text-xl font-bold text-emerald-900">
             ${Math.round(totals.profit).toLocaleString("es-MX")}
           </div>
         </div>
@@ -138,7 +147,7 @@ export function MoneysSection() {
   )
 }
 
-function MoneyCell({
+function MoneyRow({
   label,
   value,
   sublabel,
@@ -150,13 +159,15 @@ function MoneyCell({
   icon?: React.ReactNode
 }) {
   return (
-    <div className="rounded-lg bg-white/70 border border-stone-200 p-2.5">
-      <div className="text-[10px] uppercase tracking-wide text-stone-500 flex items-center gap-1">
+    <div className="flex items-center justify-between gap-3 py-2 px-3 rounded-md bg-white/70 border border-stone-200">
+      <div className="flex items-center gap-2">
         {icon}
-        {label}
+        <div>
+          <div className="text-sm font-medium text-stone-700">{label}</div>
+          {sublabel && <div className="text-[10px] text-stone-500">{sublabel}</div>}
+        </div>
       </div>
-      <div className="mt-1 text-base font-semibold text-stone-800">{value}</div>
-      {sublabel && <div className="text-[10px] text-stone-500 mt-0.5">{sublabel}</div>}
+      <div className="text-base font-semibold text-stone-800">{value}</div>
     </div>
   )
 }
