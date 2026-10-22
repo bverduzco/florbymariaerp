@@ -96,7 +96,16 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       where: { id },
       include: { customer: true, lineItems: true },
     })
-    return NextResponse.json({ order: updated })
+    // Serialize the same way as the main orders endpoint — compute lineTotal
+    // (the raw Prisma object doesn't have lineTotal, which crashes the UI)
+    const serialized = updated ? {
+      ...updated,
+      lineItems: updated.lineItems.map((li) => ({
+        ...li,
+        lineTotal: li.unitPrice * li.qty,
+      })),
+    } : null
+    return NextResponse.json({ order: serialized })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     return NextResponse.json({ error: "Failed to update line items", detail: msg }, { status: 500 })

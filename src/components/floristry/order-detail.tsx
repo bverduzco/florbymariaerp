@@ -536,7 +536,7 @@ export function OrderDetail({
                               )}
                             </div>
                             <div className="text-[10px] text-stone-500">
-                              ${li.unitPrice.toLocaleString("es-MX")} ea
+                              ${(li.unitPrice ?? 0).toLocaleString("es-MX")} ea
                             </div>
                           </div>
                           <div className="flex items-center rounded-md border border-stone-200 bg-stone-50 shrink-0">
@@ -801,10 +801,10 @@ export function OrderDetail({
                     <Badge variant="outline" className="ml-1.5 text-[10px] py-0">{li.productSize}</Badge>
                   )}
                 </div>
-                <div className="text-xs text-stone-500">×{li.qty} @ ${li.unitPrice.toLocaleString("es-MX")}</div>
+                <div className="text-xs text-stone-500">×{li.qty} @ ${(li.unitPrice ?? 0).toLocaleString("es-MX")}</div>
               </div>
               <div className="font-semibold text-stone-900 shrink-0">
-                ${li.lineTotal.toLocaleString("es-MX")}
+                ${(li.lineTotal ?? 0).toLocaleString("es-MX")}
               </div>
             </div>
           ))}
