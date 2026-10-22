@@ -95,6 +95,65 @@ model Customer {
   notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  orders    Order[]
 
   @@unique([name, phone])
+}
+
+model Order {
+  id              String   @id @default(cuid())
+  orderNumber     String   @unique // e.g. ORD-1001
+  status          String   @default("draft")
+  // draft | quote_sent | awaiting_payment | payment_confirmed | procuring | producing | delivered | fulfilled | cancelled
+
+  customerId      String
+  customer        Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  deliveryDate    DateTime?
+  deliveryAddress String?
+
+  // Notes
+  cardMessage     String?
+  deliveryNotes   String?
+  internalNotes   String?
+
+  // Money
+  deliveryFee     Float    @default(100) // flat rate per address
+  discount        Float    @default(0)
+  // subtotal, iva, total are computed (not stored)
+
+  // Sales pipeline tracking
+  quoteSentAt       DateTime?
+  quoteSentVia      String? // whatsapp | email | sms | in_person
+  paymentMethod     String? // cash | spei | online_link | card
+  paymentOptionsSentAt DateTime?
+  paymentInstructionsSent Boolean @default(false)
+  paymentStatus     String   @default("not_started")
+  // not_started | pending | confirmed | refunded | failed
+  paymentConfirmedAt DateTime?
+  paymentAmount     Float?
+  paymentReference  String? // SPEI ref, Stripe charge ID, etc.
+
+  // Procurement
+  procurementStartedAt DateTime?
+  producedAt           DateTime?
+  deliveredAt          DateTime?
+  fulfilledAt          DateTime?
+  cancelledAt          DateTime?
+
+  lineItems       OrderLineItem[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model OrderLineItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productSku  String
+  productName String
+  productSize String?
+  qty         Int
+  unitPrice   Float // snapshot — locked at order time
+  createdAt   DateTime @default(now())
 }
