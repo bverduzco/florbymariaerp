@@ -93,14 +93,22 @@ export function ShoppingListPanel({
 
   const [data, setData] = useState<PlanResponse | null>(null)
   const [orders, setOrders] = useState<any[]>([])
+  const [ordersLoaded, setOrdersLoaded] = useState(false)
 
   // Fetch orders from DB whenever the panel opens
   useEffect(() => {
     if (open) {
+      setOrdersLoaded(false)
       fetch("/api/orders", { cache: "no-store" })
         .then((r) => (r.ok ? r.json() : { orders: [] }))
-        .then((data) => setOrders(data.orders ?? []))
-        .catch(() => {})
+        .then((data) => {
+          setOrders(data.orders ?? [])
+          setOrdersLoaded(true)
+        })
+        .catch(() => {
+          setOrders([])
+          setOrdersLoaded(true)
+        })
     }
   }, [open])
 
@@ -156,11 +164,15 @@ export function ShoppingListPanel({
     }
   }
 
-  // Re-fetch when panel opens, or when items / orders / delivery dates change
+  // Re-fetch when panel opens + orders have loaded, or when plan items change
   useEffect(() => {
-    if (open && (items.length > 0 || orders.length > 0)) fetchPlan()
-    if (items.length === 0 && orders.length === 0) setData(null)
-  }, [open, items, orders, weekStartDate])
+    if (!open || !ordersLoaded) return
+    if (items.length > 0 || orders.length > 0) {
+      fetchPlan()
+    } else {
+      setData(null)
+    }
+  }, [open, items, orders, ordersLoaded, weekStartDate])
 
   function downloadCsv() {
     if (!data) return
