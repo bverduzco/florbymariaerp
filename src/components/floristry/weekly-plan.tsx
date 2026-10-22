@@ -362,9 +362,10 @@ export function WeeklyPlan() {
                       {deliveryDate && (
                         <div className="text-xs text-rose-700 flex items-center gap-1.5">
                           <CalendarClock className="h-3 w-3" />
-                          {new Date(deliveryDate + "T00:00:00").toLocaleDateString("es-MX", {
+                          <span className="font-medium">Deliver on:</span>
+                          <span>{new Date(deliveryDate + "T00:00:00").toLocaleDateString("es-MX", {
                             weekday: "short", day: "numeric", month: "short",
-                          })}
+                          })}</span>
                         </div>
                       )}
                     </div>
@@ -392,8 +393,8 @@ export function WeeklyPlan() {
                   )}
                   {!isOrder && deliveryDate && (
                     <div className="mt-1.5">
-                      <Badge variant="outline" className="text-[10px] py-0">
-                        {new Date(deliveryDate + "T00:00:00").toLocaleDateString("es-MX", {
+                      <Badge variant="outline" className="text-[10px] py-0 text-rose-700 border-rose-200">
+                        Deliver on: {new Date(deliveryDate + "T00:00:00").toLocaleDateString("es-MX", {
                           weekday: "short", day: "numeric", month: "short",
                         })}
                       </Badge>
