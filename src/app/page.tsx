@@ -14,6 +14,7 @@ import { OrdersTab } from "@/components/floristry/orders-tab"
 import { OrderIntakeForm } from "@/components/floristry/order-intake-form"
 import { GenerateDraftButton } from "@/components/floristry/generate-draft-button"
 import { CustomTab } from "@/components/floristry/custom-tab"
+import { useNavStore } from "@/lib/nav-store"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -41,21 +42,51 @@ export default function Home() {
   const shoppingListOpen = usePlanStore((s) => s.shoppingListOpen)
 
   // Initial tab state — check ?tab=XXX in URL on mount
+  const [initialOrderId, setInitialOrderId] = useState<string | null>(null)
   const [tab, setTab] = useState<TabKey>(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search)
       const tabParam = params.get("tab")
       if (tabParam && ["catalogue", "intake", "orders", "custom", "plan", "customers", "delivery"].includes(tabParam)) {
-        // Strip ?tab= from URL so refresh doesn't keep switching
-        window.history.replaceState({}, "", window.location.pathname)
+        // Don't strip URL yet — we need orderId too
         return tabParam as TabKey
       }
     }
     return "catalogue"
   })
 
+  // Read orderId from URL after mount
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const params = new URLSearchParams(window.location.search)
+    const orderIdParam = params.get("orderId")
+    const tabParam = params.get("tab")
+    const hasParams = Boolean(orderIdParam || tabParam)
+    if (orderIdParam) {
+      Promise.resolve().then(() => setInitialOrderId(orderIdParam))
+    }
+    if (hasParams) {
+      Promise.resolve().then(() => {
+        window.history.replaceState({}, "", window.location.pathname)
+      })
+    }
+  }, [])
+
   const totalPlanQty = planItems.reduce((s, i) => s + i.qty, 0)
   const planWithDeliveries = planItems.filter((i) => i.deliveryDate).length
+
+  // Listen for pendingTab changes from the nav store (e.g. Delivery View → Orders)
+  const pendingTab = useNavStore((s) => s.pendingTab)
+  const setPendingTab = useNavStore((s) => s.setPendingTab)
+  useEffect(() => {
+    if (!pendingTab || pendingTab === tab) return
+    // Use requestAnimationFrame to defer the state update out of the effect body
+    const targetTab = pendingTab
+    requestAnimationFrame(() => {
+      setTab(targetTab as TabKey)
+      setPendingTab(null)
+    })
+  }, [pendingTab, tab, setPendingTab])
 
   // Initial load
   useEffect(() => {
@@ -160,7 +191,7 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="orders" className="mt-4">
-            <OrdersTab />
+            <OrdersTab initialOrderId={initialOrderId} />
           </TabsContent>
 
           <TabsContent value="custom" className="mt-4">
@@ -187,7 +218,10 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="delivery" className="mt-4">
-            <DeliveryView />
+            <DeliveryView onNavigateToOrder={(orderId) => {
+              setInitialOrderId(orderId)
+              setTab("orders")
+            }} />
           </TabsContent>
         </Tabs>
       </main>

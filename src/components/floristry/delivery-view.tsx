@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { ChevronLeft, ChevronRight, CalendarDays, Package } from "lucide-react"
 import { useCatalogue } from "@/lib/catalogue-store"
 import { usePlanStore } from "@/lib/plan-store"
+import { useNavStore } from "@/lib/nav-store"
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 const WEEKDAYS_LONG = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
@@ -18,6 +19,8 @@ interface DeliveryItem {
   qty: number
   customerName: string | null
   price: number
+  orderId: string | null
+  orderNumber: string | null
 }
 
 function isoFromDate(d: Date): string {
@@ -31,9 +34,11 @@ function sameDay(a: string, b: string): boolean {
   return a === b
 }
 
-export function DeliveryView() {
+export function DeliveryView({ onNavigateToOrder }: { onNavigateToOrder?: (orderId: string) => void }) {
   const products = useCatalogue((s) => s.products)
   const items = usePlanStore((s) => s.items)
+  const setPendingOrderId = useNavStore((s) => s.setPendingOrderId)
+  const setPendingTab = useNavStore((s) => s.setPendingTab)
 
   // Fetch real Orders from the API
   const [orders, setOrders] = useState<any[]>([])
@@ -43,6 +48,18 @@ export function DeliveryView() {
       .then((data) => setOrders(data.orders ?? []))
       .catch(() => {})
   }, [])
+
+  function handleDeliveryClick(d: DeliveryItem) {
+    if (!d.orderId) return
+    // Set the pending order ID in the nav store for the Orders tab to pick up
+    setPendingOrderId(d.orderId)
+    // Switch to Orders tab via callback prop (direct state update in parent)
+    if (onNavigateToOrder) {
+      onNavigateToOrder(d.orderId)
+    } else {
+      setPendingTab("orders")
+    }
+  }
 
   // Default to current month
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear())
@@ -71,6 +88,8 @@ export function DeliveryView() {
             qty: li.qty,
             customerName: o.customerName,
             price: li.unitPrice,
+            orderId: o.id,
+            orderNumber: o.orderNumber,
           })
           m.set(o.deliveryDate, existing)
           continue
@@ -85,6 +104,8 @@ export function DeliveryView() {
           qty: li.qty,
           customerName: o.customerName,
           price: product?.actualPriceBeforeIva ?? li.unitPrice,
+          orderId: o.id,
+          orderNumber: o.orderNumber,
         })
         m.set(o.deliveryDate, existing)
       }
@@ -103,6 +124,8 @@ export function DeliveryView() {
         qty: item.qty,
         customerName: item.customerName,
         price: product.actualPriceBeforeIva,
+        orderId: null,
+        orderNumber: null,
       })
       m.set(item.deliveryDate, existing)
     }
@@ -276,11 +299,21 @@ export function DeliveryView() {
 
                       <div className="space-y-1 overflow-hidden">
                         {list.slice(0, 3).map((d, i) => (
-                          <div
+                          <button
                             key={i}
-                            className="text-[10px] leading-tight rounded bg-white border border-rose-200 px-1 py-0.5"
+                            onClick={() => handleDeliveryClick(d)}
+                            disabled={!d.orderId}
+                            className={`text-[10px] leading-tight rounded bg-white border border-rose-200 px-1 py-0.5 w-full text-left transition-colors ${
+                              d.orderId
+                                ? "hover:bg-rose-50 hover:border-rose-400 cursor-pointer"
+                                : "cursor-default"
+                            }`}
+                            title={d.orderId ? `View order ${d.orderNumber}` : "No linked order"}
                           >
                             <div className="font-medium text-stone-800 truncate">
+                              {d.orderNumber && (
+                                <span className="text-blue-600 mr-1">{d.orderNumber}</span>
+                              )}
                               {d.productName}
                               {d.productSize && (
                                 <span className="text-stone-500 ml-0.5">({d.productSize[0]})</span>
@@ -290,7 +323,7 @@ export function DeliveryView() {
                             {d.customerName && (
                               <div className="text-stone-500 truncate">↳ {d.customerName}</div>
                             )}
-                          </div>
+                          </button>
                         ))}
                         {list.length > 3 && (
                           <div className="text-[10px] text-stone-500 italic">

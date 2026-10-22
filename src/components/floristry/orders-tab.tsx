@@ -19,6 +19,7 @@ import {
   DollarSign,
 } from "lucide-react"
 import { toast } from "sonner"
+import { useNavStore } from "@/lib/nav-store"
 import { OrderDetail } from "@/components/floristry/order-detail"
 
 interface LineItem {
@@ -90,11 +91,24 @@ const STATUS_BADGES: Record<string, { label: string; className: string }> = {
   cancelled: { label: "Cancelled", className: "bg-red-100 text-red-800 border-red-200" },
 }
 
-export function OrdersTab() {
+export function OrdersTab({ initialOrderId }: { initialOrderId?: string | null }) {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState("all")
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
+
+  // Read pendingOrderId from the shared nav store (set by Delivery View clicks)
+  const pendingOrderId = useNavStore((s) => s.pendingOrderId)
+  const setPendingOrderId = useNavStore((s) => s.setPendingOrderId)
+
+  // Pick up orderId from either URL param (initialOrderId) or nav store (pendingOrderId)
+  useEffect(() => {
+    const id = initialOrderId || pendingOrderId
+    if (id) {
+      setSelectedOrderId(id)
+      setPendingOrderId(null) // clear after consuming
+    }
+  }, [initialOrderId, pendingOrderId, setPendingOrderId])
 
   const fetchOrders = useCallback(async () => {
     setLoading(true)
@@ -149,7 +163,17 @@ export function OrdersTab() {
         />
       )
     }
-    // Order was deleted while viewing
+    // If orders haven't loaded yet, show loading instead of resetting
+    if (loading) {
+      return (
+        <div className="space-y-3">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+      )
+    }
+    // Orders loaded but order not found — clear selection
     setSelectedOrderId(null)
   }
 
