@@ -136,7 +136,24 @@ export function WeeklyPlan() {
 
   const orderLineItems: LineItem[] = orders.flatMap((o) =>
     o.lineItems.map((li) => {
-      const p = productBySku.get(li.productSku)
+      let p = productBySku.get(li.productSku)
+      // For custom bouquets (PRD-CUSTOM-XXXX), the product isn't in the catalogue
+      // because the recipe was saved as hidden. Create a synthetic product from
+      // the line item data so it still shows in the Weekly Plan.
+      if (!p && li.productSku?.startsWith("PRD-CUSTOM-")) {
+        p = {
+          sku: li.productSku,
+          name: li.productName, // includes the full material breakdown
+          category: "Custom",
+          size: li.productSize ?? "",
+          description: "",
+          actualPriceBeforeIva: li.unitPrice,
+          totalCost: 0, // unknown for custom — doesn't affect totals meaningfully
+          marginPct: 0,
+          linesToReview: 0,
+          recipeLines: [],
+        }
+      }
       if (!p) return null
       return {
         source: "order" as const,
