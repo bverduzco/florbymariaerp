@@ -52,3 +52,25 @@ prompt
 server.log
 # Skills directory
 /skills/
+
+# === Floristry app v1 additions ===
+# Backups folder (snapshot copies, not source-controlled)
+/backups/
+# SQLite database (binary, regenerable from Excel via seed script)
+/db/
+# Download folder (output artifacts)
+/download/
+# Upload folder (user-uploaded Excel files)
+/upload/
+# Worklog (session log, not part of source)
+/worklog.md
+# Build scripts directory (build artifacts, kept locally only)
+/scripts/
+# Sandvox zscripts (dev server management, not part of source)
+/.zscripts/
+# Skills (AI skill files, not part of source)
+# (already ignored above)
+# Bun cache
+/.bun/
+# Lockfiles for sandbox tooling
+*.pid
