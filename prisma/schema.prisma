@@ -197,8 +197,11 @@ model CustomRecipe {
   totalCost       Float    @default(0)
   suggestedPrice  Float    @default(0)
   actualPrice     Float    @default(0) // user-set
-  // Linked ERP product (created on save)
+  // Linked ERP product (created on save — only when hidden=false)
   erpProductSku   String?  @unique
+  // When true: recipe is saved for reference but NOT created as ERP Product
+  // (used by "Create Order" flow — order line item carries the breakdown instead)
+  hidden          Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

@@ -57,6 +57,7 @@ export async function POST(request: Request) {
     size?: string
     description?: string
     actualPrice?: number
+    hidden?: boolean
     lines?: { customMaterialId: string; qty: number }[]
   }
   try {
@@ -129,25 +130,19 @@ export async function POST(request: Request) {
     : Math.round(suggestedPrice / 5) * 5 // round to nearest $5
   const actualPriceWithIva = actualPrice * (1 + iva)
 
-  // Generate SKU: PRD-CUSTOM-{NameSlug}-{Size}
-  const slug = body.name.trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 20)
-  const sizeSuffix = body.size ? `-${body.size[0].toUpperCase()}` : ""
-  const sku = `PRD-CUSTOM-${slug}${sizeSuffix}`
-
-  // Check SKU doesn't already exist
-  const existing = await db.product.findUnique({ where: { sku } })
-  if (existing) {
-    return NextResponse.json(
-      { error: `A product with SKU ${sku} already exists. Choose a different name.` },
-      { status: 409 },
-    )
+  // Generate consecutive SKU: PRD-CUSTOM-0001, PRD-CUSTOM-0002, ...
+  const lastCustom = await db.customRecipe.findFirst({
+    where: { erpProductSku: { startsWith: "PRD-CUSTOM-" } },
+    orderBy: { erpProductSku: "desc" },
+  })
+  let nextNum = 1
+  if (lastCustom?.erpProductSku) {
+    const match = /^PRD-CUSTOM-(\d+)$/.exec(lastCustom.erpProductSku)
+    if (match) nextNum = parseInt(match[1]) + 1
   }
+  const sku = `PRD-CUSTOM-${String(nextNum).padStart(4, "0")}`
+
+  const isHidden = body.hidden === true
 
   // Create the CustomRecipe + lines
   const recipe = await db.customRecipe.create({
@@ -161,6 +156,7 @@ export async function POST(request: Request) {
       suggestedPrice,
       actualPrice,
       erpProductSku: sku,
+      hidden: isHidden,
       lines: {
         create: lineItems.map((li) => ({
           customMaterialId: li.customMaterialId,
@@ -174,51 +170,61 @@ export async function POST(request: Request) {
     include: { lines: true },
   })
 
-  // ALSO create the Product in the ERP Product table (so it shows in Catalogue)
-  const marginPct = actualPrice > 0 ? (actualPrice - totalCost) / actualPrice : 0
-  const product = await db.product.create({
-    data: {
-      sku,
-      name: body.name.trim(),
-      category: "Custom",
-      size: body.size ?? null,
-      flowersCost,
-      otherMaterialsCost,
-      totalCost,
-      suggestedPriceBeforeIva: suggestedPrice,
-      suggestedPriceWithIva: suggestedPriceWithIva,
-      actualPriceBeforeIva: actualPrice,
-      actualPriceWithIva: actualPriceWithIva,
-      marginPct,
-      linesToReview: 0,
-      description: body.description ?? `Custom bouquet · ${lineItems.length} materials · El Gato pricing`,
-    },
-  })
+  // Only create ERP Product + RecipeLines when NOT hidden (visible in Catalogue)
+  if (!isHidden) {
+    // Check SKU doesn't already exist in Product table
+    const existing = await db.product.findUnique({ where: { sku } })
+    if (existing) {
+      return NextResponse.json(
+        { error: `A product with SKU ${sku} already exists.` },
+        { status: 409 },
+      )
+    }
 
-  // Create RecipeLine entries linking the new product to the matched ERP materials
-  // (Use the erpSku from each custom material — that's the linkage to the actual inventory)
-  for (const li of lineItems) {
-    const customMat = matById.get(li.customMaterialId)!
-    if (!customMat.erpSku) continue
-    const erpMat = await db.material.findUnique({ where: { sku: customMat.erpSku } })
-    if (!erpMat) continue
-    await db.recipeLine.create({
+    const marginPct = actualPrice > 0 ? (actualPrice - totalCost) / actualPrice : 0
+    const product = await db.product.create({
       data: {
-        productSku: sku,
-        productId: product.id,
-        componentSku: customMat.erpSku,
-        materialId: erpMat.id,
-        componentName: erpMat.name,
-        qty: li.qty,
-        unit: "stem",
-        unitCost: erpMat.unitCost ?? 0,
-        lineCost: (erpMat.unitCost ?? 0) * li.qty,
-        category: erpMat.category,
-        color: null,
-        check: "OK",
-        notes: `Custom recipe line — from El Gato "${customMat.name}"`,
+        sku,
+        name: body.name.trim(),
+        category: "Custom",
+        size: body.size ?? null,
+        flowersCost,
+        otherMaterialsCost,
+        totalCost,
+        suggestedPriceBeforeIva: suggestedPrice,
+        suggestedPriceWithIva: suggestedPriceWithIva,
+        actualPriceBeforeIva: actualPrice,
+        actualPriceWithIva: actualPriceWithIva,
+        marginPct,
+        linesToReview: 0,
+        description: body.description ?? `Custom bouquet · ${lineItems.length} materials · El Gato pricing`,
       },
     })
+
+    // Create RecipeLine entries linking the new product to the matched ERP materials
+    for (const li of lineItems) {
+      const customMat = matById.get(li.customMaterialId)!
+      if (!customMat.erpSku) continue
+      const erpMat = await db.material.findUnique({ where: { sku: customMat.erpSku } })
+      if (!erpMat) continue
+      await db.recipeLine.create({
+        data: {
+          productSku: sku,
+          productId: product.id,
+          componentSku: customMat.erpSku,
+          materialId: erpMat.id,
+          componentName: erpMat.name,
+          qty: li.qty,
+          unit: "stem",
+          unitCost: erpMat.unitCost ?? 0,
+          lineCost: (erpMat.unitCost ?? 0) * li.qty,
+          category: erpMat.category,
+          color: null,
+          check: "OK",
+          notes: `Custom recipe line — from El Gato "${customMat.name}"`,
+        },
+      })
+    }
   }
 
   return NextResponse.json(

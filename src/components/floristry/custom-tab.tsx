@@ -8,6 +8,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -27,6 +34,7 @@ import {
   Flower2,
   Leaf,
   Search,
+  PlusCircle,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -65,6 +73,18 @@ export function CustomTab() {
   const [recipeDescription, setRecipeDescription] = useState("")
   const [actualPrice, setActualPrice] = useState<string>("")
 
+  // Create Order dialog state
+  const [orderOpen, setOrderOpen] = useState(false)
+  const [creatingOrder, setCreatingOrder] = useState(false)
+  const [customers, setCustomers] = useState<{ id: string; name: string; phone: string; address: string }[]>([])
+  const [orderCustomerId, setOrderCustomerId] = useState("")
+  const [orderDeliveryDate, setOrderDeliveryDate] = useState("")
+  const [orderDeliveryAddress, setOrderDeliveryAddress] = useState("")
+  const [orderCardMessage, setOrderCardMessage] = useState("")
+  const [orderDeliveryNotes, setOrderDeliveryNotes] = useState("")
+  const [orderInternalNotes, setOrderInternalNotes] = useState("")
+  const [orderPrice, setOrderPrice] = useState("")
+
   useEffect(() => {
     fetch("/api/custom-materials", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : { materials: [] }))
@@ -74,6 +94,12 @@ export function CustomTab() {
         setMaterials([])
       })
       .finally(() => setLoading(false))
+
+    // Also load customers for the Create Order dialog
+    fetch("/api/customers", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { customers: [] }))
+      .then((data) => setCustomers(data.customers ?? []))
+      .catch(() => {})
   }, [])
 
   // Filtered materials
@@ -191,6 +217,69 @@ export function CustomTab() {
       })
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleCreateOrder() {
+    if (!orderCustomerId) {
+      toast.error("Please select a customer")
+      return
+    }
+    if (selectedLines.length === 0) {
+      toast.error("Add at least one material")
+      return
+    }
+
+    setCreatingOrder(true)
+    try {
+      const res = await fetch("/api/custom-recipes/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: recipeName.trim() || `Custom ${selectedLines.length} stems`,
+          size: recipeSize || undefined,
+          actualPrice: orderPrice ? parseFloat(orderPrice) : undefined,
+          customerId: orderCustomerId,
+          deliveryDate: orderDeliveryDate || undefined,
+          deliveryAddress: orderDeliveryAddress || undefined,
+          cardMessage: orderCardMessage || undefined,
+          deliveryNotes: orderDeliveryNotes || undefined,
+          internalNotes: orderInternalNotes || undefined,
+          lines: selectedLines.map((l) => ({
+            customMaterialId: l.material.id,
+            qty: l.qty,
+          })),
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `HTTP ${res.status}`)
+      }
+      const data = await res.json()
+      toast.success(`Order ${data.order.orderNumber} created`, {
+        description: `Custom bouquet for ${data.order.customerName} · ${data.recipe.sku} · $${data.order.actualPrice.toFixed(0)} (pre-IVA)`,
+        duration: 8000,
+      })
+      // Reset everything
+      setQuantities({})
+      setRecipeName("")
+      setRecipeSize("")
+      setOrderCustomerId("")
+      setOrderDeliveryDate("")
+      setOrderDeliveryAddress("")
+      setOrderCardMessage("")
+      setOrderDeliveryNotes("")
+      setOrderInternalNotes("")
+      setOrderPrice("")
+      setOrderOpen(false)
+      // Switch to Orders tab
+      router.push("/?tab=orders")
+    } catch (e) {
+      toast.error("Failed to create order", {
+        description: e instanceof Error ? e.message : String(e),
+      })
+    } finally {
+      setCreatingOrder(false)
     }
   }
 
@@ -494,6 +583,148 @@ export function CustomTab() {
                       >
                         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                         Save recipe
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                {/* Create Order button + dialog */}
+                <Dialog open={orderOpen} onOpenChange={setOrderOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="w-full border-rose-300 text-rose-700 hover:bg-rose-50 gap-1.5 mt-2">
+                      <PlusCircle className="h-4 w-4" />
+                      Create Order
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Create custom order</DialogTitle>
+                      <DialogDescription>
+                        Saves the recipe (hidden — not in Catalogue) and creates a draft order.
+                        Cost: ${totalCost.toFixed(0)} · Suggested: ${suggestedPriceRounded.toFixed(0)} (pre-IVA).
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-3">
+                      {/* Customer */}
+                      <div>
+                        <Label htmlFor="order-customer" className="text-xs">Customer *</Label>
+                        <Select value={orderCustomerId} onValueChange={(v) => {
+                          setOrderCustomerId(v)
+                          // Auto-fill delivery address from customer
+                          const c = customers.find((c) => c.id === v)
+                          if (c?.address) setOrderDeliveryAddress(c.address)
+                        }}>
+                          <SelectTrigger id="order-customer">
+                            <SelectValue placeholder="Select customer…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {customers.length === 0 ? (
+                              <SelectItem value="_empty" disabled>No customers yet — add one in Customers tab</SelectItem>
+                            ) : (
+                              customers.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.name}{c.phone ? ` · ${c.phone}` : ""}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Name + delivery date */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label htmlFor="order-name" className="text-xs">Bouquet name</Label>
+                          <Input
+                            id="order-name"
+                            value={recipeName}
+                            onChange={(e) => setRecipeName(e.target.value)}
+                            placeholder={`Custom ${selectedLines.length} stems`}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="order-date" className="text-xs">Delivery date</Label>
+                          <Input
+                            id="order-date"
+                            type="date"
+                            value={orderDeliveryDate}
+                            onChange={(e) => setOrderDeliveryDate(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Delivery address */}
+                      <div>
+                        <Label htmlFor="order-addr" className="text-xs">Delivery address</Label>
+                        <Input
+                          id="order-addr"
+                          value={orderDeliveryAddress}
+                          onChange={(e) => setOrderDeliveryAddress(e.target.value)}
+                          placeholder="Calle, número, colonia, ciudad"
+                        />
+                      </div>
+
+                      {/* Card message */}
+                      <div>
+                        <Label htmlFor="order-card" className="text-xs text-rose-700">Card message</Label>
+                        <Textarea
+                          id="order-card"
+                          value={orderCardMessage}
+                          onChange={(e) => setOrderCardMessage(e.target.value)}
+                          rows={2}
+                          placeholder="Para mi amor…"
+                        />
+                      </div>
+
+                      {/* Delivery + internal notes */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label htmlFor="order-dnotes" className="text-xs">Delivery notes</Label>
+                          <Textarea
+                            id="order-dnotes"
+                            value={orderDeliveryNotes}
+                            onChange={(e) => setOrderDeliveryNotes(e.target.value)}
+                            rows={2}
+                            placeholder="Timbre 2 veces"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="order-inotes" className="text-xs text-amber-700">Internal notes</Label>
+                          <Textarea
+                            id="order-inotes"
+                            value={orderInternalNotes}
+                            onChange={(e) => setOrderInternalNotes(e.target.value)}
+                            rows={2}
+                            placeholder="Notas privadas"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Price */}
+                      <div>
+                        <Label htmlFor="order-price" className="text-xs">
+                          Actual price (pre-IVA) — leave blank to use suggested (${suggestedPriceRounded.toFixed(0)})
+                        </Label>
+                        <Input
+                          id="order-price"
+                          type="number"
+                          value={orderPrice}
+                          onChange={(e) => setOrderPrice(e.target.value)}
+                          placeholder={String(suggestedPriceRounded)}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setOrderOpen(false)} disabled={creatingOrder}>
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleCreateOrder}
+                        disabled={creatingOrder || !orderCustomerId}
+                        className="bg-rose-600 hover:bg-rose-700 text-white gap-1.5"
+                      >
+                        {creatingOrder ? <Loader2 className="h-4 w-4 animate-spin" /> : <PlusCircle className="h-4 w-4" />}
+                        Create order
                       </Button>
                     </DialogFooter>
                   </DialogContent>

@@ -27,6 +27,7 @@ import {
   ArrowLeft,
   CalendarClock,
   Package,
+  Flower2,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useCatalogue } from "@/lib/catalogue-store"
@@ -51,6 +52,9 @@ interface OrderHistoryItem {
   deliveryDate: string | null
   price: number
   productCost: number
+  isCustom?: boolean
+  orderNumber?: string | null
+  orderStatus?: string | null
 }
 
 export function CustomersTab() {
@@ -331,27 +335,65 @@ function CustomerDetail({
   const products = useCatalogue((s) => s.products)
   const planItems = usePlanStore((s) => s.items)
 
-  // Compute order history: plan items where customerName matches this customer
+  // Fetch real Orders from the API
+  const [orders, setOrders] = useState<any[]>([])
+  useEffect(() => {
+    fetch("/api/orders", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { orders: [] }))
+      .then((data) => setOrders(data.orders ?? []))
+      .catch(() => {})
+  }, [])
+
+  // Compute order history from BOTH sources:
+  // 1. Real Orders from the API (where customerName matches)
+  // 2. Legacy plan items from localStorage (where customerName matches)
   const orderHistory = useMemo<OrderHistoryItem[]>(() => {
+    const items: OrderHistoryItem[] = []
+
+    // Source 1: Real Orders
+    for (const o of orders) {
+      if (o.customerName?.trim().toLowerCase() !== customer.name.trim().toLowerCase()) continue
+      for (const li of o.lineItems ?? []) {
+        // For custom bouquets (PRD-CUSTOM-XXXX), the productName contains the full breakdown
+        const isCustom = li.productSku?.startsWith("PRD-CUSTOM-")
+        items.push({
+          productSku: li.productSku,
+          productName: li.productName, // includes breakdown for custom
+          productSize: li.productSize ?? "",
+          qty: li.qty,
+          deliveryDate: o.deliveryDate,
+          price: li.unitPrice,
+          productCost: 0, // unknown for custom — use 0
+          isCustom: isCustom,
+          orderNumber: o.orderNumber,
+          orderStatus: o.status,
+        })
+      }
+    }
+
+    // Source 2: Legacy plan items (localStorage)
     const matches = planItems.filter(
       (i) => i.customerName?.trim().toLowerCase() === customer.name.trim().toLowerCase(),
     )
-    return matches
-      .map((it) => {
-        const p = products.find((pr) => pr.sku === it.productSku)
-        if (!p) return null
-        return {
-          productSku: p.sku,
-          productName: p.name,
-          productSize: p.size ?? "",
-          qty: it.qty,
-          deliveryDate: it.deliveryDate,
-          price: p.actualPriceBeforeIva,
-          productCost: p.totalCost,
-        }
+    for (const it of matches) {
+      const p = products.find((pr) => pr.sku === it.productSku)
+      if (!p) continue
+      items.push({
+        productSku: p.sku,
+        productName: p.name,
+        productSize: p.size ?? "",
+        qty: it.qty,
+        deliveryDate: it.deliveryDate,
+        price: p.actualPriceBeforeIva,
+        productCost: p.totalCost,
+        isCustom: false,
+        orderNumber: null,
+        orderStatus: null,
       })
-      .filter((x): x is OrderHistoryItem => x !== null)
-  }, [planItems, products, customer.name])
+    }
+
+    return items
+  }, [orders, planItems, products, customer])
 
   const totalSpent = orderHistory.reduce((s, o) => s + o.price * o.qty, 0)
   const totalCost = orderHistory.reduce((s, o) => s + o.productCost * o.qty, 0)
@@ -468,11 +510,27 @@ function CustomerDetail({
             {orderHistory.map((o, i) => (
               <div
                 key={`${o.productSku}-${i}`}
-                className="rounded-lg border border-stone-200 bg-stone-50/50 p-3 text-sm"
+                className={`rounded-lg border p-3 text-sm ${
+                  o.isCustom
+                    ? "border-blue-200 bg-blue-50/30"
+                    : "border-stone-200 bg-stone-50/50"
+                }`}
               >
                 <div className="flex justify-between items-start gap-2">
                   <div className="min-w-0 flex-1">
+                    {/* Order number + status badge (for real Orders) */}
+                    {o.orderNumber && (
+                      <div className="flex items-center gap-1.5 mb-1 text-[10px] text-stone-500">
+                        <Badge variant="outline" className="text-[10px] py-0 border-stone-300">
+                          {o.orderNumber}
+                        </Badge>
+                        {o.orderStatus && (
+                          <span className="text-stone-400">· {o.orderStatus.replace(/_/g, " ")}</span>
+                        )}
+                      </div>
+                    )}
                     <div className="font-medium text-stone-800">
+                      {o.isCustom && <Flower2 className="inline h-3 w-3 text-blue-500 mr-1" />}
                       {o.productName}
                       {o.productSize && (
                         <Badge variant="outline" className="ml-1.5 text-[10px] py-0">
