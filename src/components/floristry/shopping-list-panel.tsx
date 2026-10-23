@@ -51,6 +51,9 @@ interface ShoppingLine {
   packsToBuy: number | null
   packQtyRounded: number | null
   totalPackCost: number | null
+  alreadyOrderedPacks: number
+  toBuyPacks: number | null
+  substitutes: string | null
   usedBy: UsedBy[]
   warning: string | null
 }
@@ -67,7 +70,7 @@ interface PlanResponse {
     distinctSuppliers: number
   }
   shoppingList: ShoppingLine[]
-  bySupplier: Record<string, { lines: ShoppingLine[]; totalPackCost: number; lineCount: number }>
+  bySupplier: Record<string, { lines: ShoppingLine[]; totalPackCost: number; lineCount: number; openPOs: { poNumber: string }[] }>
   byCategory: Record<string, { lines: ShoppingLine[]; totalCost: number }>
 }
 
@@ -277,18 +280,31 @@ export function ShoppingListPanel({
     if (!data) return
     setCreatingPOs(true)
     try {
-      // Create one PO per supplier
+      // Create one PO per supplier — but only for lines where toBuyPacks > 0.
+      // Lines already fully covered by an open PO are skipped (Option A).
       const suppliers = Object.keys(data.bySupplier)
       const createdPOs: string[] = []
+      let skippedLines = 0
 
       for (const supplier of suppliers) {
         const group = data.bySupplier[supplier]
         const lines = group.lines
-          .filter((l) => l.packQtyRounded && l.packQtyRounded > 0)
+          .filter((l) => {
+            const toBuy = l.toBuyPacks ?? 0
+            // Skip lines with unknown pack size (null) or no remaining need.
+            if (toBuy <= 0) {
+              if (l.packQtyRounded == null) return false // unknown pack size — skip silently
+              skippedLines += 1
+              return false
+            }
+            return true
+          })
           .map((l) => ({
             materialSku: l.materialSku,
             materialName: l.materialName,
-            qtyPacks: l.packQtyRounded!,
+            // Create the PO only for the remaining delta (toBuyPacks), not the
+            // full packQtyRounded — that's the whole point of Option A.
+            qtyPacks: l.toBuyPacks!,
             costPerPack: l.packPrice ?? 0,
           }))
 
@@ -308,12 +324,18 @@ export function ShoppingListPanel({
       }
 
       if (createdPOs.length > 0) {
+        const description = skippedLines > 0
+          ? `${createdPOs.join(", ")} — ${skippedLines} line${skippedLines > 1 ? "s" : ""} already fully ordered were skipped`
+          : `${createdPOs.join(", ")} — view them in the Dashboard → Purchase Orders section`
         toast.success(`Created ${createdPOs.length} Purchase Order${createdPOs.length > 1 ? "s" : ""}`, {
-          description: createdPOs.join(", ") + " — view them in the Purchase Orders section",
+          description,
           duration: 8000,
         })
       } else {
-        toast.info("No POs created — all materials have unknown pack sizes")
+        toast.info("All materials already ordered this week", {
+          description: "Every line is covered by an open PO — nothing to create.",
+          duration: 6000,
+        })
       }
     } catch (e) {
       toast.error("Failed to create POs", {
@@ -326,7 +348,7 @@ export function ShoppingListPanel({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 gap-0 flex flex-col overflow-hidden">
+      <SheetContent side="right" className="w-full sm:max-w-4xl p-0 gap-0 flex flex-col overflow-hidden">
         <SheetHeader className="p-5 pb-3 border-b border-stone-200 shrink-0">
           <SheetTitle className="flex items-center gap-2 text-xl">
             <ShoppingCart className="h-5 w-5 text-rose-600" />
@@ -408,30 +430,54 @@ export function ShoppingListPanel({
               <div className="p-5 space-y-6">
                 {Object.entries(data.bySupplier)
                   .sort(([a], [b]) => a.localeCompare(b))
-                  .map(([supplier, group]) => (
+                  .map(([supplier, group]) => {
+                    const openPOs = group.openPOs ?? []
+                    // Lines that still need to be bought (delta > 0)
+                    const linesToBuy = group.lines.filter((l) => (l.toBuyPacks ?? 0) > 0).length
+                    return (
                     <div key={supplier}>
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center justify-between mb-2 flex-wrap gap-1">
                         <h3 className="font-semibold text-stone-800 flex items-center gap-2">
                           <Truck className="h-4 w-4 text-stone-500" />
                           {supplier || "Unknown supplier"}
+                          {openPOs.length > 0 && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200 font-medium">
+                              Existing POs: {openPOs.map((p) => p.poNumber).join(", ")}
+                            </span>
+                          )}
                         </h3>
                         <span className="text-xs text-stone-500">
-                          {group.lineCount} items · ${Math.round(group.totalPackCost).toLocaleString("es-MX")}
+                          {group.lineCount} items · {linesToBuy} to buy · ${Math.round(group.totalPackCost).toLocaleString("es-MX")}
                         </span>
                       </div>
                       <div className="space-y-1.5">
                         {group.lines.map((line) => {
                           const Icon = CATEGORY_ICON[line.category] ?? Package
+                          const toBuy = line.toBuyPacks ?? null
+                          const alreadyOrdered = line.alreadyOrderedPacks ?? 0
+                          const fullyOrdered = toBuy !== null && toBuy === 0 && (line.packQtyRounded ?? 0) > 0
+                          const unknownPackSize = line.packQtyRounded == null
                           return (
                             <div
                               key={line.materialSku}
-                              className="rounded-lg border border-stone-200 bg-white p-3"
+                              className={`rounded-lg border p-3 transition-colors ${
+                                fullyOrdered
+                                  ? "border-emerald-200 bg-emerald-50/30"
+                                  : "border-stone-200 bg-white"
+                              }`}
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2">
                                     <Icon className="h-4 w-4 text-stone-500 shrink-0" />
-                                    <span className="font-medium text-stone-800 truncate">{line.materialName}</span>
+                                    <span className={`font-medium truncate ${fullyOrdered ? "text-stone-600 line-through decoration-stone-300" : "text-stone-800"}`}>
+                                      {line.materialName}
+                                    </span>
+                                    {fullyOrdered && (
+                                      <Badge className="text-[10px] py-0 bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                        ✓ Ordered
+                                      </Badge>
+                                    )}
                                   </div>
                                   <div className="mt-0.5 ml-6 flex items-center gap-2 text-xs text-stone-500 flex-wrap">
                                     <Badge variant="outline" className="text-[10px] py-0">
@@ -441,10 +487,18 @@ export function ShoppingListPanel({
                                   </div>
                                 </div>
                                 <div className="text-right shrink-0">
-                                  <div className="text-lg font-bold text-rose-700">
-                                    {line.packQtyRounded ?? "?"}{" "}
-                                    <span className="text-xs font-normal text-stone-500">packs</span>
-                                  </div>
+                                  {unknownPackSize ? (
+                                    <div className="text-xs text-amber-700 font-medium">?</div>
+                                  ) : fullyOrdered ? (
+                                    <div className="text-base font-bold text-emerald-700">
+                                      0 <span className="text-xs font-normal text-stone-500">to buy</span>
+                                    </div>
+                                  ) : (
+                                    <div className="text-lg font-bold text-rose-700">
+                                      {toBuy}{" "}
+                                      <span className="text-xs font-normal text-stone-500">to buy</span>
+                                    </div>
+                                  )}
                                   {line.packPrice != null && (
                                     <div className="text-[10px] text-stone-500">
                                       @ ${line.packPrice.toLocaleString("es-MX")}/pack
@@ -458,24 +512,24 @@ export function ShoppingListPanel({
                                   Need <strong className="text-stone-700">{line.totalQty}</strong> {line.unit}
                                   {line.totalQty > 1 && line.unit !== "pack" ? "s" : ""}
                                 </span>
-                                {/* Stock-aware columns */}
+                                <span>
+                                  Total packs: <strong className="text-stone-700">{line.packQtyRounded ?? "?"}</strong>
+                                </span>
+                                {/* Stock-aware column */}
                                 {(() => {
                                   const stockPacks = inventory[line.materialSku] ?? 0
-                                  const packsNeeded = line.packQtyRounded ?? 0
-                                  const actualBuy = Math.max(0, packsNeeded - stockPacks)
                                   return (
-                                    <>
-                                      <span>
-                                        Have: <strong className={stockPacks > 0 ? "text-emerald-700" : "text-stone-400"}>{stockPacks}</strong> packs
-                                      </span>
-                                      {stockPacks > 0 && (
-                                        <span>
-                                          Buy: <strong className={actualBuy > 0 ? "text-rose-700" : "text-emerald-700"}>{actualBuy}</strong> packs
-                                        </span>
-                                      )}
-                                    </>
+                                    <span>
+                                      Have: <strong className={stockPacks > 0 ? "text-emerald-700" : "text-stone-400"}>{stockPacks}</strong> packs
+                                    </span>
                                   )
                                 })()}
+                                {/* Already-ordered column — the heart of Option A */}
+                                {alreadyOrdered > 0 && (
+                                  <span>
+                                    Ordered: <strong className="text-amber-700">{alreadyOrdered}</strong> packs
+                                  </span>
+                                )}
                                 {line.unitsPerPack && (
                                   <span>
                                     Pack size: <strong className="text-stone-700">{line.unitsPerPack}</strong>
@@ -491,10 +545,17 @@ export function ShoppingListPanel({
                                 )}
                               </div>
 
+                              {/* Acceptable substitutes */}
+                              {line.substitutes && (
+                                <div className="mt-1 ml-6 text-[11px] text-indigo-700 flex items-center gap-1">
+                                  <span className="font-medium">Substitutes:</span>
+                                  <span>{line.substitutes}</span>
+                                </div>
+                              )}
+
                               {/* Perishable warning */}
                               {(() => {
                                 const stockPacks = inventory[line.materialSku] ?? 0
-                                const packsNeeded = line.packQtyRounded ?? 0
                                 const hasStock = stockPacks > 0
                                 return hasStock ? (
                                   <div className="mt-1 ml-6 text-[10px] text-amber-600 italic">
@@ -532,7 +593,8 @@ export function ShoppingListPanel({
                         })}
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
               </div>
             </div>
           </>

@@ -24,7 +24,7 @@ Output: a single-page (or multi-page if needed) A4 PDF with:
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
@@ -43,6 +43,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
 
 
+# Mexico City is permanently UTC-6 (no DST since 2022).
+# We pin the "Generated" timestamp to this zone so it matches the user's wall clock.
+GMT_MINUS_6 = timezone(timedelta(hours=-6))
 COLOR_ROSE = colors.HexColor("#BE185D")
 COLOR_ROSE_LIGHT = colors.HexColor("#FCE7F3")
 COLOR_STONE = colors.HexColor("#44403C")
@@ -90,8 +93,13 @@ def build_shopping_list(payload, output_path):
         canvas.line(margin, 15 * mm, page_w - margin, 15 * mm)
         canvas.setFont("Helvetica", 8)
         canvas.setFillColor(COLOR_STONE_LIGHT)
+        # Footer timestamp uses GMT-6 (Mexico City). The API also passes a
+        # pre-computed `generatedAt` label in the payload — prefer that if set.
+        gen_label = payload.get("generatedAt")
+        if not gen_label:
+            gen_label = datetime.now(GMT_MINUS_6).strftime("%d/%m/%Y %H:%M")
         canvas.drawString(margin, 10 * mm, "Flor by Maria · Lista de compras")
-        canvas.drawRightString(page_w - margin, 10 * mm, f"Generated {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+        canvas.drawRightString(page_w - margin, 10 * mm, f"Generated {gen_label} (GMT-6)")
         canvas.restoreState()
 
     doc.addPageTemplates([PageTemplate(id="main", frames=[frame], onPage=on_page)])
@@ -117,14 +125,16 @@ def build_shopping_list(payload, output_path):
     if week_start:
         try:
             d = datetime.strptime(week_start, "%Y-%m-%d")
-            d_end = datetime.strptime(week_start, "%Y-%m-%d")
-            d_end_day = d_end.day + 6
-            # Simple: just show the week start
-            week_label = f"Week of {d.strftime('%d/%m/%Y')}"
+            d_end = d + timedelta(days=6)
+            week_label = f"Week of {d.strftime('%d/%m/%Y')} – {d_end.strftime('%d/%m/%Y')}"
         except Exception:
             week_label = f"Week of {week_start}"
     else:
-        week_label = "Current week"
+        # Fall back to the current GMT-6 week (Mon–Sun) when no start date is set.
+        now = datetime.now(GMT_MINUS_6)
+        monday = now - timedelta(days=now.weekday())
+        sunday = monday + timedelta(days=6)
+        week_label = f"Week of {monday.strftime('%d/%m/%Y')} – {sunday.strftime('%d/%m/%Y')} (current)"
 
     # Summary stats
     s = payload.get("planSummary", {})
@@ -169,22 +179,29 @@ def build_shopping_list(payload, output_path):
         lines = group.get("lines", [])
         group_total = group.get("totalPackCost", 0)
 
-        # Supplier header
-        story.append(Paragraph(
+        # Supplier header — include open PO numbers when present.
+        open_pos = group.get("openPOs", []) or []
+        header_text = (
             f'{supplier_name} — {group.get("lineCount", len(lines))} items · '
-            f'${group_total:,.0f} MXN',
-            style_supplier,
-        ))
+            f'${group_total:,.0f} MXN'
+        )
+        if open_pos:
+            po_nums = ", ".join(p.get("poNumber", "") for p in open_pos if p.get("poNumber"))
+            if po_nums:
+                header_text += f'  ·  Existing POs: {po_nums}'
+        story.append(Paragraph(header_text, style_supplier))
 
-        # Table header
+        # Table header — added checkbox (✓) + substitutes columns, dropped PACK PRICE
+        # to make room. The PACK PRICE is still implied by TOTAL / PACKS.
         table_data = [[
+            Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">✓</font>', style_body),
             Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">MATERIAL</font>', style_body),
             Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">SKU</font>', style_body),
             Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">NEED</font>', style_body),
             Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">PACK SIZE</font>', style_body),
-            Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">PACKS</font>', style_body),
-            Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">PACK PRICE</font>', style_body),
-            Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">TOTAL</font>', style_body),
+            Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">ORDERED</font>', style_body),
+            Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">TO BUY</font>', style_body),
+            Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">SUBSTITUTES</font>', style_body),
             Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">USED BY</font>', style_body),
         ]]
 
@@ -194,9 +211,33 @@ def build_shopping_list(payload, output_path):
                 need_str += "s"
 
             pack_size_str = str(li.get("unitsPerPack")) if li.get("unitsPerPack") else "?"
-            packs_str = str(li.get("packQtyRounded")) if li.get("packQtyRounded") else "?"
-            pack_price_str = f'${li.get("packPrice", 0):,.0f}' if li.get("packPrice") else "?"
-            total_str = f'${li.get("totalPackCost", 0):,.0f}' if li.get("totalPackCost") else "?"
+
+            # Option A: show already-ordered + remaining-to-buy prominently.
+            already_ordered = li.get("alreadyOrderedPacks", 0) or 0
+            to_buy = li.get("toBuyPacks")
+            pack_qty_rounded = li.get("packQtyRounded")
+
+            if pack_qty_rounded is None:
+                ordered_str = "—"
+                to_buy_str = '<font color="#D97706">?</font>'
+            elif already_ordered > 0 and to_buy == 0:
+                # Fully covered — show "✓ {ordered}" in emerald.
+                ordered_str = f'<font color="#047857" name="Helvetica-Bold">{already_ordered}</font>'
+                to_buy_str = '<font color="#047857" name="Helvetica-Bold">✓</font>'
+            elif already_ordered > 0:
+                ordered_str = f'<font color="#D97706" name="Helvetica-Bold">{already_ordered}</font>'
+                to_buy_str = f'<font color="#BE185D" name="Helvetica-Bold" size="11">{to_buy}</font>'
+            else:
+                ordered_str = '<font color="#A8A29E">0</font>'
+                to_buy_str = f'<font color="#BE185D" name="Helvetica-Bold" size="11">{pack_qty_rounded}</font>'
+
+            # Substitutes column (free-text, may be null/empty).
+            subs_text = li.get("substitutes") or ""
+            subs_str = (
+                f'<font size="7" color="#4338CA">{subs_text}</font>'
+                if subs_text else
+                '<font size="7" color="#D6D3D1">—</font>'
+            )
 
             # Used by summary
             used_by_parts = []
@@ -212,23 +253,29 @@ def build_shopping_list(payload, output_path):
                 warning_str = f'<br/><font color="#D97706" size="7"><i>⚠ {li["warning"]}</i></font>'
 
             table_data.append([
+                # Checkbox — empty box so the user can tick items off as they shop.
+                Paragraph('<font size="12" color="#A8A29E">☐</font>', style_body),
                 Paragraph(f'{li.get("materialName", "")}{warning_str}', style_body),
                 Paragraph(f'<font size="7" color="#78716C">{li.get("materialSku", "")}</font>', style_body),
                 Paragraph(need_str, style_body),
                 Paragraph(pack_size_str, style_body),
-                Paragraph(f'<font name="Helvetica-Bold" size="10" color="#BE185D">{packs_str}</font>', style_body),
-                Paragraph(pack_price_str, style_body),
-                Paragraph(f'<font name="Helvetica-Bold">{total_str}</font>', style_body),
+                Paragraph(ordered_str, style_body),
+                Paragraph(to_buy_str, style_body),
+                Paragraph(subs_str, style_body),
                 Paragraph(f'<font size="7" color="#78716C">{used_by_str}</font>', style_body),
             ])
 
-        col_widths = [32*mm, 22*mm, 18*mm, 14*mm, 12*mm, 18*mm, 18*mm, 46*mm]
+        # Column widths (sum ≈ 180mm, fits A4 with 15mm margins):
+        #   checkbox, material, sku, need, pack-size, ordered, to-buy, substitutes, used-by
+        col_widths = [6*mm, 30*mm, 18*mm, 16*mm, 13*mm, 14*mm, 14*mm, 30*mm, 39*mm]
         items_table = Table(table_data, colWidths=col_widths, repeatRows=1)
         items_table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), COLOR_ROSE),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
-            ("ALIGN", (0, 0), (1, -1), "LEFT"),
+            ("ALIGN", (0, 0), (0, -1), "CENTER"),     # checkbox column centered
+            ("ALIGN", (3, 0), (6, -1), "RIGHT"),       # numeric columns right-aligned
+            ("ALIGN", (1, 0), (2, -1), "LEFT"),       # material + sku left
+            ("ALIGN", (7, 0), (8, -1), "LEFT"),       # substitutes + used-by left
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("LEFTPADDING", (0, 0), (-1, -1), 4),
             ("RIGHTPADDING", (0, 0), (-1, -1), 4),

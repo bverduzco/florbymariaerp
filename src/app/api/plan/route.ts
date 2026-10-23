@@ -35,8 +35,39 @@ interface ShoppingLine {
   packsToBuy: number | null // null if pack size unknown
   packQtyRounded: number | null // ceil(packsToBuy)
   totalPackCost: number | null
+  alreadyOrderedPacks: number // sum of qtyPacks on open (non-received) PO lines
+  toBuyPacks: number | null // max(0, packQtyRounded - alreadyOrderedPacks); null if pack size unknown
+  substitutes: string | null // free-text acceptable substitutes
   usedBy: { productSku: string; productName: string; qty: number; deliveryDate: string | null; customerName: string | null }[]
   warning: string | null
+}
+
+// Statuses considered "open" — POs that have been created but not yet received.
+// These count against the "to buy" calculation (we don't want to re-order materials
+// that are already on a draft/approved/pending/procured PO).
+const PO_OPEN_STATUSES = ["draft", "approved", "pending", "procured"]
+
+/**
+ * Fetch all open PurchaseOrderLines grouped by materialSku.
+ * Returns a map: materialSku → { totalPacks, poNumbers: string[] }
+ */
+async function fetchOpenPOQuantitiesBySku(): Promise<
+  Map<string, { totalPacks: number; poNumbers: Set<string> }>
+> {
+  const poLines = await db.purchaseOrderLine.findMany({
+    where: { po: { status: { in: PO_OPEN_STATUSES } } },
+    include: { po: { select: { poNumber: true } } },
+  })
+  const map = new Map<string, { totalPacks: number; poNumbers: Set<string> }>()
+  for (const line of poLines) {
+    if (!map.has(line.materialSku)) {
+      map.set(line.materialSku, { totalPacks: 0, poNumbers: new Set() })
+    }
+    const entry = map.get(line.materialSku)!
+    entry.totalPacks += line.qtyPacks
+    entry.poNumbers.add(line.po.poNumber)
+  }
+  return map
 }
 
 export async function POST(request: Request) {
@@ -77,6 +108,21 @@ export async function POST(request: Request) {
   })
 
   const productBySku = new Map(products.map((p) => [p.sku, p]))
+
+  // Fetch open PO quantities once — used to compute "to buy" delta per material.
+  const openPOBySku = await fetchOpenPOQuantitiesBySku()
+
+  // Helper: compute alreadyOrderedPacks + toBuyPacks for a material SKU.
+  function computeOrderedDelta(materialSku: string, packQtyRounded: number | null) {
+    const alreadyOrderedPacks = openPOBySku.get(materialSku)?.totalPacks ?? 0
+    if (packQtyRounded == null) {
+      return { alreadyOrderedPacks, toBuyPacks: null }
+    }
+    return {
+      alreadyOrderedPacks,
+      toBuyPacks: Math.max(0, packQtyRounded - alreadyOrderedPacks),
+    }
+  }
 
   // Aggregation: for each material, sum qty across all plan items
   const shoppingByMaterialSku = new Map<string, ShoppingLine>()
@@ -161,6 +207,8 @@ export async function POST(request: Request) {
             packsToBuy,
             packQtyRounded,
             totalPackCost,
+            ...computeOrderedDelta(m.sku, packQtyRounded),
+            substitutes: m.substitutes ?? null,
             usedBy: [{
               productSku: item.productSku,
               productName,
@@ -243,6 +291,8 @@ export async function POST(request: Request) {
           packsToBuy,
           packQtyRounded,
           totalPackCost,
+          ...computeOrderedDelta(m.sku, packQtyRounded),
+          substitutes: m.substitutes ?? null,
           usedBy: [
             {
               productSku: product.sku,
@@ -264,19 +314,39 @@ export async function POST(request: Request) {
     return a.materialName.localeCompare(b.materialName)
   })
 
-  // Group by supplier
+  // Group by supplier — also attach the list of open PO numbers per supplier so
+  // the shopping list UI / PDF can show "Existing POs: PO-3001, PO-3003".
   const bySupplier: Record<
     string,
-    { lines: ShoppingLine[]; totalPackCost: number; lineCount: number }
+    {
+      lines: ShoppingLine[]
+      totalPackCost: number
+      lineCount: number
+      openPOs: { poNumber: string }[]
+    }
   > = {}
   for (const line of shoppingList) {
     const supplier = line.supplier || "Unknown"
     if (!bySupplier[supplier]) {
-      bySupplier[supplier] = { lines: [], totalPackCost: 0, lineCount: 0 }
+      bySupplier[supplier] = { lines: [], totalPackCost: 0, lineCount: 0, openPOs: [] }
     }
     bySupplier[supplier].lines.push(line)
     bySupplier[supplier].lineCount += 1
     bySupplier[supplier].totalPackCost += line.totalPackCost ?? 0
+  }
+
+  // For each supplier, collect unique open PO numbers across all of its lines.
+  // Per-line already-ordered quantities are available on each ShoppingLine;
+  // here we just need the PO-number list for display.
+  for (const supplier of Object.keys(bySupplier)) {
+    const poNumbers = new Set<string>()
+    for (const line of bySupplier[supplier].lines) {
+      const poEntry = openPOBySku.get(line.materialSku)
+      if (poEntry) {
+        for (const poNumber of poEntry.poNumbers) poNumbers.add(poNumber)
+      }
+    }
+    bySupplier[supplier].openPOs = Array.from(poNumbers).sort().map((poNumber) => ({ poNumber }))
   }
 
   // Group by category

@@ -26,7 +26,16 @@ Input JSON shape:
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
+
+# Mexico City is permanently UTC-6 (no DST since 2022).
+# We pin "Generated" timestamps to this zone so they match the user's wall clock.
+GMT_MINUS_6 = timezone(timedelta(hours=-6))
+
+
+def _now_gmt_minus_6_iso() -> str:
+    """ISO 8601 timestamp in GMT-6, e.g. '2026-10-23T14:35:00-06:00'."""
+    return datetime.now(GMT_MINUS_6).isoformat(timespec="seconds")
 
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
@@ -70,7 +79,7 @@ def build_orders_tab(ws, orders):
 
     ws["A1"] = "Orders — Draft Export (from app database)"
     ws["A1"].font = TITLE_FONT
-    ws["A2"] = f"Generated {datetime.now().isoformat(timespec='seconds')}"
+    ws["A2"] = f"Generated {_now_gmt_minus_6_iso()} (GMT-6)"
     ws["A2"].font = SUBTITLE_FONT
 
     headers = [
@@ -127,7 +136,7 @@ def build_customers_tab(ws, customers):
 
     ws["A1"] = "Customers — Draft Export (from app database)"
     ws["A1"].font = TITLE_FONT
-    ws["A2"] = f"Generated {datetime.now().isoformat(timespec='seconds')}"
+    ws["A2"] = f"Generated {_now_gmt_minus_6_iso()} (GMT-6)"
     ws["A2"].font = SUBTITLE_FONT
 
     headers = ["Customer ID", "Name", "Phone", "Email", "Address", "Notes", "Created At"]
@@ -157,7 +166,7 @@ def build_line_items_tab(ws, line_items):
 
     ws["A1"] = "Order Line Items — Draft Export (from app database)"
     ws["A1"].font = TITLE_FONT
-    ws["A2"] = f"Generated {datetime.now().isoformat(timespec='seconds')}"
+    ws["A2"] = f"Generated {_now_gmt_minus_6_iso()} (GMT-6)"
     ws["A2"].font = SUBTITLE_FONT
 
     headers = [
@@ -225,7 +234,7 @@ def main():
     wb.properties.title = "ERP Draft"
     wb.properties.description = (
         f"Auto-generated draft export from the app database on "
-        f"{data.get('generatedAt', datetime.now().isoformat())}. "
+        f"{data.get('generatedAt', _now_gmt_minus_6_iso())}. "
         "Review this file, then promote to be the official ERP version."
     )
 
