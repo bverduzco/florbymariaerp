@@ -266,12 +266,12 @@ export function OrderIntakeForm() {
             <Label htmlFor="event" className="text-xs flex items-center gap-1">
               <PartyPopper className="h-3 w-3" /> Is this part of an event?
             </Label>
-            <Select value={eventId} onValueChange={setEventId}>
+            <Select value={eventId || "_none"} onValueChange={(v) => setEventId(v === "_none" ? "" : v)}>
               <SelectTrigger id="event">
                 <SelectValue placeholder="None — standalone order" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None — standalone order</SelectItem>
+                <SelectItem value="_none">None — standalone order</SelectItem>
                 {events.map((e) => (
                   <SelectItem key={e.id} value={e.id}>
                     {e.eventNumber} · {e.name}
