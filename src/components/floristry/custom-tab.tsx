@@ -35,6 +35,7 @@ import {
   Leaf,
   Search,
   PlusCircle,
+  User,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -221,7 +222,7 @@ export function CustomTab() {
   }
 
   async function handleCreateOrder() {
-    if (!orderCustomerId) {
+    if (!orderCustomerId || orderCustomerId === "_new_customer") {
       toast.error("Please select a customer")
       return
     }
@@ -618,18 +619,27 @@ export function CustomTab() {
                             <SelectValue placeholder="Select customer…" />
                           </SelectTrigger>
                           <SelectContent>
-                            {customers.length === 0 ? (
-                              <SelectItem value="_empty" disabled>No customers yet — add one in Customers tab</SelectItem>
-                            ) : (
-                              customers.map((c) => (
-                                <SelectItem key={c.id} value={c.id}>
-                                  {c.name}{c.phone ? ` · ${c.phone}` : ""}
-                                </SelectItem>
-                              ))
-                            )}
+                            {customers.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.name}{c.phone ? ` · ${c.phone}` : ""}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="_new_customer">
+                              ➕ New customer…
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
+                      {orderCustomerId === "_new_customer" && (
+                        <NewCustomerInline
+                          onCreated={(c) => {
+                            setCustomers(prev => [...prev, c].sort((a, b) => a.name.localeCompare(b.name)))
+                            setOrderCustomerId(c.id)
+                            if (c.address) setOrderDeliveryAddress(c.address)
+                          }}
+                          onCancel={() => setOrderCustomerId("")}
+                        />
+                      )}
 
                       {/* Name + delivery date */}
                       <div className="grid grid-cols-2 gap-2">
@@ -743,6 +753,106 @@ export function CustomTab() {
             )}
           </Card>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// NewCustomerInline — inline form to add a customer on the fly
+// ============================================================
+
+interface InlineCustomer {
+  id: string
+  name: string
+  phone: string
+  email: string
+  address: string
+}
+
+function NewCustomerInline({
+  onCreated,
+  onCancel,
+}: {
+  onCreated: (customer: InlineCustomer) => void
+  onCancel: () => void
+}) {
+  const [name, setName] = useState("")
+  const [phone, setPhone] = useState("")
+  const [email, setEmail] = useState("")
+  const [address, setAddress] = useState("")
+  const [saving, setSaving] = useState(false)
+
+  async function handleSave() {
+    if (!name.trim()) {
+      toast.error("Name is required")
+      return
+    }
+    setSaving(true)
+    try {
+      const res = await fetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), phone, email, address }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `HTTP ${res.status}`)
+      }
+      const data = await res.json()
+      toast.success(`Customer added: ${data.customer.name}`)
+      onCreated(data.customer)
+    } catch (e) {
+      toast.error("Failed to add customer", { description: e instanceof Error ? e.message : String(e) })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="rounded-md border border-rose-200 bg-rose-50/30 p-3 space-y-2">
+      <div className="text-xs font-medium text-rose-700 flex items-center gap-1">
+        <User className="h-3 w-3" /> New customer
+      </div>
+      <Input
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Name *"
+        className="h-7 text-xs"
+        autoFocus
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <Input
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="Phone / WhatsApp"
+          className="h-7 text-xs"
+        />
+        <Input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
+          className="h-7 text-xs"
+        />
+      </div>
+      <Input
+        type="text"
+        value={address}
+        onChange={(e) => setAddress(e.target.value)}
+        placeholder="Address"
+        className="h-7 text-xs"
+      />
+      <div className="flex items-center gap-2">
+        <Button size="sm" onClick={handleSave} disabled={saving || !name.trim()} className="bg-rose-600 hover:bg-rose-700 text-white text-xs gap-1">
+          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+          Save
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onCancel} className="text-xs">
+          Cancel
+        </Button>
       </div>
     </div>
   )
