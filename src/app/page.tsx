@@ -154,6 +154,11 @@ export default function Home() {
               <span className="hidden sm:inline">Orders</span>
               <span className="sm:hidden">ORD</span>
             </TabsTrigger>
+            <TabsTrigger value="custom" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+              <Wand2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Custom</span>
+              <span className="sm:hidden">Cust</span>
+            </TabsTrigger>
             <TabsTrigger value="catalogue" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <Flower2 className="h-4 w-4" />
               <span className="hidden sm:inline">Catalogue</span>
@@ -183,11 +188,6 @@ export default function Home() {
               <PartyPopper className="h-4 w-4" />
               <span className="hidden sm:inline">Events</span>
               <span className="sm:hidden">Evt</span>
-            </TabsTrigger>
-            <TabsTrigger value="custom" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
-              <Wand2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Custom</span>
-              <span className="sm:hidden">Cust</span>
             </TabsTrigger>
             <TabsTrigger value="inventory" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <Boxes className="h-4 w-4" />
