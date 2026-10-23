@@ -18,6 +18,7 @@ import {
   Package,
   DollarSign,
   PartyPopper,
+  AlertTriangle,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useNavStore } from "@/lib/nav-store"
@@ -261,6 +262,12 @@ function OrderRow({ order, onClick }: { order: Order; onClick: () => void }) {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-semibold text-stone-800">{order.orderNumber}</span>
             <Badge variant="outline" className={`text-[10px] ${badge.className}`}>{badge.label}</Badge>
+            {!order.deliveryDate && (
+              <Badge className="text-[10px] bg-amber-100 text-amber-800 border border-amber-200 gap-0.5">
+                <AlertTriangle className="h-2.5 w-2.5" />
+                No delivery date
+              </Badge>
+            )}
           </div>
           <div className="mt-1 flex items-center gap-3 text-xs text-stone-600 flex-wrap">
             <span className="flex items-center gap-1">

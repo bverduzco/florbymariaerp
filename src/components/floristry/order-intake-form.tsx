@@ -15,6 +15,14 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import {
   Plus,
   Minus,
   User,
@@ -59,6 +67,7 @@ export function OrderIntakeForm() {
   const [internalNotes, setInternalNotes] = useState<string>("")
   const [deliveryFee, setDeliveryFee] = useState<number>(DELIVERY_FLAT_RATE)
   const [discount, setDiscount] = useState<number>(0)
+  const [showNoDateConfirm, setShowNoDateConfirm] = useState(false)
 
   // Line item quantities keyed by product SKU
   const [quantities, setQuantities] = useState<Record<string, number>>({})
@@ -153,6 +162,16 @@ export function OrderIntakeForm() {
       return
     }
 
+    // If no delivery date, show confirmation dialog
+    if (!deliveryDate) {
+      setShowNoDateConfirm(true)
+      return
+    }
+
+    await doCreateOrder()
+  }
+
+  async function doCreateOrder() {
     setSubmitting(true)
     try {
       const res = await fetch("/api/orders", {
@@ -470,6 +489,34 @@ export function OrderIntakeForm() {
           Reset
         </Button>
       </div>
+
+      {/* No delivery date confirmation */}
+      <Dialog open={showNoDateConfirm} onOpenChange={setShowNoDateConfirm}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>No delivery date set</DialogTitle>
+            <DialogDescription>
+              Do you want to create this order without a delivery date?
+              You can add one later, but orders without a delivery date won&apos;t appear
+              in the Delivery View calendar.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowNoDateConfirm(false)}>
+              Go back — add date
+            </Button>
+            <Button
+              onClick={async () => {
+                setShowNoDateConfirm(false)
+                await doCreateOrder()
+              }}
+              className="bg-rose-600 hover:bg-rose-700 text-white"
+            >
+              Create without date
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
