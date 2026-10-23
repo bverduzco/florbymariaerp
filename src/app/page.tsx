@@ -16,6 +16,7 @@ import { GenerateDraftButton } from "@/components/floristry/generate-draft-butto
 import { CustomTab } from "@/components/floristry/custom-tab"
 import { InventoryTab } from "@/components/floristry/inventory-tab"
 import { DashboardTab } from "@/components/floristry/dashboard-tab"
+import { EventsTab } from "@/components/floristry/events-tab"
 import { useNavStore } from "@/lib/nav-store"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -31,9 +32,10 @@ import {
   Wand2,
   Boxes,
   LayoutDashboard,
+  PartyPopper,
 } from "lucide-react"
 
-type TabKey = "dashboard" | "intake" | "orders" | "custom" | "catalogue" | "inventory" | "plan" | "customers" | "delivery"
+type TabKey = "intake" | "orders" | "custom" | "catalogue" | "inventory" | "plan" | "customers" | "delivery" | "events" | "dashboard"
 
 export default function Home() {
   const fetchCatalogue = useCatalogue((s) => s.fetch)
@@ -50,15 +52,14 @@ export default function Home() {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search)
       const tabParam = params.get("tab")
-      const validTabs = ["dashboard", "intake", "orders", "custom", "catalogue", "inventory", "plan", "customers", "delivery"]
+      const validTabs = ["intake", "orders", "custom", "catalogue", "inventory", "plan", "customers", "delivery", "events", "dashboard"]
       if (tabParam && validTabs.includes(tabParam)) {
         return tabParam as TabKey
       }
     }
-    return "dashboard"
+    return "intake"
   })
 
-  // Read orderId from URL after mount
   useEffect(() => {
     if (typeof window === "undefined") return
     const params = new URLSearchParams(window.location.search)
@@ -78,7 +79,6 @@ export default function Home() {
   const totalPlanQty = planItems.reduce((s, i) => s + i.qty, 0)
   const planWithDeliveries = planItems.filter((i) => i.deliveryDate).length
 
-  // Listen for pendingTab changes from the nav store
   const pendingTab = useNavStore((s) => s.pendingTab)
   const setPendingTab = useNavStore((s) => s.setPendingTab)
   useEffect(() => {
@@ -90,7 +90,6 @@ export default function Home() {
     })
   }, [pendingTab, tab, setPendingTab])
 
-  // Initial load
   useEffect(() => {
     fetchCatalogue()
   }, [fetchCatalogue])
@@ -143,52 +142,61 @@ export default function Home() {
       {/* Main — tabbed */}
       <main className="flex-1 mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
-          <TabsList className="bg-white border border-rose-100 p-1 h-auto flex-wrap">
-            <TabsTrigger value="dashboard" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
-              <LayoutDashboard className="h-4 w-4" />
-              Dashboard
-            </TabsTrigger>
-            <TabsTrigger value="intake" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+          <TabsList className="bg-white border border-rose-100 p-1 h-auto flex-wrap w-full justify-between">
+            <TabsTrigger value="intake" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <PlusCircle className="h-4 w-4" />
-              New Order
+              <span className="hidden sm:inline">New Order</span>
+              <span className="sm:hidden">Order</span>
             </TabsTrigger>
-            <TabsTrigger value="orders" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+            <TabsTrigger value="orders" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <ClipboardList className="h-4 w-4" />
-              Orders
+              <span className="hidden sm:inline">Orders</span>
+              <span className="sm:hidden">ORD</span>
             </TabsTrigger>
-            <TabsTrigger value="custom" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+            <TabsTrigger value="custom" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <Wand2 className="h-4 w-4" />
-              Custom
+              <span className="hidden sm:inline">Custom</span>
+              <span className="sm:hidden">Cust</span>
             </TabsTrigger>
-            <TabsTrigger value="catalogue" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
-              <Flower2 className="h-4 w-4" />
-              Catalogue
+            <TabsTrigger value="catalogue" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+              <Flower2 className="h-4 w-4 text-rose-600" />
+              <span className="hidden sm:inline">Catalogue</span>
+              <span className="sm:hidden">Cat</span>
             </TabsTrigger>
-            <TabsTrigger value="inventory" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+            <TabsTrigger value="inventory" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <Boxes className="h-4 w-4" />
-              Inventory
+              <span className="hidden sm:inline">Inventory</span>
+              <span className="sm:hidden">Inv</span>
             </TabsTrigger>
-            <TabsTrigger value="plan" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+            <TabsTrigger value="plan" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <ClipboardList className="h-4 w-4" />
-              Weekly Plan
+              <span className="hidden sm:inline">Plan</span>
+              <span className="sm:hidden">Plan</span>
               {totalPlanQty > 0 && (
                 <Badge className="ml-1 bg-rose-100 text-rose-700 px-1.5 py-0 text-[10px]">
                   {totalPlanQty}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="customers" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+            <TabsTrigger value="customers" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <Users className="h-4 w-4" />
-              Customers
+              <span className="hidden sm:inline">Customers</span>
+              <span className="sm:hidden">Cust</span>
             </TabsTrigger>
-            <TabsTrigger value="delivery" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+            <TabsTrigger value="delivery" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <CalendarDays className="h-4 w-4" />
-              Delivery View
-              {planWithDeliveries > 0 && (
-                <Badge className="ml-1 bg-rose-100 text-rose-700 px-1.5 py-0 text-[10px]">
-                  {planWithDeliveries}
-                </Badge>
-              )}
+              <span className="hidden sm:inline">Delivery</span>
+              <span className="sm:hidden">Del</span>
+            </TabsTrigger>
+            <TabsTrigger value="events" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+              <PartyPopper className="h-4 w-4" />
+              <span className="hidden sm:inline">Events</span>
+              <span className="sm:hidden">Evt</span>
+            </TabsTrigger>
+            <TabsTrigger value="dashboard" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+              <LayoutDashboard className="h-4 w-4" />
+              <span className="hidden sm:inline">Dashboard</span>
+              <span className="sm:hidden">Dash</span>
             </TabsTrigger>
           </TabsList>
 
@@ -196,10 +204,6 @@ export default function Home() {
           <div className="mt-4 flex items-center justify-end gap-2">
             <GenerateDraftButton />
           </div>
-
-          <TabsContent value="dashboard" className="mt-4">
-            <DashboardTab />
-          </TabsContent>
 
           <TabsContent value="intake" className="mt-4">
             <OrderIntakeForm />
@@ -241,6 +245,14 @@ export default function Home() {
               setTab("orders")
             }} />
           </TabsContent>
+
+          <TabsContent value="events" className="mt-4">
+            <EventsTab />
+          </TabsContent>
+
+          <TabsContent value="dashboard" className="mt-4">
+            <DashboardTab />
+          </TabsContent>
         </Tabs>
       </main>
 
@@ -252,7 +264,6 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Slide-over shopping list */}
       <ShoppingListPanel
         open={shoppingListOpen}
         onOpenChange={setShoppingListOpen}

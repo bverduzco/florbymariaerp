@@ -97,6 +97,7 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   orders    Order[]
+  events    Event[]
 
   @@unique([name, phone])
 }
@@ -109,6 +110,8 @@ model Order {
 
   customerId      String
   customer        Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  eventId         String?
+  event           Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
 
   deliveryDate    DateTime?
   deliveryAddress String?
@@ -264,4 +267,22 @@ model PurchaseOrderLine {
   costPerPack     Float
   lineTotal       Float
   createdAt       DateTime @default(now())
+}
+
+/**
+ * Events bundle multiple orders under one occasion (wedding, corporate, etc.)
+ */
+model Event {
+  id          String   @id @default(cuid())
+  eventNumber String   @unique // EVT-2001
+  name        String
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  eventDate   DateTime?
+  guests      Int?
+  status      String   @default("quote") // quote | confirmed | in_progress | completed | cancelled
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  orders      Order[]
 }
