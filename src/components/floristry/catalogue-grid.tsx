@@ -4,7 +4,8 @@ import { useMemo, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Sparkles, ShoppingBag } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Sparkles, ShoppingBag, Search } from "lucide-react"
 import { useCatalogue, type CatalogueProduct } from "@/lib/catalogue-store"
 import {
   Sheet,
@@ -124,16 +125,32 @@ export function CatalogueGrid() {
   const products = useCatalogue((s) => s.products)
   const loading = useCatalogue((s) => s.loading)
   const [selected, setSelected] = useCatalogueSelector()
+  const [search, setSearch] = useState("")
+  const [categoryFilter, setCategoryFilter] = useState<"all" | "Bouquet" | "Arrangement" | "Custom">("all")
+
+  const filtered = useMemo(() => {
+    let list = products
+    if (categoryFilter !== "all") list = list.filter((p) => p.category === categoryFilter)
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      list = list.filter((p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.sku.toLowerCase().includes(q) ||
+        (p.description ?? "").toLowerCase().includes(q),
+      )
+    }
+    return list
+  }, [products, search, categoryFilter])
 
   const grouped = useMemo(() => {
     const byName = new Map<string, CatalogueProduct[]>()
-    for (const p of products) {
+    for (const p of filtered) {
       const arr = byName.get(p.name) ?? []
       arr.push(p)
       byName.set(p.name, arr)
     }
     return Array.from(byName.entries()).sort((a, b) => a[0].localeCompare(b[0]))
-  }, [products])
+  }, [filtered])
 
   if (loading && products.length === 0) {
     return (
@@ -156,32 +173,73 @@ export function CatalogueGrid() {
   }
 
   return (
-    <div className="space-y-8">
-      {grouped.map(([name, sizes]) => (
-        <section key={name}>
-          <div className="mb-3 flex items-baseline justify-between">
-            <h2 className="text-lg font-semibold text-stone-800">{name}</h2>
-            <span className="text-xs text-stone-500">
-              {sizes.length} size{sizes.length > 1 ? "s" : ""}
-            </span>
+    <div className="space-y-6">
+      {/* Search + filter bar */}
+      <Card className="bg-white p-3">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-400 pointer-events-none" />
+            <Input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name, SKU, or description…"
+              className="h-8 pl-7 text-sm"
+            />
           </div>
-          <div className="space-y-4">
-            {sizes.map((p) => (
-              <Sheet key={p.sku} open={selected === p.sku} onOpenChange={(o) => setSelected(o ? p.sku : null)}>
-                <div className="flex flex-col gap-1">
-                  <ProductCard product={p} />
-                  <SheetTrigger asChild>
-                    <Button variant="link" size="sm" className="text-xs text-stone-500 self-start">
-                      View recipe ({p.recipeLines.length} components)
-                    </Button>
-                  </SheetTrigger>
-                </div>
-                <RecipeSheet product={p} />
-              </Sheet>
+          <div className="flex items-center gap-1">
+            {(["all", "Bouquet", "Arrangement", "Custom"] as const).map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+                  categoryFilter === cat
+                    ? "bg-rose-100 text-rose-800 border-rose-200"
+                    : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
+                }`}
+              >
+                {cat === "all" ? "All" : cat + "s"}
+              </button>
             ))}
           </div>
-        </section>
-      ))}
+        </div>
+      </Card>
+
+      {/* Product grid */}
+      {grouped.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-stone-300 p-8 text-center text-stone-500">
+          <Search className="h-8 w-8 mx-auto text-stone-300 mb-2" />
+          <p className="text-sm">No products match your search</p>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {grouped.map(([name, sizes]) => (
+            <section key={name}>
+              <div className="mb-3 flex items-baseline justify-between">
+                <h2 className="text-lg font-semibold text-stone-800">{name}</h2>
+                <span className="text-xs text-stone-500">
+                  {sizes.length} size{sizes.length > 1 ? "s" : ""}
+                </span>
+              </div>
+              <div className="space-y-4">
+                {sizes.map((p) => (
+                  <Sheet key={p.sku} open={selected === p.sku} onOpenChange={(o) => setSelected(o ? p.sku : null)}>
+                    <div className="flex flex-col gap-1">
+                      <ProductCard product={p} />
+                      <SheetTrigger asChild>
+                        <Button variant="link" size="sm" className="text-xs text-stone-500 self-start">
+                          View recipe ({p.recipeLines.length} components)
+                        </Button>
+                      </SheetTrigger>
+                    </div>
+                    <RecipeSheet product={p} />
+                  </Sheet>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
