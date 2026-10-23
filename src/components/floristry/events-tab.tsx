@@ -74,6 +74,17 @@ export function EventsTab() {
   const [events, setEvents] = useState<EventItem[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  // Pick up pending event ID from sessionStorage (set by Delivery View clicks)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const pending = sessionStorage.getItem("pendingEventId")
+      if (pending) {
+        sessionStorage.removeItem("pendingEventId")
+        setSelectedId(pending)
+      }
+    }
+  }, [])
   const [addOpen, setAddOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [customers, setCustomers] = useState<{ id: string; name: string; phone: string }[]>([])

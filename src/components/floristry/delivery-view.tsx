@@ -21,6 +21,10 @@ interface DeliveryItem {
   price: number
   orderId: string | null
   orderNumber: string | null
+  eventId: string | null
+  eventName: string | null
+  eventNumber: string | null
+  type: "order" | "event"
 }
 
 function isoFromDate(d: Date): string {
@@ -40,24 +44,38 @@ export function DeliveryView({ onNavigateToOrder }: { onNavigateToOrder?: (order
   const setPendingOrderId = useNavStore((s) => s.setPendingOrderId)
   const setPendingTab = useNavStore((s) => s.setPendingTab)
 
-  // Fetch real Orders from the API
+  // Fetch real Orders + Events from the API
   const [orders, setOrders] = useState<any[]>([])
+  const [events, setEvents] = useState<any[]>([])
   useEffect(() => {
     fetch("/api/orders", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : { orders: [] }))
       .then((data) => setOrders(data.orders ?? []))
       .catch(() => {})
+    fetch("/api/events", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { events: [] }))
+      .then((data) => setEvents(data.events ?? []))
+      .catch(() => {})
   }, [])
 
   function handleDeliveryClick(d: DeliveryItem) {
-    if (!d.orderId) return
-    // Set the pending order ID in the nav store for the Orders tab to pick up
-    setPendingOrderId(d.orderId)
-    // Switch to Orders tab via callback prop (direct state update in parent)
-    if (onNavigateToOrder) {
-      onNavigateToOrder(d.orderId)
-    } else {
-      setPendingTab("orders")
+    if (d.type === "event" && d.eventId) {
+      // Navigate to Events tab — use pendingOrderId pattern but for events
+      // We'll store the event ID and switch to Events tab
+      setPendingTab("events")
+      // Store event ID in sessionStorage so EventsTab can pick it up
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("pendingEventId", d.eventId)
+      }
+      return
+    }
+    if (d.orderId) {
+      setPendingOrderId(d.orderId)
+      if (onNavigateToOrder) {
+        onNavigateToOrder(d.orderId)
+      } else {
+        setPendingTab("orders")
+      }
     }
   }
 
@@ -74,11 +92,31 @@ export function DeliveryView({ onNavigateToOrder }: { onNavigateToOrder?: (order
   const deliveriesByDate = useMemo(() => {
     const m = new Map<string, DeliveryItem[]>()
 
-    // Source 1: Real Orders
+    // Source 1: Events
+    for (const ev of events) {
+      if (!ev.eventDate) continue
+      const existing = m.get(ev.eventDate) ?? []
+      existing.push({
+        productSku: "",
+        productName: ev.name,
+        productSize: "",
+        qty: ev.orderCount ?? 0,
+        customerName: ev.customerName,
+        price: ev.totalRevenue ?? 0,
+        orderId: null,
+        orderNumber: null,
+        eventId: ev.id,
+        eventName: ev.name,
+        eventNumber: ev.eventNumber,
+        type: "event",
+      })
+      m.set(ev.eventDate, existing)
+    }
+
+    // Source 2: Real Orders
     for (const o of orders) {
       if (!o.deliveryDate) continue
       for (const li of o.lineItems ?? []) {
-        // For custom bouquets, use the line item data directly
         if (li.productSku?.startsWith("PRD-CUSTOM-")) {
           const existing = m.get(o.deliveryDate) ?? []
           existing.push({
@@ -90,11 +128,14 @@ export function DeliveryView({ onNavigateToOrder }: { onNavigateToOrder?: (order
             price: li.unitPrice,
             orderId: o.id,
             orderNumber: o.orderNumber,
+            eventId: null,
+            eventName: null,
+            eventNumber: null,
+            type: "order",
           })
           m.set(o.deliveryDate, existing)
           continue
         }
-        // For catalogue products, look up the product
         const product = productBySku.get(li.productSku)
         const existing = m.get(o.deliveryDate) ?? []
         existing.push({
@@ -106,12 +147,16 @@ export function DeliveryView({ onNavigateToOrder }: { onNavigateToOrder?: (order
           price: product?.actualPriceBeforeIva ?? li.unitPrice,
           orderId: o.id,
           orderNumber: o.orderNumber,
+          eventId: null,
+          eventName: null,
+          eventNumber: null,
+          type: "order",
         })
         m.set(o.deliveryDate, existing)
       }
     }
 
-    // Source 2: Legacy localStorage plan items
+    // Source 3: Legacy localStorage plan items
     for (const item of items) {
       if (!item.deliveryDate) continue
       const product = productBySku.get(item.productSku)
@@ -126,11 +171,15 @@ export function DeliveryView({ onNavigateToOrder }: { onNavigateToOrder?: (order
         price: product.actualPriceBeforeIva,
         orderId: null,
         orderNumber: null,
+        eventId: null,
+        eventName: null,
+        eventNumber: null,
+        type: "order",
       })
       m.set(item.deliveryDate, existing)
     }
     return m
-  }, [orders, items, productBySku])
+  }, [orders, events, items, productBySku])
 
   // Generate the calendar grid for the current view month
   // Layout: weeks starting Monday. Each week has 7 cells.
@@ -298,33 +347,47 @@ export function DeliveryView({ onNavigateToOrder }: { onNavigateToOrder?: (order
                       </div>
 
                       <div className="space-y-1 overflow-hidden">
-                        {list.slice(0, 3).map((d, i) => (
-                          <button
-                            key={i}
-                            onClick={() => handleDeliveryClick(d)}
-                            disabled={!d.orderId}
-                            className={`text-[10px] leading-tight rounded bg-white border border-rose-200 px-1 py-0.5 w-full text-left transition-colors ${
-                              d.orderId
-                                ? "hover:bg-rose-50 hover:border-rose-400 cursor-pointer"
-                                : "cursor-default"
-                            }`}
-                            title={d.orderId ? `View order ${d.orderNumber}` : "No linked order"}
-                          >
-                            <div className="font-medium text-stone-800 truncate">
-                              {d.orderNumber && (
-                                <span className="text-blue-600 mr-1">{d.orderNumber}</span>
+                        {list.slice(0, 3).map((d, i) => {
+                          const isEvent = d.type === "event"
+                          const isClickable = d.orderId || (isEvent && d.eventId)
+                          return (
+                            <button
+                              key={i}
+                              onClick={() => handleDeliveryClick(d)}
+                              disabled={!isClickable}
+                              className={`text-[10px] leading-tight rounded bg-white border px-1 py-0.5 w-full text-left transition-colors ${
+                                isEvent
+                                  ? "border-purple-300 hover:bg-purple-50 hover:border-purple-500 cursor-pointer"
+                                  : isClickable
+                                    ? "border-rose-200 hover:bg-rose-50 hover:border-rose-400 cursor-pointer"
+                                    : "border-stone-200 cursor-default"
+                              }`}
+                              title={isEvent ? `View event ${d.eventNumber}` : d.orderId ? `View order ${d.orderNumber}` : "No linked order"}
+                            >
+                              <div className={`font-medium truncate ${isEvent ? "text-purple-800" : "text-stone-800"}`}>
+                                {isEvent && (
+                                  <span className="text-purple-600 mr-1">🎉</span>
+                                )}
+                                {d.orderNumber && !isEvent && (
+                                  <span className="text-blue-600 mr-1">{d.orderNumber}</span>
+                                )}
+                                {d.productName}
+                                {!isEvent && d.productSize && (
+                                  <span className="text-stone-500 ml-0.5">({d.productSize[0]})</span>
+                                )}
+                                {!isEvent && (
+                                  <span className="text-rose-600 ml-1">×{d.qty}</span>
+                                )}
+                                {isEvent && d.qty > 0 && (
+                                  <span className="text-purple-500 ml-1">{d.qty} orders</span>
+                                )}
+                              </div>
+                              {d.customerName && (
+                                <div className="text-stone-500 truncate">↳ {d.customerName}</div>
                               )}
-                              {d.productName}
-                              {d.productSize && (
-                                <span className="text-stone-500 ml-0.5">({d.productSize[0]})</span>
-                              )}
-                              <span className="text-rose-600 ml-1">×{d.qty}</span>
-                            </div>
-                            {d.customerName && (
-                              <div className="text-stone-500 truncate">↳ {d.customerName}</div>
-                            )}
-                          </button>
-                        ))}
+                            </button>
+                          )
+                        })}
                         {list.length > 3 && (
                           <div className="text-[10px] text-stone-500 italic">
                             +{list.length - 3} more
