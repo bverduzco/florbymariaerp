@@ -16,7 +16,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
   const { id } = await params
   const order = await db.order.findUnique({
     where: { id },
-    include: { customer: true, lineItems: true },
+    include: { customer: true, event: true, lineItems: true },
   })
   if (!order) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 })
@@ -57,7 +57,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   // Build update payload from allowed fields
   const allowedFields = [
     "status", "deliveryAddress", "cardMessage", "deliveryNotes", "internalNotes",
-    "deliveryFee", "discount",
+    "deliveryFee", "discount", "eventId",
     "quoteSentVia", "paymentMethod", "paymentInstructionsSent",
     "paymentStatus", "paymentAmount", "paymentReference",
   ]
@@ -133,7 +133,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const updated = await db.order.update({
       where: { id },
       data,
-      include: { customer: true, lineItems: true },
+      include: { customer: true, event: true, lineItems: true },
     })
     return NextResponse.json({ order: serializeOrder(updated) })
   } catch (err) {

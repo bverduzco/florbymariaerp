@@ -17,6 +17,7 @@ import {
   User,
   Package,
   DollarSign,
+  PartyPopper,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useNavStore } from "@/lib/nav-store"
@@ -41,6 +42,9 @@ interface Order {
   customerPhone: string | null
   customerEmail: string | null
   customerAddress: string | null
+  eventId: string | null
+  eventName: string | null
+  eventNumber: string | null
   deliveryDate: string | null
   deliveryAddress: string | null
   cardMessage: string | null
@@ -274,6 +278,10 @@ function OrderRow({ order, onClick }: { order: Order; onClick: () => void }) {
             <span className="flex items-center gap-1">
               <Package className="h-3 w-3" />
               {bouquets} bouquet{bouquets !== 1 ? "s" : ""}
+            </span>
+            <span className={`flex items-center gap-1 ${order.eventName ? "text-purple-700 font-medium" : "text-stone-400"}`}>
+              <PartyPopper className="h-3 w-3" />
+              Event: {order.eventName ?? "none"}
             </span>
           </div>
           {/* Line item summary */}

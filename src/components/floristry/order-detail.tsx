@@ -66,6 +66,9 @@ interface Order {
   customerPhone: string | null
   customerEmail: string | null
   customerAddress: string | null
+  eventId: string | null
+  eventName: string | null
+  eventNumber: string | null
   deliveryDate: string | null
   deliveryAddress: string | null
   cardMessage: string | null
@@ -718,6 +721,17 @@ export function OrderDetail({
                   )}
                 </div>
               )}
+              {/* Event badge */}
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="font-medium text-stone-600">Event:</span>
+                {order.eventName ? (
+                  <span className="text-purple-700 font-medium bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                    {order.eventNumber} · {order.eventName}
+                  </span>
+                ) : (
+                  <span className="text-stone-400 italic">none</span>
+                )}
+              </div>
             </div>
           </div>
         </div>

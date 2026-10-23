@@ -21,6 +21,7 @@ export async function GET(request: Request) {
     orderBy: [{ deliveryDate: "asc" }, { createdAt: "desc" }],
     include: {
       customer: true,
+      event: true,
       lineItems: true,
     },
   })
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
     internalNotes?: string
     deliveryFee?: number
     discount?: number
+    eventId?: string
     lineItems?: { productSku: string; qty: number }[]
   }
   try {
@@ -107,6 +109,7 @@ export async function POST(request: Request) {
         orderNumber,
         status: "draft",
         customerId: body.customerId,
+        eventId: body.eventId || null,
         deliveryDate: body.deliveryDate ? new Date(body.deliveryDate + "T00:00:00") : null,
         deliveryAddress: body.deliveryAddress || null,
         cardMessage: body.cardMessage || null,
@@ -127,7 +130,7 @@ export async function POST(request: Request) {
           }),
         },
       },
-      include: { customer: true, lineItems: true },
+      include: { customer: true, event: true, lineItems: true },
     })
 
     return NextResponse.json(
@@ -150,6 +153,9 @@ function serializeOrder(o: typeof db.$inferTypes["order"] | any) {
     customerPhone: o.customer?.phone ?? null,
     customerEmail: o.customer?.email ?? null,
     customerAddress: o.customer?.address ?? null,
+    eventId: o.eventId ?? null,
+    eventName: o.event?.name ?? null,
+    eventNumber: o.event?.eventNumber ?? null,
     deliveryDate: o.deliveryDate?.toISOString().split("T")[0] ?? null,
     deliveryAddress: o.deliveryAddress,
     cardMessage: o.cardMessage,

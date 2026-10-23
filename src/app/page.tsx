@@ -160,7 +160,7 @@ export default function Home() {
               <span className="sm:hidden">Cust</span>
             </TabsTrigger>
             <TabsTrigger value="catalogue" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
-              <Flower2 className="h-4 w-4 text-rose-600" />
+              <Flower2 className="h-4 w-4" />
               <span className="hidden sm:inline">Catalogue</span>
               <span className="sm:hidden">Cat</span>
             </TabsTrigger>

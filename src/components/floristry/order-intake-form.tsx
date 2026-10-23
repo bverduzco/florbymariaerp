@@ -24,6 +24,7 @@ import {
   Loader2,
   Sparkles,
   RotateCcw,
+  PartyPopper,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -68,7 +69,10 @@ export function OrderIntakeForm() {
     fetchCatalogue()
   }, [fetchCatalogue])
 
-  // Load customers
+  // Load customers + events
+  const [events, setEvents] = useState<{ id: string; name: string; eventNumber: string }[]>([])
+  const [eventId, setEventId] = useState<string>("")
+
   useEffect(() => {
     fetch("/api/customers", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : { customers: [] }))
@@ -77,6 +81,11 @@ export function OrderIntakeForm() {
       })
       .catch(() => setCustomers([]))
       .finally(() => setCustomersLoading(false))
+
+    fetch("/api/events", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { events: [] }))
+      .then((data) => setEvents((data.events ?? []).map((e: any) => ({ id: e.id, name: e.name, eventNumber: e.eventNumber }))))
+      .catch(() => {})
   }, [])
 
   // When a customer is selected, autofill delivery address from their record
@@ -104,6 +113,7 @@ export function OrderIntakeForm() {
 
   function resetForm() {
     setCustomerId("")
+    setEventId("")
     setDeliveryDate("")
     setDeliveryAddress("")
     setCardMessage("")
@@ -150,6 +160,7 @@ export function OrderIntakeForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           customerId,
+          eventId: eventId || undefined,
           deliveryDate: deliveryDate || undefined,
           deliveryAddress: deliveryAddress || undefined,
           cardMessage: cardMessage || undefined,
@@ -250,6 +261,24 @@ export function OrderIntakeForm() {
               value={deliveryDate}
               onChange={(e) => setDeliveryDate(e.target.value)}
             />
+          </div>
+          <div className="sm:col-span-2">
+            <Label htmlFor="event" className="text-xs flex items-center gap-1">
+              <PartyPopper className="h-3 w-3" /> Is this part of an event?
+            </Label>
+            <Select value={eventId} onValueChange={setEventId}>
+              <SelectTrigger id="event">
+                <SelectValue placeholder="None — standalone order" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">None — standalone order</SelectItem>
+                {events.map((e) => (
+                  <SelectItem key={e.id} value={e.id}>
+                    {e.eventNumber} · {e.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="sm:col-span-2">
             <Label htmlFor="deliveryAddress" className="text-xs flex items-center gap-1">
