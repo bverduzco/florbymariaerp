@@ -212,8 +212,49 @@ export async function POST(request: Request) {
   const generatedAt = new Date(Date.now() - 6 * 60 * 60 * 1000)
   const generatedLabel = generatedAt.toISOString().slice(0, 16).replace("T", " ") // "YYYY-MM-DD HH:MM"
 
+  // === Shopping List identifier + status ===
+  // Each PDF generation gets a unique SL-NNNN number, persisted so the user
+  // can later reference "SL-0003 for the week of 26/10" even after more orders
+  // are added to the plan.
+  const lastSL = await db.shoppingList.findFirst({ orderBy: { slNumber: "desc" } })
+  let nextSLNum = 1
+  if (lastSL?.slNumber) {
+    const match = /^SL-(\d+)$/.exec(lastSL.slNumber)
+    if (match) nextSLNum = parseInt(match[1], 10) + 1
+  }
+  const slNumber = `SL-${String(nextSLNum).padStart(4, "0")}`
+
+  // Status: complete = every line's toBuyPacks = 0 (all materials covered by
+  // open POs). Pending = at least one line still has remaining need.
+  const itemsToBuyCount = shoppingList.filter(
+    (l: any) => (l.toBuyPacks ?? 0) > 0,
+  ).length
+  const totalToBuyPacks = shoppingList.reduce(
+    (s: number, l: any) => s + (l.toBuyPacks ?? 0),
+    0,
+  )
+  const status: "pending" | "complete" = itemsToBuyCount === 0 ? "complete" : "pending"
+
+  // Persist the Shopping List snapshot.
+  await db.shoppingList.create({
+    data: {
+      slNumber,
+      weekStartDate: body.weekStartDate ?? null,
+      status,
+      itemsToBuyCount,
+      totalToBuyPacks,
+      totalCost: shoppingList.reduce((s: number, l: any) => s + (l.totalPackCost ?? 0), 0),
+      materialCount: shoppingList.length,
+      supplierCount: Object.keys(bySupplier).length,
+    },
+  })
+
   const payload = {
     weekStartDate: body.weekStartDate ?? null,
+    slNumber,
+    status,
+    itemsToBuyCount,
+    totalToBuyPacks,
     generatedAt: generatedLabel,
     planSummary: {
       totalBouquets, totalRevenue, totalCost,
@@ -226,8 +267,9 @@ export async function POST(request: Request) {
     bySupplier,
   }
 
-  // File name uses GMT-6 date so it sorts correctly in the user's download folder.
-  const fileName = `Shopping List ${generatedAt.toISOString().split("T")[0]}.pdf`
+  // File name includes the SL number so multiple PDFs for the same week are
+  // distinguishable in the user's download folder.
+  const fileName = `Shopping List ${slNumber} (${generatedAt.toISOString().split("T")[0]}).pdf`
   const outputPath = path.join("/home/z/my-project/download", fileName)
 
   // Write payload to temp JSON + generate PDF via Python
@@ -249,6 +291,10 @@ export async function POST(request: Request) {
       success: true,
       fileName,
       downloadPath: outputPath,
+      slNumber,
+      status,
+      itemsToBuyCount,
+      totalToBuyPacks,
       materialCount: shoppingList.length,
       supplierCount: Object.keys(bySupplier).length,
     })

@@ -93,12 +93,8 @@ def build_shopping_list(payload, output_path):
         canvas.line(margin, 15 * mm, page_w - margin, 15 * mm)
         canvas.setFont("Helvetica", 8)
         canvas.setFillColor(COLOR_STONE_LIGHT)
-        # Footer timestamp uses GMT-6 (Mexico City). The API also passes a
-        # pre-computed `generatedAt` label in the payload — prefer that if set.
-        gen_label = payload.get("generatedAt")
-        if not gen_label:
-            gen_label = datetime.now(GMT_MINUS_6).strftime("%d/%m/%Y %H:%M")
-        canvas.drawString(margin, 10 * mm, "Flor by Maria · Lista de compras")
+        # Footer timestamp uses the same GMT-6 label as the header subtitle.
+        canvas.drawString(margin, 10 * mm, f"Flor by Maria · {sl_number} · Lista de compras")
         canvas.drawRightString(page_w - margin, 10 * mm, f"Generated {gen_label} (GMT-6)")
         canvas.restoreState()
 
@@ -136,11 +132,38 @@ def build_shopping_list(payload, output_path):
         sunday = monday + timedelta(days=6)
         week_label = f"Week of {monday.strftime('%d/%m/%Y')} – {sunday.strftime('%d/%m/%Y')} (current)"
 
-    # Summary stats
+    # "Generated at" label (GMT-6). The API passes a pre-computed label; fall back
+    # to the current GMT-6 time if the API didn't set one.
+    gen_label = payload.get("generatedAt") or datetime.now(GMT_MINUS_6).strftime("%d/%m/%Y %H:%M")
+
+    # Summary stats — now includes the SL number, status badge, and subtitle line.
+    sl_number = payload.get("slNumber") or "SL-????"
+    status = payload.get("status") or "pending"
+    items_to_buy_count = payload.get("itemsToBuyCount", 0) or 0
+    total_to_buy_packs = payload.get("totalToBuyPacks", 0) or 0
+
+    # Status badge (color-coded text).
+    if status == "complete":
+        status_html = (
+            f'<font name="Helvetica-Bold" size="10" color="#047857">'
+            f'✓ Status: Complete — all materials covered by open POs</font>'
+        )
+    else:
+        status_html = (
+            f'<font name="Helvetica-Bold" size="10" color="#D97706">'
+            f'● Status: Pending — {items_to_buy_count} item'
+            f'{"s" if items_to_buy_count != 1 else ""} still to buy · '
+            f'{total_to_buy_packs} packs</font>'
+        )
+
     s = payload.get("planSummary", {})
     summary_html = (
         f'<font name="Helvetica-Bold" size="14" color="#44403C">SHOPPING LIST</font>'
+        f'  <font name="Helvetica-Bold" size="12" color="#BE185D">{sl_number}</font>'
         f'<br/><font size="9" color="#78716C">{week_label}</font>'
+        f'<br/><font size="8" color="#78716C" face="Helvetica-Oblique">'
+        f'Material needed for orders placed before {gen_label} (GMT-6)</font>'
+        f'<br/>{status_html}'
     )
     stats_html = (
         f'<font size="9" color="#78716C">Bouquets:</font> '
@@ -179,11 +202,12 @@ def build_shopping_list(payload, output_path):
         lines = group.get("lines", [])
         group_total = group.get("totalPackCost", 0)
 
-        # Supplier header — include open PO numbers when present.
+        # Supplier header — include open PO numbers when present, prefix cost
+        # with "Est. cost: " so it's clear this is an estimate, not an invoice.
         open_pos = group.get("openPOs", []) or []
         header_text = (
             f'{supplier_name} — {group.get("lineCount", len(lines))} items · '
-            f'${group_total:,.0f} MXN'
+            f'Est. cost: ${group_total:,.0f} MXN'
         )
         if open_pos:
             po_nums = ", ".join(p.get("poNumber", "") for p in open_pos if p.get("poNumber"))
@@ -191,19 +215,24 @@ def build_shopping_list(payload, output_path):
                 header_text += f'  ·  Existing POs: {po_nums}'
         story.append(Paragraph(header_text, style_supplier))
 
-        # Table header — added checkbox (✓) + substitutes columns, dropped PACK PRICE
-        # to make room. The PACK PRICE is still implied by TOTAL / PACKS.
+        # Table header — reverted to the original 8 columns.
+        #   Material (with checkbox prefix), SKU, Need, Pack Size, Packs,
+        #   Pack Price, Total, Used By.
+        # Substitutes appear as a separate SPAN row below each item, not as
+        # their own column.
         table_data = [[
-            Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">✓</font>', style_body),
             Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">MATERIAL</font>', style_body),
             Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">SKU</font>', style_body),
             Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">NEED</font>', style_body),
             Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">PACK SIZE</font>', style_body),
-            Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">ORDERED</font>', style_body),
-            Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">TO BUY</font>', style_body),
-            Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">SUBSTITUTES</font>', style_body),
+            Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">PACKS</font>', style_body),
+            Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">PACK PRICE</font>', style_body),
+            Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">TOTAL</font>', style_body),
             Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="8">USED BY</font>', style_body),
         ]]
+
+        # Track which row indices are substitutes rows (for SPAN styling).
+        subs_rows = []
 
         for li in lines:
             need_str = f'{li.get("totalQty", 0)} {li.get("unit", "")}'
@@ -211,33 +240,9 @@ def build_shopping_list(payload, output_path):
                 need_str += "s"
 
             pack_size_str = str(li.get("unitsPerPack")) if li.get("unitsPerPack") else "?"
-
-            # Option A: show already-ordered + remaining-to-buy prominently.
-            already_ordered = li.get("alreadyOrderedPacks", 0) or 0
-            to_buy = li.get("toBuyPacks")
-            pack_qty_rounded = li.get("packQtyRounded")
-
-            if pack_qty_rounded is None:
-                ordered_str = "—"
-                to_buy_str = '<font color="#D97706">?</font>'
-            elif already_ordered > 0 and to_buy == 0:
-                # Fully covered — show "✓ {ordered}" in emerald.
-                ordered_str = f'<font color="#047857" name="Helvetica-Bold">{already_ordered}</font>'
-                to_buy_str = '<font color="#047857" name="Helvetica-Bold">✓</font>'
-            elif already_ordered > 0:
-                ordered_str = f'<font color="#D97706" name="Helvetica-Bold">{already_ordered}</font>'
-                to_buy_str = f'<font color="#BE185D" name="Helvetica-Bold" size="11">{to_buy}</font>'
-            else:
-                ordered_str = '<font color="#A8A29E">0</font>'
-                to_buy_str = f'<font color="#BE185D" name="Helvetica-Bold" size="11">{pack_qty_rounded}</font>'
-
-            # Substitutes column (free-text, may be null/empty).
-            subs_text = li.get("substitutes") or ""
-            subs_str = (
-                f'<font size="7" color="#4338CA">{subs_text}</font>'
-                if subs_text else
-                '<font size="7" color="#D6D3D1">—</font>'
-            )
+            packs_str = str(li.get("packQtyRounded")) if li.get("packQtyRounded") else "?"
+            pack_price_str = f'${li.get("packPrice", 0):,.0f}' if li.get("packPrice") else "?"
+            total_str = f'${li.get("totalPackCost", 0):,.0f}' if li.get("totalPackCost") else "?"
 
             # Used by summary
             used_by_parts = []
@@ -252,39 +257,75 @@ def build_shopping_list(payload, output_path):
             if li.get("warning"):
                 warning_str = f'<br/><font color="#D97706" size="7"><i>⚠ {li["warning"]}</i></font>'
 
+            # Checkbox prefix on the material name so the user can tick items off
+            # as they shop. No separate column — saves horizontal space.
+            material_html = (
+                f'<font size="11" color="#A8A29E">☐</font> '
+                f'{li.get("materialName", "")}{warning_str}'
+            )
+
             table_data.append([
-                # Checkbox — empty box so the user can tick items off as they shop.
-                Paragraph('<font size="12" color="#A8A29E">☐</font>', style_body),
-                Paragraph(f'{li.get("materialName", "")}{warning_str}', style_body),
+                Paragraph(material_html, style_body),
                 Paragraph(f'<font size="7" color="#78716C">{li.get("materialSku", "")}</font>', style_body),
                 Paragraph(need_str, style_body),
                 Paragraph(pack_size_str, style_body),
-                Paragraph(ordered_str, style_body),
-                Paragraph(to_buy_str, style_body),
-                Paragraph(subs_str, style_body),
+                Paragraph(f'<font name="Helvetica-Bold" size="10" color="#BE185D">{packs_str}</font>', style_body),
+                Paragraph(pack_price_str, style_body),
+                Paragraph(f'<font name="Helvetica-Bold">{total_str}</font>', style_body),
                 Paragraph(f'<font size="7" color="#78716C">{used_by_str}</font>', style_body),
             ])
 
+            # Substitutes row — only when the material has substitutes defined.
+            # Spans all columns, small italic indigo text, no row border.
+            subs_text = li.get("substitutes") or ""
+            if subs_text:
+                subs_para = Paragraph(
+                    f'<font size="7" color="#4338CA" face="Helvetica-Oblique">'
+                    f'&nbsp;&nbsp;&nbsp;↳ Substitutes: {subs_text}</font>',
+                    style_body,
+                )
+                table_data.append([subs_para] + [""] * 7)
+                subs_rows.append(len(table_data) - 1)
+
         # Column widths (sum ≈ 180mm, fits A4 with 15mm margins):
-        #   checkbox, material, sku, need, pack-size, ordered, to-buy, substitutes, used-by
-        col_widths = [6*mm, 30*mm, 18*mm, 16*mm, 13*mm, 14*mm, 14*mm, 30*mm, 39*mm]
+        #   material, sku, need, pack-size, packs, pack-price, total, used-by
+        col_widths = [32*mm, 22*mm, 18*mm, 14*mm, 12*mm, 18*mm, 18*mm, 46*mm]
         items_table = Table(table_data, colWidths=col_widths, repeatRows=1)
-        items_table.setStyle(TableStyle([
+
+        # Build style commands. SPAN the substitutes rows across all columns
+        # and override their background to white (so they don't pick up the
+        # alternating row background of the item rows above/below).
+        style_cmds = [
             ("BACKGROUND", (0, 0), (-1, 0), COLOR_ROSE),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-            ("ALIGN", (0, 0), (0, -1), "CENTER"),     # checkbox column centered
-            ("ALIGN", (3, 0), (6, -1), "RIGHT"),       # numeric columns right-aligned
-            ("ALIGN", (1, 0), (2, -1), "LEFT"),       # material + sku left
-            ("ALIGN", (7, 0), (8, -1), "LEFT"),       # substitutes + used-by left
+            ("ALIGN", (2, 0), (-1, -1), "RIGHT"),
+            ("ALIGN", (0, 0), (1, -1), "LEFT"),
             ("VALIGN", (0, 0), (-1, -1), "TOP"),
             ("LEFTPADDING", (0, 0), (-1, -1), 4),
             ("RIGHTPADDING", (0, 0), (-1, -1), 4),
             ("TOPPADDING", (0, 0), (-1, -1), 4),
             ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, COLOR_BG_LIGHT]),
             ("LINEBELOW", (0, 0), (-1, -1), 0.25, COLOR_BORDER),
             ("BOX", (0, 0), (-1, -1), 0.5, COLOR_BORDER),
-        ]))
+        ]
+
+        # Apply alternating row backgrounds only to non-subs rows.
+        # Row 0 is the header; subsequent rows alternate white / light-stone.
+        # Skip subs_rows — they get their own explicit background.
+        for row_idx in range(1, len(table_data)):
+            if row_idx in subs_rows:
+                style_cmds.append(("BACKGROUND", (0, row_idx), (-1, row_idx), colors.white))
+                style_cmds.append(("SPAN", (0, row_idx), (-1, row_idx)))
+                style_cmds.append(("TOPPADDING", (0, row_idx), (-1, row_idx), 1))
+                style_cmds.append(("BOTTOMPADDING", (0, row_idx), (-1, row_idx), 1))
+                style_cmds.append(("LINEBELOW", (0, row_idx), (-1, row_idx), 0, colors.white))
+            else:
+                # Alternating: count only non-subs rows for the parity check.
+                non_subs_above = sum(1 for r in range(1, row_idx) if r not in subs_rows)
+                if non_subs_above % 2 == 1:
+                    style_cmds.append(("BACKGROUND", (0, row_idx), (-1, row_idx), COLOR_BG_LIGHT))
+
+        items_table.setStyle(TableStyle(style_cmds))
         story.append(items_table)
         story.append(Spacer(1, 4 * mm))
 

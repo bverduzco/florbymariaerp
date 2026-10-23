@@ -271,6 +271,30 @@ model PurchaseOrderLine {
 }
 
 /**
+ * Shopping List snapshot — created each time the user generates a PDF
+ * from the Shopping List panel. Has its own identifier (SL-0001, SL-0002, ...)
+ * so the user can reference "SL-0003 for the week of 26/10" later, even after
+ * more orders are added to the plan.
+ *
+ * Status is computed at generation time:
+ *   - "complete" = every line's toBuyPacks = 0 (all materials covered by open POs)
+ *   - "pending"  = at least one line still has remaining need (toBuyPacks > 0)
+ */
+model ShoppingList {
+  id              String   @id @default(cuid())
+  slNumber        String   @unique // e.g. SL-0001
+  weekStartDate   String?  // ISO yyyy-mm-dd (may be null if user didn't pick a week)
+  status          String   @default("pending") // pending | complete
+  itemsToBuyCount Int      @default(0) // count of lines with toBuyPacks > 0
+  totalToBuyPacks Int      @default(0) // sum of toBuyPacks across all lines
+  totalCost       Float    @default(0) // sum of totalPackCost (est. cost)
+  materialCount   Int      @default(0) // distinct materials in the snapshot
+  supplierCount   Int      @default(0) // distinct suppliers
+  generatedAt     DateTime @default(now()) // when the PDF was generated
+  createdAt       DateTime @default(now())
+}
+
+/**
  * Events bundle multiple orders under one occasion (wedding, corporate, etc.)
  */
 model Event {
