@@ -154,20 +154,10 @@ export default function Home() {
               <span className="hidden sm:inline">Orders</span>
               <span className="sm:hidden">ORD</span>
             </TabsTrigger>
-            <TabsTrigger value="custom" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
-              <Wand2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Custom</span>
-              <span className="sm:hidden">Cust</span>
-            </TabsTrigger>
             <TabsTrigger value="catalogue" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <Flower2 className="h-4 w-4" />
               <span className="hidden sm:inline">Catalogue</span>
               <span className="sm:hidden">Cat</span>
-            </TabsTrigger>
-            <TabsTrigger value="inventory" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
-              <Boxes className="h-4 w-4" />
-              <span className="hidden sm:inline">Inventory</span>
-              <span className="sm:hidden">Inv</span>
             </TabsTrigger>
             <TabsTrigger value="plan" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <ClipboardList className="h-4 w-4" />
@@ -179,20 +169,30 @@ export default function Home() {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="customers" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
-              <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Customers</span>
-              <span className="sm:hidden">Cust</span>
-            </TabsTrigger>
             <TabsTrigger value="delivery" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <CalendarDays className="h-4 w-4" />
               <span className="hidden sm:inline">Delivery</span>
               <span className="sm:hidden">Del</span>
             </TabsTrigger>
+            <TabsTrigger value="customers" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Customers</span>
+              <span className="sm:hidden">Cust</span>
+            </TabsTrigger>
             <TabsTrigger value="events" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <PartyPopper className="h-4 w-4" />
               <span className="hidden sm:inline">Events</span>
               <span className="sm:hidden">Evt</span>
+            </TabsTrigger>
+            <TabsTrigger value="custom" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+              <Wand2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Custom</span>
+              <span className="sm:hidden">Cust</span>
+            </TabsTrigger>
+            <TabsTrigger value="inventory" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+              <Boxes className="h-4 w-4" />
+              <span className="hidden sm:inline">Inventory</span>
+              <span className="sm:hidden">Inv</span>
             </TabsTrigger>
             <TabsTrigger value="dashboard" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <LayoutDashboard className="h-4 w-4" />
