@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Loader2, Download, CheckCircle2 } from "lucide-react"
+import { Loader2, Upload, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
 
 export function BackupButton() {
@@ -53,7 +53,7 @@ export function BackupButton() {
       ) : lastBackup ? (
         <CheckCircle2 className="h-4 w-4 text-emerald-600" />
       ) : (
-        <Download className="h-4 w-4" />
+        <Upload className="h-4 w-4" />
       )}
       {backing ? "Backing up…" : "Backup DB to Excel"}
     </Button>

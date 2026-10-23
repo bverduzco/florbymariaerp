@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { Upload, Loader2, CheckCircle2 } from "lucide-react"
+import { Download, Loader2, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { useCatalogue } from "@/lib/catalogue-store"
@@ -68,7 +68,7 @@ export function ErpUploadButton() {
         ) : lastUpload ? (
           <CheckCircle2 className="h-4 w-4 text-emerald-600" />
         ) : (
-          <Upload className="h-4 w-4" />
+          <Download className="h-4 w-4" />
         )}
         {uploading ? "Refreshing…" : "Refresh UI from Truth"}
       </Button>
