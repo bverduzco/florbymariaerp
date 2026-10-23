@@ -18,6 +18,7 @@ import { InventoryTab } from "@/components/floristry/inventory-tab"
 import { DashboardTab } from "@/components/floristry/dashboard-tab"
 import { EventsTab } from "@/components/floristry/events-tab"
 import { useNavStore } from "@/lib/nav-store"
+import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
@@ -218,15 +219,17 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="catalogue" className="mt-4">
-            <div className="mb-3 flex items-baseline justify-between">
-              <h2 className="text-lg font-semibold text-stone-800 flex items-center gap-2">
-                <Flower2 className="h-5 w-5 text-rose-600" />
-                Catalogue
-              </h2>
-              {catalogueLoading && (
-                <span className="text-xs text-stone-500 animate-pulse">Loading…</span>
-              )}
-            </div>
+            <Card className="border-rose-200 bg-rose-50/40 p-4 mb-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <Flower2 className="h-5 w-5 text-rose-700" />
+                  <h2 className="text-lg font-semibold text-stone-800">Catalogue</h2>
+                </div>
+                {catalogueLoading && (
+                  <span className="text-xs text-stone-500 animate-pulse">Loading…</span>
+                )}
+              </div>
+            </Card>
             <CatalogueGrid />
           </TabsContent>
 
