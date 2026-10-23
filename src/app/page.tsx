@@ -219,7 +219,10 @@ export default function Home() {
 
           <TabsContent value="catalogue" className="mt-4">
             <div className="mb-3 flex items-baseline justify-between">
-              <h2 className="text-lg font-semibold text-stone-800">Catalogue</h2>
+              <h2 className="text-lg font-semibold text-stone-800 flex items-center gap-2">
+                <Flower2 className="h-5 w-5 text-rose-600" />
+                Catalogue
+              </h2>
               {catalogueLoading && (
                 <span className="text-xs text-stone-500 animate-pulse">Loading…</span>
               )}
