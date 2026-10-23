@@ -24,6 +24,7 @@ import {
   Gift,
   FileDown,
   Loader2,
+  ClipboardCheck,
 } from "lucide-react"
 import { usePlanStore } from "@/lib/plan-store"
 import { toast } from "sonner"
@@ -98,6 +99,7 @@ export function ShoppingListPanel({
   const [orders, setOrders] = useState<any[]>([])
   const [ordersLoaded, setOrdersLoaded] = useState(false)
   const [printingPdf, setPrintingPdf] = useState(false)
+  const [creatingPOs, setCreatingPOs] = useState(false)
   const [inventory, setInventory] = useState<Record<string, number>>({})
 
   // Fetch orders + inventory from DB whenever the panel opens
@@ -271,6 +273,57 @@ export function ShoppingListPanel({
     }
   }
 
+  async function createPOs() {
+    if (!data) return
+    setCreatingPOs(true)
+    try {
+      // Create one PO per supplier
+      const suppliers = Object.keys(data.bySupplier)
+      const createdPOs: string[] = []
+
+      for (const supplier of suppliers) {
+        const group = data.bySupplier[supplier]
+        const lines = group.lines
+          .filter((l) => l.packQtyRounded && l.packQtyRounded > 0)
+          .map((l) => ({
+            materialSku: l.materialSku,
+            materialName: l.materialName,
+            qtyPacks: l.packQtyRounded!,
+            costPerPack: l.packPrice ?? 0,
+          }))
+
+        if (lines.length === 0) continue
+
+        const res = await fetch("/api/purchase-orders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ supplier, lines }),
+        })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}))
+          throw new Error(err.error || `HTTP ${res.status}`)
+        }
+        const poData = await res.json()
+        createdPOs.push(poData.purchaseOrder.poNumber)
+      }
+
+      if (createdPOs.length > 0) {
+        toast.success(`Created ${createdPOs.length} Purchase Order${createdPOs.length > 1 ? "s" : ""}`, {
+          description: createdPOs.join(", ") + " — view them in the Purchase Orders section",
+          duration: 8000,
+        })
+      } else {
+        toast.info("No POs created — all materials have unknown pack sizes")
+      }
+    } catch (e) {
+      toast.error("Failed to create POs", {
+        description: e instanceof Error ? e.message : String(e),
+      })
+    } finally {
+      setCreatingPOs(false)
+    }
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-2xl p-0 gap-0 flex flex-col overflow-hidden">
@@ -337,6 +390,16 @@ export function ShoppingListPanel({
               <Button variant="outline" size="sm" onClick={printPdf} disabled={printingPdf} className="gap-1.5 text-xs">
                 {printingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
                 Print PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={createPOs}
+                disabled={creatingPOs || !data}
+                className="gap-1.5 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              >
+                {creatingPOs ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ClipboardCheck className="h-3.5 w-3.5" />}
+                Create POs
               </Button>
             </div>
 

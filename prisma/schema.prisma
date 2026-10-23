@@ -237,3 +237,31 @@ model StockAdjustment {
   notes       String?
   createdAt   DateTime @default(now())
 }
+
+/**
+ * Purchase Orders generated from the Shopping List.
+ * One PO per supplier per shopping list generation.
+ */
+model PurchaseOrder {
+  id              String   @id @default(cuid())
+  poNumber        String   @unique // e.g. PO-3001
+  supplier        String
+  status          String   @default("draft") // draft | sent | received | cancelled
+  totalCost       Float    @default(0)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  lines           PurchaseOrderLine[]
+}
+
+model PurchaseOrderLine {
+  id              String   @id @default(cuid())
+  poId            String
+  po              PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  materialSku     String
+  materialName    String
+  qtyPacks        Int
+  costPerPack     Float
+  lineTotal       Float
+  createdAt       DateTime @default(now())
+}
