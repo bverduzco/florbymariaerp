@@ -249,7 +249,7 @@ model PurchaseOrder {
   id              String   @id @default(cuid())
   poNumber        String   @unique // e.g. PO-3001
   supplier        String
-  status          String   @default("draft") // draft | sent | received | cancelled
+  status          String   @default("draft") // draft | approved | pending | procured | received | cancelled
   totalCost       Float    @default(0)
   notes           String?
   createdAt       DateTime @default(now())

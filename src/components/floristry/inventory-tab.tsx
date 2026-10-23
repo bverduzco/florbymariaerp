@@ -32,6 +32,8 @@ import {
   Search,
   TrendingDown,
   Boxes,
+  Truck,
+  ClipboardCheck,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -58,6 +60,38 @@ interface InventoryItem {
   }[]
 }
 
+interface POLine {
+  id: string
+  materialSku: string
+  materialName: string
+  qtyPacks: number
+  costPerPack: number
+  lineTotal: number
+}
+
+interface PurchaseOrder {
+  id: string
+  poNumber: string
+  supplier: string
+  status: string
+  totalCost: number
+  lineCount: number
+  createdAt: string
+  lines: POLine[]
+}
+
+// Statuses considered "incoming" (not yet physically received).
+const PO_INCOMING_STATUSES = ["draft", "approved", "pending", "procured"]
+
+const PO_STATUS_BADGES: Record<string, string> = {
+  draft: "bg-stone-100 text-stone-600 border-stone-200",
+  approved: "bg-indigo-100 text-indigo-700 border-indigo-200",
+  pending: "bg-blue-100 text-blue-700 border-blue-200",
+  procured: "bg-amber-100 text-amber-800 border-amber-200",
+  received: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  cancelled: "bg-red-100 text-red-700 border-red-200",
+}
+
 const REASONS = [
   { value: "loss", label: "Pérdida (loss/damage)" },
   { value: "expiration", label: "Caducidad (expiration)" },
@@ -69,19 +103,31 @@ const REASONS = [
 
 export function InventoryTab() {
   const [items, setItems] = useState<InventoryItem[]>([])
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [showLowOnly, setShowLowOnly] = useState(false)
   const [adjustOpen, setAdjustOpen] = useState<string | null>(null)
+  const [poRefreshKey, setPoRefreshKey] = useState(0)
 
   async function fetchInventory() {
     setLoading(true)
     try {
-      const res = await fetch("/api/inventory", { cache: "no-store" })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
-      setItems(data.materials ?? [])
+      const [invRes, poRes] = await Promise.all([
+        fetch("/api/inventory", { cache: "no-store" }),
+        fetch("/api/purchase-orders", { cache: "no-store" }),
+      ])
+      if (!invRes.ok) throw new Error(`Inventory HTTP ${invRes.status}`)
+      const invData = await invRes.json()
+      setItems(invData.materials ?? [])
+      // POs are best-effort — never block inventory on PO fetch failure.
+      if (poRes.ok) {
+        const poData = await poRes.json()
+        setPurchaseOrders(poData.purchaseOrders ?? [])
+      } else {
+        setPurchaseOrders([])
+      }
     } catch (e) {
       toast.error("Failed to load inventory", {
         description: e instanceof Error ? e.message : String(e),
@@ -94,6 +140,23 @@ export function InventoryTab() {
   useEffect(() => {
     fetchInventory()
   }, [])
+
+  // Refresh POs when the tab regains focus (e.g. after a PO was created elsewhere).
+  useEffect(() => {
+    function onFocus() {
+      setPoRefreshKey((k) => k + 1)
+    }
+    window.addEventListener("focus", onFocus)
+    return () => window.removeEventListener("focus", onFocus)
+  }, [])
+
+  useEffect(() => {
+    if (poRefreshKey === 0) return
+    fetch("/api/purchase-orders", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { purchaseOrders: [] }))
+      .then((d) => setPurchaseOrders(d.purchaseOrders ?? []))
+      .catch(() => {})
+  }, [poRefreshKey])
 
   const filtered = useMemo(() => {
     let list = items
@@ -111,6 +174,36 @@ export function InventoryTab() {
   const totalValue = items.reduce((s, m) => s + m.stockValue, 0)
   const lowStockCount = items.filter((m) => m.reorderLevel !== null && m.currentStockPacks <= (m.reorderLevel ?? 0)).length
   const trackedCount = items.filter((m) => m.isTracked).length
+
+  // Incoming POs = any PO not yet received (and not cancelled).
+  const incomingPOs = useMemo(
+    () => purchaseOrders.filter((po) => PO_INCOMING_STATUSES.includes(po.status)),
+    [purchaseOrders],
+  )
+
+  // Per-SKU total incoming packs across all incoming POs.
+  const incomingBySku = useMemo(() => {
+    const map: Record<string, { totalPacks: number; pos: { poNumber: string; qtyPacks: number; status: string }[] }> = {}
+    for (const po of incomingPOs) {
+      for (const line of po.lines) {
+        if (!map[line.materialSku]) {
+          map[line.materialSku] = { totalPacks: 0, pos: [] }
+        }
+        map[line.materialSku].totalPacks += line.qtyPacks
+        map[line.materialSku].pos.push({
+          poNumber: po.poNumber,
+          qtyPacks: line.qtyPacks,
+          status: po.status,
+        })
+      }
+    }
+    return map
+  }, [incomingPOs])
+
+  const totalIncomingPacks = useMemo(
+    () => Object.values(incomingBySku).reduce((s, v) => s + v.totalPacks, 0),
+    [incomingBySku],
+  )
 
   async function handleAdjust(sku: string, deltaPacks: number, reason: string, notes: string) {
     try {
@@ -164,6 +257,63 @@ export function InventoryTab() {
           expirations, or manual corrections. Flowers are perishable — trust but verify.
         </p>
       </Card>
+
+      {/* Incoming POs (not yet received) — pinned at the top so you can see what's coming in */}
+      {incomingPOs.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50/40 p-4">
+          <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+            <div className="flex items-center gap-2">
+              <Truck className="h-4 w-4 text-amber-700" />
+              <h3 className="text-sm font-semibold text-stone-800">Incoming Purchase Orders</h3>
+              <Badge variant="outline" className="text-[10px] bg-amber-100 text-amber-800 border-amber-200">
+                {incomingPOs.length} PO{incomingPOs.length > 1 ? "s" : ""}
+              </Badge>
+              <Badge variant="outline" className="text-[10px] bg-white border-amber-200 text-amber-700">
+                {totalIncomingPacks} packs incoming
+              </Badge>
+            </div>
+            <span className="text-[10px] text-stone-500">
+              These POs haven't been marked as received yet — stock will be added automatically when received.
+            </span>
+          </div>
+          <div className="space-y-2">
+            {incomingPOs.map((po) => (
+              <div
+                key={po.id}
+                className="rounded-md border border-amber-200 bg-white p-2.5"
+              >
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-stone-800 text-sm">{po.poNumber}</span>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] py-0 ${PO_STATUS_BADGES[po.status] ?? ""}`}
+                    >
+                      {po.status}
+                    </Badge>
+                    <span className="text-xs text-stone-500">{po.supplier}</span>
+                  </div>
+                  <div className="text-xs text-stone-500">
+                    {new Date(po.createdAt).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}
+                    {" · "}
+                    <span className="font-medium text-stone-700">${po.totalCost.toLocaleString("es-MX")}</span>
+                  </div>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {po.lines.map((line) => (
+                    <span
+                      key={line.id}
+                      className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 border border-amber-200 text-amber-800"
+                    >
+                      {line.materialName} · +{line.qtyPacks} packs
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Search + filters */}
       <Card className="bg-white p-3">
@@ -222,7 +372,12 @@ export function InventoryTab() {
         ) : (
           <div className="space-y-1 max-h-[600px] overflow-y-auto pr-1">
             {filtered.map((m) => (
-              <InventoryRow key={m.sku} item={m} onAdjust={(sku) => setAdjustOpen(sku)} />
+              <InventoryRow
+                key={m.sku}
+                item={m}
+                incoming={incomingBySku[m.sku]}
+                onAdjust={(sku) => setAdjustOpen(sku)}
+              />
             ))}
           </div>
         )}
@@ -243,9 +398,18 @@ export function InventoryTab() {
   )
 }
 
-function InventoryRow({ item, onAdjust }: { item: InventoryItem; onAdjust: (sku: string) => void }) {
+function InventoryRow({
+  item,
+  incoming,
+  onAdjust,
+}: {
+  item: InventoryItem
+  incoming?: { totalPacks: number; pos: { poNumber: string; qtyPacks: number; status: string }[] }
+  onAdjust: (sku: string) => void
+}) {
   const isLow = item.reorderLevel !== null && item.currentStockPacks <= (item.reorderLevel ?? 0)
   const isUntracked = !item.isTracked
+  const hasIncoming = !!incoming && incoming.totalPacks > 0
 
   return (
     <div
@@ -261,6 +425,27 @@ function InventoryRow({ item, onAdjust }: { item: InventoryItem; onAdjust: (sku:
           {item.supplier && <span>· {item.supplier}</span>}
           {item.packPrice != null && <span>· ${item.packPrice}/pack</span>}
         </div>
+        {/* PO status flag — list each incoming PO with status + qty */}
+        {hasIncoming && (
+          <div className="mt-1 flex items-center gap-1 flex-wrap">
+            <span className="text-[10px] text-amber-700 font-medium flex items-center gap-0.5">
+              <ClipboardCheck className="h-3 w-3" />
+              PO status:
+            </span>
+            {incoming!.pos.map((p, i) => (
+              <span
+                key={i}
+                className={`text-[10px] px-1.5 py-0 rounded border ${PO_STATUS_BADGES[p.status] ?? ""}`}
+                title={`${p.poNumber} · ${p.status}`}
+              >
+                {p.poNumber} · +{p.qtyPacks} ({p.status})
+              </span>
+            ))}
+            <span className="text-[10px] text-amber-800 font-semibold">
+              → +{incoming!.totalPacks} packs
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Stock info */}
@@ -278,6 +463,11 @@ function InventoryRow({ item, onAdjust }: { item: InventoryItem; onAdjust: (sku:
             {item.adjustmentPacks !== 0 && (
               <div className="text-[10px] text-blue-500">
                 {item.adjustmentPacks > 0 ? "+" : ""}{item.adjustmentPacks} adjusted
+              </div>
+            )}
+            {hasIncoming && (
+              <div className="text-[10px] text-amber-600 font-medium">
+                +{incoming!.totalPacks} incoming
               </div>
             )}
           </>
