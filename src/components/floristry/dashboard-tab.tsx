@@ -3,6 +3,13 @@
 import { useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   TrendingUp,
   Package,
@@ -13,6 +20,10 @@ import {
   Users,
   ShoppingBag,
   Loader2,
+  ClipboardCheck,
+  ChevronDown,
+  ChevronUp,
+  X,
 } from "lucide-react"
 
 interface OrderSummary {
@@ -27,6 +38,24 @@ interface OrderSummary {
   createdAt: string
 }
 
+interface PurchaseOrder {
+  id: string
+  poNumber: string
+  supplier: string
+  status: string
+  totalCost: number
+  lineCount: number
+  createdAt: string
+  lines: {
+    id: string
+    materialSku: string
+    materialName: string
+    qtyPacks: number
+    costPerPack: number
+    lineTotal: number
+  }[]
+}
+
 interface DashboardData {
   totalOrders: number
   pendingPayments: number
@@ -38,34 +67,48 @@ interface DashboardData {
   customerCount: number
   totalStockValue: number
   orders: OrderSummary[]
+  purchaseOrders: PurchaseOrder[]
+  poTotalCost: number
+  poPending: number
+}
+
+const PO_STATUS_BADGES: Record<string, string> = {
+  draft: "bg-stone-100 text-stone-600 border-stone-200",
+  sent: "bg-blue-100 text-blue-700 border-blue-200",
+  received: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  cancelled: "bg-red-100 text-red-700 border-red-200",
 }
 
 export function DashboardTab() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [poExpanded, setPoExpanded] = useState(false)
+  const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null)
 
   useEffect(() => {
     async function fetchDashboard() {
       try {
-        const [ordersRes, inventoryRes, customersRes] = await Promise.all([
+        const [ordersRes, inventoryRes, customersRes, poRes] = await Promise.all([
           fetch("/api/orders", { cache: "no-store" }),
           fetch("/api/inventory", { cache: "no-store" }),
           fetch("/api/customers", { cache: "no-store" }),
+          fetch("/api/purchase-orders", { cache: "no-store" }),
         ])
 
         const ordersData = await ordersRes.json()
         const inventoryData = await inventoryRes.json()
         const customersData = await customersRes.json()
+        const poData = await poRes.json()
 
         const orders = ordersData.orders ?? []
         const materials = inventoryData.materials ?? []
         const customers = customersData.customers ?? []
+        const purchaseOrders = poData.purchaseOrders ?? []
 
-        // Compute stats
         const totalRevenue = orders.reduce((s: number, o: OrderSummary) =>
           s + o.lineItems.reduce((ls: number, li) => ls + li.lineTotal, 0), 0)
         const totalCost = orders.reduce((s: number, o: OrderSummary) =>
-          s + o.lineItems.reduce((ls: number, li) => ls + li.unitPrice * 0.3, 0), 0) // rough estimate
+          s + o.lineItems.reduce((ls: number, li) => ls + li.unitPrice * 0.3, 0), 0)
 
         const pendingPayments = orders.filter((o: OrderSummary) =>
           o.paymentStatus === "pending" || o.paymentStatus === "not_started").length
@@ -78,8 +121,8 @@ export function DashboardTab() {
         const upcomingDeliveries = orders.filter((o: OrderSummary) =>
           o.deliveryDate && o.deliveryDate >= today).length
 
-        const lowStockCount = inventoryData.lowStockCount ?? 0
-        const totalStockValue = inventoryData.totalStockValue ?? 0
+        const poTotalCost = purchaseOrders.reduce((s: number, po: PurchaseOrder) => s + po.totalCost, 0)
+        const poPending = purchaseOrders.filter((po: PurchaseOrder) => po.status === "draft" || po.status === "sent").length
 
         setData({
           totalOrders: orders.length,
@@ -88,10 +131,13 @@ export function DashboardTab() {
           totalRevenue,
           totalCost,
           upcomingDeliveries,
-          lowStockCount,
+          lowStockCount: inventoryData.lowStockCount ?? 0,
           customerCount: customers.length,
-          totalStockValue,
+          totalStockValue: inventoryData.totalStockValue ?? 0,
           orders,
+          purchaseOrders,
+          poTotalCost,
+          poPending,
         })
       } catch (e) {
         console.error("Dashboard fetch error:", e)
@@ -212,6 +258,142 @@ export function DashboardTab() {
           </div>
         )}
       </Card>
+
+      {/* Purchase Orders */}
+      <Card className="bg-white p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <ClipboardCheck className="h-4 w-4 text-emerald-600" />
+            <h3 className="text-sm font-semibold text-stone-800">Purchase Orders</h3>
+            <Badge variant="outline" className="text-[10px]">
+              {data.purchaseOrders.length} total
+            </Badge>
+            {data.poPending > 0 && (
+              <Badge className="text-[10px] bg-amber-100 text-amber-800 border border-amber-200">
+                {data.poPending} pending
+              </Badge>
+            )}
+            <span className="text-xs text-stone-500">
+              ${Math.round(data.poTotalCost).toLocaleString("es-MX")} total
+            </span>
+          </div>
+          {data.purchaseOrders.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPoExpanded(!poExpanded)}
+              className="text-xs gap-1"
+            >
+              {poExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              {poExpanded ? "Hide" : "Show all"}
+            </Button>
+          )}
+        </div>
+
+        {data.purchaseOrders.length === 0 ? (
+          <p className="text-sm text-stone-400 text-center py-4">
+            No POs yet. Generate one from the Shopping List panel.
+          </p>
+        ) : (
+          <div className="space-y-1.5">
+            {(poExpanded ? data.purchaseOrders : data.purchaseOrders.slice(0, 3)).map((po) => (
+              <button
+                key={po.id}
+                onClick={() => setSelectedPO(po)}
+                className="w-full text-left flex items-center justify-between gap-2 rounded-md border border-stone-200 px-3 py-2 text-sm hover:border-emerald-300 hover:bg-emerald-50/30 transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-stone-800">{po.poNumber}</span>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] py-0 ${PO_STATUS_BADGES[po.status] ?? ""}`}
+                    >
+                      {po.status}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-stone-500 mt-0.5">
+                    {po.supplier} · {po.lineCount} line{po.lineCount !== 1 ? "s" : ""}
+                    {" · "}
+                    {new Date(po.createdAt).toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })}
+                  </div>
+                </div>
+                <div className="font-semibold text-stone-800 shrink-0">
+                  ${po.totalCost.toLocaleString("es-MX")}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* PO detail dialog */}
+      <Dialog open={!!selectedPO} onOpenChange={(o) => !o && setSelectedPO(null)}>
+        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedPO?.poNumber}
+              {selectedPO && (
+                <Badge
+                  variant="outline"
+                  className={`text-[10px] py-0 ${PO_STATUS_BADGES[selectedPO.status] ?? ""}`}
+                >
+                  {selectedPO.status}
+                </Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedPO && (
+            <div className="space-y-3">
+              <div className="text-xs text-stone-500">
+                <span className="font-medium text-stone-700">{selectedPO.supplier}</span>
+                {" · "}
+                {new Date(selectedPO.createdAt).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}
+              </div>
+
+              {/* Line items */}
+              <div className="space-y-1">
+                <div className="text-[10px] uppercase tracking-wide text-stone-400 mb-1">Materials</div>
+                {selectedPO.lines.map((l) => (
+                  <div
+                    key={l.id}
+                    className="flex items-center justify-between gap-2 rounded-md border border-stone-200 px-2.5 py-1.5 text-sm"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-stone-800 truncate">{l.materialName}</div>
+                      <div className="text-[10px] text-stone-400">{l.materialSku}</div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-stone-700">{l.qtyPacks} packs @ ${l.costPerPack}</div>
+                      <div className="font-semibold text-stone-800">${l.lineTotal.toLocaleString("es-MX")}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Total */}
+              <div className="flex items-center justify-between pt-2 border-t border-stone-200">
+                <span className="font-semibold text-stone-800">Total</span>
+                <span className="text-lg font-bold text-emerald-700">
+                  ${selectedPO.totalCost.toLocaleString("es-MX")}
+                </span>
+              </div>
+
+              {/* Status actions */}
+              {selectedPO.status === "draft" && (
+                <div className="text-xs text-stone-500 bg-stone-50 rounded-md p-2 border border-stone-200">
+                  This PO is a draft. Use the Shopping List panel to create POs, then mark them as received when the flowers arrive.
+                </div>
+              )}
+              {selectedPO.status === "received" && (
+                <div className="text-xs text-emerald-600 bg-emerald-50 rounded-md p-2 border border-emerald-200">
+                  ✅ Received — stock levels were automatically updated when this PO was marked as received.
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
