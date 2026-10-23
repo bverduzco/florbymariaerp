@@ -267,9 +267,14 @@ export async function POST(request: Request) {
     bySupplier,
   }
 
-  // File name includes the SL number so multiple PDFs for the same week are
-  // distinguishable in the user's download folder.
-  const fileName = `Shopping List ${slNumber} (${generatedAt.toISOString().split("T")[0]}).pdf`
+  // File name includes the SL number + GMT-6 date AND time, so multiple PDFs
+  // generated the same day are distinguishable and sort chronologically.
+  // Format: "Shopping List SL-0001 (2026-10-23 14.35).pdf"  (colon replaced
+  // with a dot since Windows forbids colons in file names).
+  const genForFile = generatedAt.toISOString()
+  const fileDate = genForFile.split("T")[0]
+  const fileTime = genForFile.split("T")[1].slice(0, 5).replace(":", ".")
+  const fileName = `Shopping List ${slNumber} (${fileDate} ${fileTime}).pdf`
   const outputPath = path.join("/home/z/my-project/download", fileName)
 
   // Write payload to temp JSON + generate PDF via Python

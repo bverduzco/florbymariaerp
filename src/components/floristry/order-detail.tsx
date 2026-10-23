@@ -405,7 +405,7 @@ export function OrderDetail({
         throw new Error(err.error || `HTTP ${res.status}`)
       }
       const data = await res.json()
-      toast.success(`Invoice ${data.orderNumber} generated`, {
+      toast.success(`Recibo ${data.orderNumber} generado`, {
         description: `File: ${data.fileName} — saved in /download folder`,
         duration: 5000,
       })
@@ -456,7 +456,7 @@ export function OrderDetail({
             onClick={downloadPdf}
             disabled={generatingPdf}
             className="gap-1.5"
-            title="Generate customer-facing PDF invoice"
+            title="Generar recibo en PDF para el cliente"
           >
             {generatingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
             Print to PDF

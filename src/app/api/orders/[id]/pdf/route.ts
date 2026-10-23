@@ -1,6 +1,6 @@
 /**
  * GET /api/orders/[id]/pdf
- * Generates a customer-facing PDF invoice for the order.
+ * Generates a customer-facing PDF recibo (receipt) for the order.
  *
  * Output: PDF file (downloadable) saved to /home/z/my-project/download/
  * Returns: { downloadUrl, fileName }
@@ -8,15 +8,15 @@
  * The PDF includes:
  *   - Flor by Maria logo (text-based since we don't have an image asset)
  *   - Business info (name, address placeholder, phone, email)
- *   - Bill To: customer name + delivery address
- *   - Invoice # = order number
- *   - Date: order creation date
- *   - Delivery date: from order
+ *   - Para: customer name + delivery address
+ *   - Recibo # = order number
+ *   - Fecha de emisión: order creation date
+ *   - Fecha de entrega: from order
  *   - Line items table: product, qty, unit price, line total
- *   - Subtotal, IVA (16%), Delivery fee, Discount, Total due
- *   - Card message (if any)
- *   - Payment instructions (cash/SPEI/online based on method)
- *   - Footer: thank-you note
+ *   - Subtotal, IVA (16%), Envío, Descuento, Total
+ *   - Mensaje de tarjeta (if any)
+ *   - Instrucciones de pago (cash/SPEI/online based on method)
+ *   - Footer: thank-you note (in Spanish)
  */
 
 import { NextResponse } from "next/server"
@@ -83,8 +83,10 @@ export async function GET(_request: Request, { params }: RouteParams) {
 
   // Write payload to temp JSON
   const tmpDir = os.tmpdir()
-  const tmpJsonPath = path.join(tmpDir, `flor-invoice-${order.id}-${Date.now()}.json`)
-  const fileName = `Invoice ${order.orderNumber}.pdf`
+  const tmpJsonPath = path.join(tmpDir, `flor-recibo-${order.id}-${Date.now()}.json`)
+  // File name: "Recibo ORD-1001.pdf" — this is a customer-facing receipt, not
+  // a fiscal invoice. The Python script also embeds "RECIBO" as the document title.
+  const fileName = `Recibo ${order.orderNumber}.pdf`
   const outputPath = path.join("/home/z/my-project/download", fileName)
 
   await fs.mkdir(path.dirname(outputPath), { recursive: true })
@@ -99,8 +101,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
       tmpJsonPath,
       outputPath,
     ])
-    console.log("Invoice PDF stdout:", stdout)
-    if (stderr) console.log("Invoice PDF stderr:", stderr)
+    console.log("Recibo PDF stdout:", stdout)
+    if (stderr) console.log("Recibo PDF stderr:", stderr)
 
     await fs.unlink(tmpJsonPath).catch(() => {})
 
@@ -114,7 +116,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     await fs.unlink(tmpJsonPath).catch(() => {})
     const msg = err instanceof Error ? err.message : String(err)
     return NextResponse.json(
-      { error: "Failed to generate invoice PDF", detail: msg },
+      { error: "Failed to generate recibo PDF", detail: msg },
       { status: 500 },
     )
   }

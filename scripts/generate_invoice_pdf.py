@@ -1,5 +1,5 @@
 """
-Generate a customer-facing PDF invoice for a florist order.
+Generate a customer-facing PDF recibo (receipt) for a florist order.
 
 Usage:
     python3 generate_invoice_pdf.py <input.json> <output.pdf>
@@ -20,22 +20,22 @@ Input JSON shape:
       "paymentMethod": "cash" | "spei" | "online_link" | null
     }
 
-Output: a single-page A4 PDF invoice with:
+Output: a single-page A4 PDF recibo (in Spanish) with:
   - Flor by Maria logo (text-based, rose-colored)
   - Business info
-  - Bill To: customer + delivery address
-  - Invoice # + dates
-  - Line items table
-  - Totals (Subtotal, IVA, Delivery, Discount, Total due)
-  - Card message (if any)
-  - Payment instructions
-  - Footer
+  - Para: customer + delivery address
+  - Recibo # + dates (in Spanish, GMT-6)
+  - Line items table (PRODUCTO / CANT. / PRECIO UNIT. / TOTAL)
+  - Totals (Subtotal, IVA, Envío, Descuento, Total)
+  - Mensaje de tarjeta (if any)
+  - Instrucciones de pago
+  - Footer (Spanish)
 """
 
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
@@ -66,7 +66,14 @@ COLOR_BG_LIGHT = colors.HexColor("#FAFAF9")     # stone-50
 
 
 def build_invoice(payload: dict, output_path: str) -> None:
-    """Build the invoice PDF."""
+    """Build the recibo (customer-facing receipt) PDF."""
+    # Fechas en español, usando GMT-6 (Mexico City, no DST desde 2022).
+    GMT_MINUS_6 = timezone(timedelta(hours=-6))
+    MESES_ES = [
+        "enero", "febrero", "marzo", "abril", "mayo", "junio",
+        "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+    ]
+
     page_w, page_h = A4
     margin = 18 * mm
 
@@ -77,9 +84,9 @@ def build_invoice(payload: dict, output_path: str) -> None:
         rightMargin=margin,
         topMargin=margin,
         bottomMargin=margin,
-        title=f"Invoice {payload.get('orderNumber', '')} - Flor by Maria",
+        title=f"Recibo {payload.get('orderNumber', '')} - Flor by Maria",
         author="Flor by Maria",
-        subject=f"Invoice {payload.get('orderNumber', '')}",
+        subject=f"Recibo {payload.get('orderNumber', '')}",
         creator="Flor by Maria ERP",
     )
 
@@ -106,7 +113,7 @@ def build_invoice(payload: dict, output_path: str) -> None:
         canvas.setFont("Helvetica", 8)
         canvas.setFillColor(COLOR_STONE_LIGHT)
         canvas.drawString(margin, 12 * mm, "Flor by Maria · Gracias por su compra")
-        canvas.drawRightString(page_w - margin, 12 * mm, f"Invoice {payload.get('orderNumber', '')}")
+        canvas.drawRightString(page_w - margin, 12 * mm, f"Recibo {payload.get('orderNumber', '')}")
         canvas.restoreState()
 
     doc.addPageTemplates([PageTemplate(id="main", frames=[frame], onPage=on_page)])
@@ -167,7 +174,7 @@ def build_invoice(payload: dict, output_path: str) -> None:
     # Build the story
     story = []
 
-    # === HEADER: Logo + business info (left) | Invoice meta (right) ===
+    # === HEADER: Logo + business info (left) | Recibo meta (right) ===
     logo_html = '<font color="#BE185D">✿</font> Flor by Maria'
     business_info_html = (
         "Flor by Maria<br/>"
@@ -179,23 +186,25 @@ def build_invoice(payload: dict, output_path: str) -> None:
 
     created_at = payload.get("createdAt", "")
     try:
-        created_date = datetime.fromisoformat(created_at.replace("Z", "+00:00")).strftime("%d/%m/%Y")
+        created_dt = datetime.fromisoformat(created_at.replace("Z", "+00:00")).astimezone(GMT_MINUS_6)
+        created_date = f"{created_dt.day} de {MESES_ES[created_dt.month - 1]} de {created_dt.year}"
     except Exception:
         created_date = created_at[:10] if created_date else ""
 
     delivery_date = payload.get("deliveryDate", "")
     try:
-        delivery_date_fmt = datetime.strptime(delivery_date, "%Y-%m-%d").strftime("%d/%m/%Y") if delivery_date else "—"
+        delivery_dt = datetime.strptime(delivery_date, "%Y-%m-%d")
+        delivery_date_fmt = f"{delivery_dt.day} de {MESES_ES[delivery_dt.month - 1]} de {delivery_dt.year}" if delivery_date else "—"
     except Exception:
         delivery_date_fmt = delivery_date or "—"
 
     invoice_meta_html = (
-        f'<font name="Helvetica-Bold" size="14" color="#44403C">INVOICE</font><br/>'
+        f'<font name="Helvetica-Bold" size="14" color="#44403C">RECIBO</font><br/>'
         f'<font size="9" color="#78716C">#</font> '
         f'<font name="Helvetica-Bold" size="11" color="#44403C">{payload.get("orderNumber", "")}</font><br/><br/>'
-        f'<font size="9" color="#78716C">Date issued:</font><br/>'
+        f'<font size="9" color="#78716C">Fecha de emisión:</font><br/>'
         f'<font size="10" color="#44403C">{created_date}</font><br/><br/>'
-        f'<font size="9" color="#78716C">Delivery date:</font><br/>'
+        f'<font size="9" color="#78716C">Fecha de entrega:</font><br/>'
         f'<font name="Helvetica-Bold" size="10" color="#BE185D">{delivery_date_fmt}</font>'
     )
 
@@ -249,8 +258,8 @@ def build_invoice(payload: dict, output_path: str) -> None:
 
     bill_to_table = Table(
         [
-            [Paragraph('<font color="#78716C" size="9">BILL TO</font>', style_body),
-             Paragraph('<font color="#78716C" size="9">DELIVER TO</font>', style_body)],
+            [Paragraph('<font color="#78716C" size="9">PARA</font>', style_body),
+             Paragraph('<font color="#78716C" size="9">ENTREGAR EN</font>', style_body)],
             [Paragraph(bill_to_html, style_body),
              Paragraph(delivery_html, style_body)],
         ],
@@ -269,11 +278,11 @@ def build_invoice(payload: dict, output_path: str) -> None:
     story.append(bill_to_table)
     story.append(Spacer(1, 8 * mm))
 
-    # === LINE ITEMS TABLE ===
+    # === TABLA DE PRODUCTOS ===
     line_items_data = [[
-        Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="9">PRODUCT</font>', style_body),
-        Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="9">QTY</font>', style_body),
-        Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="9">UNIT PRICE</font>', style_body),
+        Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="9">PRODUCTO</font>', style_body),
+        Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="9">CANT.</font>', style_body),
+        Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="9">PRECIO UNIT.</font>', style_body),
         Paragraph('<font color="#FFFFFF" name="Helvetica-Bold" size="9">TOTAL</font>', style_body),
     ]]
 
@@ -322,16 +331,16 @@ def build_invoice(payload: dict, output_path: str) -> None:
          Paragraph(f"${subtotal:,.0f} MXN", style_body)],
         [Paragraph("IVA (16%)", style_body),
          Paragraph(f"${iva:,.0f} MXN", style_body)],
-        [Paragraph("Delivery fee", style_body),
+        [Paragraph("Envío", style_body),
          Paragraph(f"${delivery_fee:,.0f} MXN", style_body)],
     ]
     if discount > 0:
         totals_data.append([
-            Paragraph('<font color="#BE185D">Discount</font>', style_body),
+            Paragraph('<font color="#BE185D">Descuento</font>', style_body),
             Paragraph(f'<font color="#BE185D">−${discount:,.0f} MXN</font>', style_body),
         ])
     totals_data.append([
-        Paragraph("TOTAL DUE", style_total_label),
+        Paragraph("TOTAL", style_total_label),
         Paragraph(f"${total:,.0f} MXN", style_total_value),
     ])
 
@@ -354,13 +363,13 @@ def build_invoice(payload: dict, output_path: str) -> None:
     story.append(totals_table)
     story.append(Spacer(1, 8 * mm))
 
-    # === CARD MESSAGE (if any) ===
+    # === MENSAJE DE TARJETA (si existe) ===
     card_msg = payload.get("cardMessage")
     if card_msg:
         card_table = Table(
             [[
                 Paragraph(
-                    f'<font color="#78716C" size="9">CARD MESSAGE</font><br/><br/>'
+                    f'<font color="#78716C" size="9">MENSAJE DE TARJETA</font><br/><br/>'
                     f'<font name="Helvetica-Oblique" color="#BE185D" size="10">"{card_msg}"</font>',
                     style_body,
                 )
@@ -378,33 +387,33 @@ def build_invoice(payload: dict, output_path: str) -> None:
         story.append(card_table)
         story.append(Spacer(1, 6 * mm))
 
-    # === PAYMENT INSTRUCTIONS ===
+    # === INSTRUCCIONES DE PAGO ===
     payment_method = payload.get("paymentMethod")
     payment_lines = []
 
     if payment_method == "cash":
         payment_lines.append(
-            '<font name="Helvetica-Bold" color="#047857">Payment: Cash on delivery</font><br/>'
-            'Please have the exact amount ready when your bouquet arrives.'
+            '<font name="Helvetica-Bold" color="#047857">Pago: Efectivo contra entrega</font><br/>'
+            'Por favor ten el monto exacto listo al recibir tu bouquet.'
         )
     elif payment_method == "spei":
         payment_lines.append(
-            '<font name="Helvetica-Bold" color="#44403C">Payment: SPEI bank transfer</font><br/>'
-            'Bank: Banco Ejemplo<br/>'
+            '<font name="Helvetica-Bold" color="#44403C">Pago: Transferencia SPEI</font><br/>'
+            'Banco: Banco Ejemplo<br/>'
             'CLABE: 012 345 67890 1234567<br/>'
-            'Account holder: Flor by Maria<br/>'
-            'Reference: ' + payload.get("orderNumber", "") + '<br/>'
-            '<font color="#78716C">Please send payment confirmation via WhatsApp once transferred.</font>'
+            'Titular: Flor by Maria<br/>'
+            'Referencia: ' + payload.get("orderNumber", "") + '<br/>'
+            '<font color="#78716C">Envía el comprobante por WhatsApp una vez transferido.</font>'
         )
     elif payment_method == "online_link":
         payment_lines.append(
-            '<font name="Helvetica-Bold" color="#44403C">Payment: Online</font><br/>'
-            'You will receive a secure payment link via WhatsApp shortly.<br/>'
-            '<font color="#78716C">The link expires in 24 hours.</font>'
+            '<font name="Helvetica-Bold" color="#44403C">Pago: En línea</font><br/>'
+            'Recibirás un enlace de pago seguro por WhatsApp en breve.<br/>'
+            '<font color="#78716C">El enlace expira en 24 horas.</font>'
         )
     else:
         payment_lines.append(
-            '<font color="#78716C">Payment method to be confirmed. We will contact you shortly via WhatsApp.</font>'
+            '<font color="#78716C">Método de pago por confirmar. Te contactaremos por WhatsApp en breve.</font>'
         )
 
     payment_html = "<br/>".join(payment_lines)
@@ -423,12 +432,12 @@ def build_invoice(payload: dict, output_path: str) -> None:
     story.append(payment_table)
     story.append(Spacer(1, 4 * mm))
 
-    # === THANK YOU NOTE ===
+    # === NOTA DE AGRADECIMIENTO ===
     story.append(Paragraph(
         '<font color="#78716C" size="9">'
-        'Thank you for choosing Flor by Maria. '
-        'Each bouquet is made with love and care. '
-        'For questions about your order, contact us via WhatsApp.'
+        'Gracias por elegir a Flor by Maria. '
+        'Cada bouquet se elabora con amor y cuidado. '
+        'Para dudas sobre tu pedido, contáctanos por WhatsApp.'
         '</font>',
         style_small,
     ))
@@ -454,7 +463,7 @@ def main():
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     build_invoice(payload, output_path)
 
-    print(f"Invoice PDF written to: {output_path}")
+    print(f"Recibo PDF written to: {output_path}")
     print(f"  Order: {payload.get('orderNumber', '?')}")
     print(f"  Customer: {payload.get('customer', {}).get('name', '?')}")
     print(f"  Line items: {len(payload.get('lineItems', []))}")
