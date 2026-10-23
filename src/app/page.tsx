@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useCatalogue } from "@/lib/catalogue-store"
 import { usePlanStore } from "@/lib/plan-store"
 import { ErpUploadButton } from "@/components/floristry/erp-upload-button"
+import { BackupButton } from "@/components/floristry/backup-button"
 import { CatalogueGrid } from "@/components/floristry/catalogue-grid"
 import { WeeklyPlan } from "@/components/floristry/weekly-plan"
 import { ShoppingListPanel } from "@/components/floristry/shopping-list-panel"
@@ -115,6 +116,7 @@ export default function Home() {
               </Badge>
             )}
             <ErpUploadButton />
+            <BackupButton />
           </div>
         </div>
       </header>
