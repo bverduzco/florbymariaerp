@@ -70,7 +70,7 @@ export function ErpUploadButton() {
         ) : (
           <Upload className="h-4 w-4" />
         )}
-        {uploading ? "Refreshing…" : "Refresh ERP from Excel"}
+        {uploading ? "Refreshing…" : "Refresh UI from Truth"}
       </Button>
     </>
   )
