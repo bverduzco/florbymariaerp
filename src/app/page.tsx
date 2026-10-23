@@ -178,6 +178,11 @@ export default function Home() {
               <CalendarDays className="h-4 w-4" />
               <span className="hidden sm:inline">Delivery</span>
               <span className="sm:hidden">Del</span>
+              {planWithDeliveries > 0 && (
+                <Badge className="ml-1 bg-rose-100 text-rose-700 px-1.5 py-0 text-[10px]">
+                  {planWithDeliveries}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="customers" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <Users className="h-4 w-4" />
