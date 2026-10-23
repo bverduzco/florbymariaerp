@@ -98,21 +98,29 @@ export function ShoppingListPanel({
   const [orders, setOrders] = useState<any[]>([])
   const [ordersLoaded, setOrdersLoaded] = useState(false)
   const [printingPdf, setPrintingPdf] = useState(false)
+  const [inventory, setInventory] = useState<Record<string, number>>({})
 
-  // Fetch orders from DB whenever the panel opens
+  // Fetch orders + inventory from DB whenever the panel opens
   useEffect(() => {
     if (open) {
       setOrdersLoaded(false)
-      fetch("/api/orders", { cache: "no-store" })
-        .then((r) => (r.ok ? r.json() : { orders: [] }))
-        .then((data) => {
-          setOrders(data.orders ?? [])
-          setOrdersLoaded(true)
-        })
-        .catch(() => {
-          setOrders([])
-          setOrdersLoaded(true)
-        })
+      Promise.all([
+        fetch("/api/orders", { cache: "no-store" }).then(r => r.ok ? r.json() : { orders: [] }),
+        fetch("/api/inventory", { cache: "no-store" }).then(r => r.ok ? r.json() : { materials: [] }),
+      ]).then(([ordersData, invData]) => {
+        setOrders(ordersData.orders ?? [])
+        // Build inventory lookup: { sku: currentStockPacks }
+        const invMap: Record<string, number> = {}
+        for (const m of invData.materials ?? []) {
+          invMap[m.sku] = m.currentStockPacks ?? 0
+        }
+        setInventory(invMap)
+        setOrdersLoaded(true)
+      }).catch(() => {
+        setOrders([])
+        setInventory({})
+        setOrdersLoaded(true)
+      })
     }
   }, [open])
 
@@ -387,6 +395,24 @@ export function ShoppingListPanel({
                                   Need <strong className="text-stone-700">{line.totalQty}</strong> {line.unit}
                                   {line.totalQty > 1 && line.unit !== "pack" ? "s" : ""}
                                 </span>
+                                {/* Stock-aware columns */}
+                                {(() => {
+                                  const stockPacks = inventory[line.materialSku] ?? 0
+                                  const packsNeeded = line.packQtyRounded ?? 0
+                                  const actualBuy = Math.max(0, packsNeeded - stockPacks)
+                                  return (
+                                    <>
+                                      <span>
+                                        Have: <strong className={stockPacks > 0 ? "text-emerald-700" : "text-stone-400"}>{stockPacks}</strong> packs
+                                      </span>
+                                      {stockPacks > 0 && (
+                                        <span>
+                                          Buy: <strong className={actualBuy > 0 ? "text-rose-700" : "text-emerald-700"}>{actualBuy}</strong> packs
+                                        </span>
+                                      )}
+                                    </>
+                                  )
+                                })()}
                                 {line.unitsPerPack && (
                                   <span>
                                     Pack size: <strong className="text-stone-700">{line.unitsPerPack}</strong>
@@ -401,6 +427,18 @@ export function ShoppingListPanel({
                                   </span>
                                 )}
                               </div>
+
+                              {/* Perishable warning */}
+                              {(() => {
+                                const stockPacks = inventory[line.materialSku] ?? 0
+                                const packsNeeded = line.packQtyRounded ?? 0
+                                const hasStock = stockPacks > 0
+                                return hasStock ? (
+                                  <div className="mt-1 ml-6 text-[10px] text-amber-600 italic">
+                                    ⚠ Flowers are perishable — verify stock quality before using existing inventory
+                                  </div>
+                                ) : null
+                              })()}
 
                               {line.warning && (
                                 <div className="mt-2 ml-6 text-xs text-amber-700 flex items-center gap-1.5">

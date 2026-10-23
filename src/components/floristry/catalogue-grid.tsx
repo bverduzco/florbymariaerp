@@ -4,11 +4,8 @@ import { useMemo, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Plus, Sparkles, ShoppingBag, CalendarClock } from "lucide-react"
+import { Sparkles, ShoppingBag } from "lucide-react"
 import { useCatalogue, type CatalogueProduct } from "@/lib/catalogue-store"
-import { usePlanStore } from "@/lib/plan-store"
-import { CustomerInput } from "@/components/floristry/customer-input"
 import {
   Sheet,
   SheetContent,
@@ -16,38 +13,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet"
-import { ScrollArea } from "@/components/ui/scroll-area"
 
 function ProductCard({ product }: { product: CatalogueProduct }) {
-  const addItem = usePlanStore((s) => s.addItem)
-  const setDeliveryDate = usePlanStore((s) => s.setDeliveryDate)
-  const setCustomerName = usePlanStore((s) => s.setCustomerName)
-  const items = usePlanStore((s) => s.items)
-  const inCart = items.find((i) => i.productSku === product.sku)
-  // Local state for date + customer name (mirrors store when in cart)
-  const [deliveryDate, setLocalDeliveryDate] = useState<string>("")
-  const [customerName, setLocalCustomerName] = useState<string>("")
-
-  function handleAddToPlan() {
-    addItem(product.sku, 1, deliveryDate || null, customerName || null)
-  }
-
-  function handleDateChange(value: string) {
-    setLocalDeliveryDate(value)
-    // If already in plan, update the store live
-    if (inCart) {
-      setDeliveryDate(product.sku, value || null)
-    }
-  }
-
-  function handleCustomerChange(value: string) {
-    setLocalCustomerName(value)
-    if (inCart) {
-      setCustomerName(product.sku, value || null)
-    }
-  }
-
-  // Pick a soft gradient based on category for visual variety
   const gradient =
     product.category === "Arrangement"
       ? "from-amber-50 via-orange-50 to-rose-50"
@@ -61,12 +28,10 @@ function ProductCard({ product }: { product: CatalogueProduct }) {
     <Card
       className={`relative flex flex-col sm:flex-row gap-4 p-4 bg-gradient-to-br ${gradient} border-rose-100 hover:border-rose-300 hover:shadow-md transition-all`}
     >
-      {/* Thumbnail area — reserved for future bouquet photo. Currently a soft placeholder. */}
       <div className="shrink-0 w-full sm:w-32 h-32 rounded-lg bg-white/50 border border-white/80 flex items-center justify-center overflow-hidden">
         <Sparkles className="h-8 w-8 text-rose-300/60" />
       </div>
 
-      {/* Card content — takes remaining width */}
       <div className="flex-1 min-w-0 flex flex-col gap-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -109,46 +74,6 @@ function ProductCard({ product }: { product: CatalogueProduct }) {
             <div className="text-stone-500">Recipe</div>
             <div className="font-semibold text-stone-700">{product.recipeLines.length} items</div>
           </div>
-        </div>
-
-        {/* Action row — wraps on narrow widths */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button
-            size="sm"
-            onClick={handleAddToPlan}
-            className="bg-rose-600 hover:bg-rose-700 text-white gap-1 shrink-0"
-          >
-            <Plus className="h-4 w-4" />
-            Add
-          </Button>
-
-          <div className="flex-1 min-w-[140px]">
-            <CustomerInput
-              value={customerName || inCart?.customerName || ""}
-              onChange={(v) => handleCustomerChange(v)}
-              placeholder="Customer"
-              ariaLabel={`Customer name for ${product.name}`}
-              className="h-8 pl-7 pr-2 text-xs bg-white border-stone-200 text-stone-700"
-            />
-          </div>
-
-          <div className="relative flex-1 min-w-[160px]">
-            <CalendarClock className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-stone-400 pointer-events-none z-10" />
-            <Input
-              type="date"
-              value={deliveryDate || inCart?.deliveryDate || ""}
-              onChange={(e) => handleDateChange(e.target.value)}
-              placeholder="Delivery date"
-              aria-label={`Delivery date for ${product.name}`}
-              className="h-8 pl-7 pr-8 text-xs bg-white border-stone-200 text-stone-700 w-full cursor-pointer"
-            />
-          </div>
-
-          {inCart && (
-            <Badge className="bg-rose-100 text-rose-700 border border-rose-200 px-2 shrink-0">
-              {inCart.qty} in plan
-            </Badge>
-          )}
         </div>
 
         {product.linesToReview > 0 && (
@@ -240,7 +165,6 @@ export function CatalogueGrid() {
               {sizes.length} size{sizes.length > 1 ? "s" : ""}
             </span>
           </div>
-          {/* Single-column layout — full width of container so date picker never clips */}
           <div className="space-y-4">
             {sizes.map((p) => (
               <Sheet key={p.sku} open={selected === p.sku} onOpenChange={(o) => setSelected(o ? p.sku : null)}>
@@ -262,7 +186,6 @@ export function CatalogueGrid() {
   )
 }
 
-// Small helper hook to track which product's recipe sheet is open
 function useCatalogueSelector(): [string | null, (v: string | null) => void] {
   const [state, setState] = useState<string | null>(null)
   return [state, setState]

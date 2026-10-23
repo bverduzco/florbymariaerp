@@ -10,11 +10,12 @@ import { WeeklyPlan } from "@/components/floristry/weekly-plan"
 import { ShoppingListPanel } from "@/components/floristry/shopping-list-panel"
 import { CustomersTab } from "@/components/floristry/customers-tab"
 import { DeliveryView } from "@/components/floristry/delivery-view"
-import { MoneysSection } from "@/components/floristry/moneys-section"
 import { OrdersTab } from "@/components/floristry/orders-tab"
 import { OrderIntakeForm } from "@/components/floristry/order-intake-form"
 import { GenerateDraftButton } from "@/components/floristry/generate-draft-button"
 import { CustomTab } from "@/components/floristry/custom-tab"
+import { InventoryTab } from "@/components/floristry/inventory-tab"
+import { DashboardTab } from "@/components/floristry/dashboard-tab"
 import { useNavStore } from "@/lib/nav-store"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -28,9 +29,11 @@ import {
   PlusCircle,
   FileSpreadsheet,
   Wand2,
+  Boxes,
+  LayoutDashboard,
 } from "lucide-react"
 
-type TabKey = "catalogue" | "intake" | "orders" | "custom" | "plan" | "customers" | "delivery"
+type TabKey = "dashboard" | "intake" | "orders" | "custom" | "catalogue" | "inventory" | "plan" | "customers" | "delivery"
 
 export default function Home() {
   const fetchCatalogue = useCatalogue((s) => s.fetch)
@@ -42,18 +45,17 @@ export default function Home() {
   const setShoppingListOpen = usePlanStore((s) => s.setShoppingListOpen)
   const shoppingListOpen = usePlanStore((s) => s.shoppingListOpen)
 
-  // Initial tab state — check ?tab=XXX in URL on mount
   const [initialOrderId, setInitialOrderId] = useState<string | null>(null)
   const [tab, setTab] = useState<TabKey>(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search)
       const tabParam = params.get("tab")
-      if (tabParam && ["catalogue", "intake", "orders", "custom", "plan", "customers", "delivery"].includes(tabParam)) {
-        // Don't strip URL yet — we need orderId too
+      const validTabs = ["dashboard", "intake", "orders", "custom", "catalogue", "inventory", "plan", "customers", "delivery"]
+      if (tabParam && validTabs.includes(tabParam)) {
         return tabParam as TabKey
       }
     }
-    return "catalogue"
+    return "dashboard"
   })
 
   // Read orderId from URL after mount
@@ -76,12 +78,11 @@ export default function Home() {
   const totalPlanQty = planItems.reduce((s, i) => s + i.qty, 0)
   const planWithDeliveries = planItems.filter((i) => i.deliveryDate).length
 
-  // Listen for pendingTab changes from the nav store (e.g. Delivery View → Orders)
+  // Listen for pendingTab changes from the nav store
   const pendingTab = useNavStore((s) => s.pendingTab)
   const setPendingTab = useNavStore((s) => s.setPendingTab)
   useEffect(() => {
     if (!pendingTab || pendingTab === tab) return
-    // Use requestAnimationFrame to defer the state update out of the effect body
     const targetTab = pendingTab
     requestAnimationFrame(() => {
       setTab(targetTab as TabKey)
@@ -105,7 +106,7 @@ export default function Home() {
             </div>
             <div className="flex items-baseline gap-2">
               <h1 className="text-base font-semibold text-stone-800">Flor by Maria</h1>
-              <span className="hidden sm:inline text-xs text-stone-500">v1.5</span>
+              <span className="hidden sm:inline text-xs text-stone-500">v1.6</span>
             </div>
           </div>
 
@@ -143,6 +144,10 @@ export default function Home() {
       <main className="flex-1 mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-6">
         <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
           <TabsList className="bg-white border border-rose-100 p-1 h-auto flex-wrap">
+            <TabsTrigger value="dashboard" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+              <LayoutDashboard className="h-4 w-4" />
+              Dashboard
+            </TabsTrigger>
             <TabsTrigger value="intake" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <PlusCircle className="h-4 w-4" />
               New Order
@@ -158,6 +163,10 @@ export default function Home() {
             <TabsTrigger value="catalogue" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <Flower2 className="h-4 w-4" />
               Catalogue
+            </TabsTrigger>
+            <TabsTrigger value="inventory" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
+              <Boxes className="h-4 w-4" />
+              Inventory
             </TabsTrigger>
             <TabsTrigger value="plan" className="gap-1.5 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <ClipboardList className="h-4 w-4" />
@@ -183,10 +192,14 @@ export default function Home() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Action bar (above tab content) */}
+          {/* Action bar */}
           <div className="mt-4 flex items-center justify-end gap-2">
             <GenerateDraftButton />
           </div>
+
+          <TabsContent value="dashboard" className="mt-4">
+            <DashboardTab />
+          </TabsContent>
 
           <TabsContent value="intake" className="mt-4">
             <OrderIntakeForm />
@@ -208,7 +221,10 @@ export default function Home() {
               )}
             </div>
             <CatalogueGrid />
-            <MoneysSection />
+          </TabsContent>
+
+          <TabsContent value="inventory" className="mt-4">
+            <InventoryTab />
           </TabsContent>
 
           <TabsContent value="plan" className="mt-4">
@@ -231,12 +247,12 @@ export default function Home() {
       {/* Footer */}
       <footer className="mt-auto border-t border-stone-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 text-xs text-stone-500 flex flex-col sm:flex-row justify-between gap-1">
-          <span>Flor by Maria · v1.5 · Currency: MXN</span>
+          <span>Flor by Maria · v1.6 · Currency: MXN</span>
           <span>Source: ERP Excel workbook · {productCount} products loaded</span>
         </div>
       </footer>
 
-      {/* Slide-over shopping list (works from any tab) */}
+      {/* Slide-over shopping list */}
       <ShoppingListPanel
         open={shoppingListOpen}
         onOpenChange={setShoppingListOpen}

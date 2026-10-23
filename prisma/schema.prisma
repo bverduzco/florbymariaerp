@@ -41,6 +41,7 @@ model Material {
   colors             String?
   notes              String?
   recipeLines        RecipeLine[]
+  stockAdjustments   StockAdjustment[]
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 }
@@ -220,4 +221,19 @@ model CustomRecipeLine {
   materialPrice    Float
   materialType     String // flower | foliage
   createdAt        DateTime @default(now())
+}
+
+/**
+ * UI-initiated stock movements (losses, expirations, adjustments, receipts).
+ * These are separate from the Excel's Stock Movements tab — they track
+ * changes made through the app's Inventory tab.
+ */
+model StockAdjustment {
+  id          String   @id @default(cuid())
+  materialSku String
+  material    Material @relation(fields: [materialSku], references: [sku], onDelete: Cascade)
+  deltaPacks  Float    // signed: +N for receipts/adjustments up, -N for losses/expiration
+  reason      String   // "loss" | "expiration" | "adjustment" | "receipt" | "sample" | "other"
+  notes       String?
+  createdAt   DateTime @default(now())
 }

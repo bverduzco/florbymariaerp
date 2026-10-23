@@ -33,6 +33,8 @@ import {
   AlertTriangle,
   MessageCircle,
   FileDown,
+  Copy,
+  Check,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -145,6 +147,8 @@ export function OrderDetail({
   const [editOpen, setEditOpen] = useState(false)
   const [savingEdits, setSavingEdits] = useState(false)
   const [generatingPdf, setGeneratingPdf] = useState(false)
+  const [whatsappOpen, setWhatsappOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   // Editable fields (current values shown in detail view)
   const [deliveryFee, setDeliveryFee] = useState(order.deliveryFee)
@@ -453,6 +457,16 @@ export function OrderDetail({
           >
             {generatingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
             Print to PDF
+          </Button>
+          {/* WhatsApp quote button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setWhatsappOpen(true)}
+            className="gap-1.5 text-emerald-700 hover:bg-emerald-50 border-emerald-200"
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+            WhatsApp message
           </Button>
           <Dialog open={editOpen} onOpenChange={setEditOpen}>
             <DialogTrigger asChild>
@@ -1007,6 +1021,88 @@ export function OrderDetail({
           )}
         </div>
       </Card>
+
+      {/* WhatsApp quote dialog */}
+      <Dialog open={whatsappOpen} onOpenChange={setWhatsappOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="h-4 w-4 text-emerald-600" />
+              Mensaje de WhatsApp
+            </DialogTitle>
+            <DialogDescription>
+              Cotización para {order.customerName}. Copia el mensaje y pégalo en WhatsApp.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-stone-50 rounded-md border border-stone-200 p-3 text-sm text-stone-700 whitespace-pre-wrap max-h-[400px] overflow-y-auto">
+            {buildWhatsAppMessage(order, subtotal, iva, total)}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                navigator.clipboard.writeText(buildWhatsAppMessage(order, subtotal, iva, total))
+                setCopied(true)
+                setTimeout(() => setCopied(false), 2000)
+                toast.success("Copiado al portapapeles")
+              }}
+              className="gap-1.5"
+            >
+              {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+              {copied ? "Copiado" : "Copy to Clipboard"}
+            </Button>
+            <Button onClick={() => setWhatsappOpen(false)} className="bg-rose-600 hover:bg-rose-700 text-white">
+              Cerrar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
+}
+
+function buildWhatsAppMessage(order: Order, subtotal: number, iva: number, total: number): string {
+  const lines: string[] = []
+  lines.push("🌸 *Flor by Maria*")
+  lines.push("")
+  lines.push(`¡Hola ${order.customerName ?? ""}!`)
+  lines.push("")
+  lines.push("Aquí está el resumen de su cotización:")
+  lines.push("")
+  lines.push(`📦 *Pedido:* ${order.orderNumber}`)
+  lines.push("🌹 *Productos:*")
+  for (const li of order.lineItems) {
+    const sizeStr = li.productSize ? ` (${li.productSize})` : ""
+    lines.push(`• ${li.productName}${sizeStr} ×${li.qty} — $${(li.unitPrice * li.qty).toLocaleString("es-MX")}`)
+  }
+  lines.push("")
+  lines.push(`💵 *Subtotal:* $${Math.round(subtotal).toLocaleString("es-MX")}`)
+  lines.push(`📊 *IVA (16%):* $${Math.round(iva).toLocaleString("es-MX")}`)
+  if (order.deliveryFee > 0) {
+    lines.push(`🚚 *Envío:* $${order.deliveryFee.toLocaleString("es-MX")}`)
+  }
+  if (order.discount > 0) {
+    lines.push(`🏷️ *Descuento:* −$${order.discount.toLocaleString("es-MX")}`)
+  }
+  lines.push(`✅ *Total:* $${Math.round(total).toLocaleString("es-MX")}`)
+  lines.push("")
+  if (order.deliveryDate) {
+    const d = new Date(order.deliveryDate + "T00:00:00")
+    lines.push(`📅 *Entrega:* ${d.toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}`)
+  }
+  if (order.deliveryAddress) {
+    lines.push(`📍 ${order.deliveryAddress}`)
+  }
+  if (order.cardMessage) {
+    lines.push(`💌 Tarjeta: "${order.cardMessage}"`)
+  }
+  lines.push("")
+  lines.push("💳 *Opciones de pago:*")
+  lines.push("• Efectivo")
+  lines.push("")
+  lines.push("Quedamos en espera de su pago. Una vez realizado recibirá confirmación y procederemos con su pedido. 🌷")
+  lines.push("")
+  lines.push("¡Gracias por su confianza!")
+
+  return lines.join("\n")
 }
