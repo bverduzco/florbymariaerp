@@ -1,36 +1,26 @@
-/**
- * GET /api/orders/[id]/pdf
- * Generates a customer-facing PDF recibo (receipt) for the order.
- *
- * Output: PDF file (downloadable) saved to /home/z/my-project/download/
- * Returns: { downloadUrl, fileName }
- *
- * The PDF includes:
- *   - Flor by Maria logo (text-based since we don't have an image asset)
- *   - Business info (name, address placeholder, phone, email)
- *   - Para: customer name + delivery address
- *   - Recibo # = order number
- *   - Fecha de emisión: order creation date
- *   - Fecha de entrega: from order
- *   - Line items table: product, qty, unit price, line total
- *   - Subtotal, IVA (16%), Envío, Descuento, Total
- *   - Mensaje de tarjeta (if any)
- *   - Instrucciones de pago (cash/SPEI/online based on method)
- *   - Footer: thank-you note (in Spanish)
- */
+// src/app/api/orders/[id]/pdf/route.ts — v1.8
+//
+// Streams the Recibo PDF directly to the browser. No disk writes.
+//
+// v1.7 used to:
+//   1. Write payload to /tmp/xxx.json
+//   2. execFileAsync('python3', [...])
+//   3. Save PDF to /home/z/my-project/download/...
+//   4. Return JSON { fileName, downloadPath } to client
+//   5. Client would then GET /download/.../[filename]
+//
+// v1.8:
+//   1. Build PDF buffer in-process via pdfmake
+//   2. Return Response with Content-Type: application/pdf + Content-Disposition
+//   3. Browser downloads immediately — no disk, no second round-trip
 
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { promises as fs } from "fs"
-import path from "path"
-import os from "os"
-import { execFile } from "child_process"
-import { promisify } from "util"
-
-const execFileAsync = promisify(execFile)
+import { generateReciboPdf, type ReciboPayload } from "@/lib/pdf/recibo"
+import { nowGmtMinus6FileStamp } from "@/lib/pdf/utils"
 
 export const dynamic = "force-dynamic"
-export const maxDuration = 60
+export const maxDuration = 60 // 60s — needed for Vercel Pro if generating large PDFs
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -47,12 +37,12 @@ export async function GET(_request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 })
   }
 
-  // Build the order payload for the Python PDF generator
+  // Build the payload (same shape as v1.7)
   const subtotal = order.lineItems.reduce((s, li) => s + li.unitPrice * li.qty, 0)
   const iva = subtotal * 0.16
   const total = subtotal + iva + order.deliveryFee - order.discount
 
-  const payload = {
+  const payload: ReciboPayload = {
     orderNumber: order.orderNumber,
     createdAt: order.createdAt.toISOString(),
     deliveryDate: order.deliveryDate?.toISOString().split("T")[0] ?? null,
@@ -78,46 +68,22 @@ export async function GET(_request: Request, { params }: RouteParams) {
     deliveryFee: order.deliveryFee,
     discount: order.discount,
     total,
-    paymentMethod: order.paymentMethod,
+    paymentMethod: order.paymentMethod as ReciboPayload["paymentMethod"],
   }
 
-  // Write payload to temp JSON
-  const tmpDir = os.tmpdir()
-  const tmpJsonPath = path.join(tmpDir, `flor-recibo-${order.id}-${Date.now()}.json`)
-  // File name: "Recibo ORD-1001.pdf" — this is a customer-facing receipt, not
-  // a fiscal invoice. The Python script also embeds "RECIBO" as the document title.
+  // Generate PDF in-process — no execFile, no Python, no disk writes
+  const pdfBuffer = await generateReciboPdf(payload)
+
+  // Stream the PDF back as the HTTP response.
+  // The browser will download it directly with the given filename.
   const fileName = `Recibo ${order.orderNumber}.pdf`
-  const outputPath = path.join("/home/z/my-project/download", fileName)
-
-  await fs.mkdir(path.dirname(outputPath), { recursive: true })
-  await fs.writeFile(tmpJsonPath, JSON.stringify(payload, null, 2))
-
-  // Run the Python PDF generator
-  const scriptPath = path.join(process.cwd(), "scripts", "generate_invoice_pdf.py")
-
-  try {
-    const { stdout, stderr } = await execFileAsync("python3", [
-      scriptPath,
-      tmpJsonPath,
-      outputPath,
-    ])
-    console.log("Recibo PDF stdout:", stdout)
-    if (stderr) console.log("Recibo PDF stderr:", stderr)
-
-    await fs.unlink(tmpJsonPath).catch(() => {})
-
-    return NextResponse.json({
-      success: true,
-      fileName,
-      downloadPath: outputPath,
-      orderNumber: order.orderNumber,
-    })
-  } catch (err) {
-    await fs.unlink(tmpJsonPath).catch(() => {})
-    const msg = err instanceof Error ? err.message : String(err)
-    return NextResponse.json(
-      { error: "Failed to generate recibo PDF", detail: msg },
-      { status: 500 },
-    )
-  }
+  return new Response(pdfBuffer, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${encodeURIComponent(fileName)}"`,
+      "Content-Length": String(pdfBuffer.length),
+      "Cache-Control": "no-store", // always regenerate, never cache
+    },
+  })
 }

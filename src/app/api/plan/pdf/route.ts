@@ -1,28 +1,50 @@
+// src/app/api/plan/pdf/route.ts — v1.8
+//
+// Streams the Shopping List PDF directly to the browser. No disk writes.
+//
+// Replaces the v1.7 version which:
+//   1. Wrote payload JSON to /tmp/xxx.json
+//   2. Called python3 scripts/generate_shopping_list_pdf.py
+//   3. Saved PDF to /home/z/my-project/download/...
+//   4. Returned JSON { fileName, slNumber, ... }
+//   5. Client fetched /download/.../[filename] separately
+//
+// v1.8:
+//   1. Generate PDF buffer in-process via pdfmake
+//   2. Persist ShoppingList snapshot to Turso (same as v1.7)
+//   3. Return Response with Content-Type: application/pdf
+//   4. Browser downloads immediately — no disk, no second round-trip
+
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { promises as fs } from "fs"
-import path from "path"
-import os from "os"
-import { execFile } from "child_process"
-import { promisify } from "util"
-
-const execFileAsync = promisify(execFile)
+import {
+  generateShoppingListPdf,
+  type ShoppingListPayload,
+  type ShoppingListLine,
+} from "@/lib/pdf/shopping-list"
+import { nowGmtMinus6FileStamp, nowGmtMinus6Label } from "@/lib/pdf/utils"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
-/**
- * POST /api/plan/pdf
- * Body: same as /api/plan (items array + weekStartDate)
- *
- * Generates the plan response (same as /api/plan), then renders it as a PDF
- * using the shopping list PDF generator. Returns the file path + auto-download.
- */
+// Statuses considered "open" — POs that have been created but not yet received.
+// These count against the "to buy" calculation.
+const PO_OPEN_STATUSES = ["draft", "approved", "pending", "procured"]
+
+interface PlanItem {
+  productSku: string
+  qty: number
+  deliveryDate?: string | null
+  customerName?: string | null
+}
+
+interface PlanRequest {
+  items: PlanItem[]
+  weekStartDate?: string
+}
+
 export async function POST(request: Request) {
-  let body: {
-    items: { productSku: string; qty: number; deliveryDate?: string | null; customerName?: string | null }[]
-    weekStartDate?: string
-  }
+  let body: PlanRequest
   try {
     body = await request.json()
   } catch {
@@ -33,7 +55,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Items array is required" }, { status: 400 })
   }
 
-  // Validate + normalize items
   const items = body.items
     .filter((i) => i && typeof i.productSku === "string" && typeof i.qty === "number" && i.qty > 0)
     .map((i) => ({
@@ -55,16 +76,12 @@ export async function POST(request: Request) {
   })
   const productBySku = new Map(products.map((p) => [p.sku, p]))
 
-  // Fetch open PO quantities once — used to compute "to buy" delta per material.
-  // Open = PO status in {draft, approved, pending, procured} (not received, not cancelled).
-  const poOpenStatuses = ["draft", "approved", "pending", "procured"]
+  // Fetch open PO quantities (same logic as v1.7 — needed for "to buy" delta)
   const poLines = await db.purchaseOrderLine.findMany({
-    where: { po: { status: { in: poOpenStatuses } } },
+    where: { po: { status: { in: PO_OPEN_STATUSES } } },
     include: { po: { select: { poNumber: true, supplier: true } } },
   })
-  // Map: materialSku → { totalPacks, poNumbers: Set<string>, suppliers: Set<string> }
   const openPOBySku = new Map<string, { totalPacks: number; poNumbers: Set<string> }>()
-  // Map: supplier → Set<poNumber>  (for the per-supplier PO list in the PDF)
   const openPOBySupplier = new Map<string, Set<string>>()
   for (const line of poLines) {
     if (!openPOBySku.has(line.materialSku)) {
@@ -73,7 +90,6 @@ export async function POST(request: Request) {
     const entry = openPOBySku.get(line.materialSku)!
     entry.totalPacks += line.qtyPacks
     entry.poNumbers.add(line.po.poNumber)
-
     const supplierName = line.po.supplier || "Unknown"
     if (!openPOBySupplier.has(supplierName)) {
       openPOBySupplier.set(supplierName, new Set())
@@ -81,7 +97,6 @@ export async function POST(request: Request) {
     openPOBySupplier.get(supplierName)!.add(line.po.poNumber)
   }
 
-  // Helper: compute alreadyOrderedPacks + toBuyPacks for a material SKU.
   function computeOrderedDelta(materialSku: string, packQtyRounded: number | null) {
     const alreadyOrderedPacks = openPOBySku.get(materialSku)?.totalPacks ?? 0
     if (packQtyRounded == null) {
@@ -93,8 +108,8 @@ export async function POST(request: Request) {
     }
   }
 
-  // Aggregate shopping list (same logic as /api/plan)
-  const shoppingByMaterialSku = new Map<string, any>()
+  // Aggregate shopping list (same logic as v1.7)
+  const shoppingByMaterialSku = new Map<string, ShoppingListLine>()
   let totalRevenue = 0
   let totalCost = 0
   let totalBouquets = 0
@@ -102,6 +117,7 @@ export async function POST(request: Request) {
   for (const item of items) {
     const product = productBySku.get(item.productSku)
 
+    // Custom bouquet branch (PRD-CUSTOM-*)
     if (!product && item.productSku.startsWith("PRD-CUSTOM-")) {
       const customRecipe = await db.customRecipe.findUnique({
         where: { erpProductSku: item.productSku },
@@ -193,29 +209,23 @@ export async function POST(request: Request) {
     return a.materialName.localeCompare(b.materialName)
   })
 
-  const bySupplier: Record<string, { lines: any[]; totalPackCost: number; lineCount: number; openPOs: { poNumber: string }[] }> = {}
+  // Group by supplier (same as v1.7)
+  const bySupplier: ShoppingListPayload["bySupplier"] = {}
   for (const line of shoppingList) {
     const supplier = line.supplier || "Unknown"
-    if (!bySupplier[supplier]) bySupplier[supplier] = { lines: [], totalPackCost: 0, lineCount: 0, openPOs: [] }
+    if (!bySupplier[supplier]) {
+      bySupplier[supplier] = { lines: [], totalPackCost: 0, lineCount: 0, openPOs: [] }
+    }
     bySupplier[supplier].lines.push(line)
     bySupplier[supplier].lineCount += 1
     bySupplier[supplier].totalPackCost += line.totalPackCost ?? 0
   }
-  // Attach the unique open PO numbers per supplier.
   for (const supplier of Object.keys(bySupplier)) {
     const poNumbers = openPOBySupplier.get(supplier) ?? new Set<string>()
     bySupplier[supplier].openPOs = Array.from(poNumbers).sort().map((poNumber) => ({ poNumber }))
   }
 
-  // GMT-6 timestamp (Mexico City, no DST since 2022). Used for the
-  // "Generated" footer of the PDF — the server's local time may differ.
-  const generatedAt = new Date(Date.now() - 6 * 60 * 60 * 1000)
-  const generatedLabel = generatedAt.toISOString().slice(0, 16).replace("T", " ") // "YYYY-MM-DD HH:MM"
-
-  // === Shopping List identifier + status ===
-  // Each PDF generation gets a unique SL-NNNN number, persisted so the user
-  // can later reference "SL-0003 for the week of 26/10" even after more orders
-  // are added to the plan.
+  // === Generate the SL-NNNN identifier (same as v1.7) ===
   const lastSL = await db.shoppingList.findFirst({ orderBy: { slNumber: "desc" } })
   let nextSLNum = 1
   if (lastSL?.slNumber) {
@@ -224,18 +234,11 @@ export async function POST(request: Request) {
   }
   const slNumber = `SL-${String(nextSLNum).padStart(4, "0")}`
 
-  // Status: complete = every line's toBuyPacks = 0 (all materials covered by
-  // open POs). Pending = at least one line still has remaining need.
-  const itemsToBuyCount = shoppingList.filter(
-    (l: any) => (l.toBuyPacks ?? 0) > 0,
-  ).length
-  const totalToBuyPacks = shoppingList.reduce(
-    (s: number, l: any) => s + (l.toBuyPacks ?? 0),
-    0,
-  )
+  const itemsToBuyCount = shoppingList.filter((l) => (l.toBuyPacks ?? 0) > 0).length
+  const totalToBuyPacks = shoppingList.reduce((s, l) => s + (l.toBuyPacks ?? 0), 0)
   const status: "pending" | "complete" = itemsToBuyCount === 0 ? "complete" : "pending"
 
-  // Persist the Shopping List snapshot.
+  // Persist ShoppingList snapshot to DB (same as v1.7)
   await db.shoppingList.create({
     data: {
       slNumber,
@@ -243,19 +246,21 @@ export async function POST(request: Request) {
       status,
       itemsToBuyCount,
       totalToBuyPacks,
-      totalCost: shoppingList.reduce((s: number, l: any) => s + (l.totalPackCost ?? 0), 0),
+      totalCost: shoppingList.reduce((s, l) => s + (l.totalPackCost ?? 0), 0),
       materialCount: shoppingList.length,
       supplierCount: Object.keys(bySupplier).length,
     },
   })
 
-  const payload = {
+  // === Build the payload ===
+  const generatedAtLabel = nowGmtMinus6Label()
+  const pdfPayload: ShoppingListPayload = {
     weekStartDate: body.weekStartDate ?? null,
     slNumber,
     status,
     itemsToBuyCount,
     totalToBuyPacks,
-    generatedAt: generatedLabel,
+    generatedAt: generatedAtLabel,
     planSummary: {
       totalBouquets, totalRevenue, totalCost,
       estimatedProfit: totalRevenue - totalCost,
@@ -267,45 +272,23 @@ export async function POST(request: Request) {
     bySupplier,
   }
 
-  // File name includes the SL number + GMT-6 date AND time, so multiple PDFs
-  // generated the same day are distinguishable and sort chronologically.
-  // Format: "Shopping List SL-0001 (2026-10-23 14.35).pdf"  (colon replaced
-  // with a dot since Windows forbids colons in file names).
-  const genForFile = generatedAt.toISOString()
-  const fileDate = genForFile.split("T")[0]
-  const fileTime = genForFile.split("T")[1].slice(0, 5).replace(":", ".")
-  const fileName = `Shopping List ${slNumber} (${fileDate} ${fileTime}).pdf`
-  const outputPath = path.join("/home/z/my-project/download", fileName)
+  // === Generate PDF in-process (NEW in v1.8) ===
+  const pdfBuffer = await generateShoppingListPdf(pdfPayload)
 
-  // Write payload to temp JSON + generate PDF via Python
-  const tmpDir = os.tmpdir()
-  const tmpJsonPath = path.join(tmpDir, `flor-shoplist-${Date.now()}.json`)
+  // File name includes SL number + GMT-6 date AND time (same as v1.7)
+  const fileName = `Shopping List ${slNumber} (${nowGmtMinus6FileStamp()}).pdf`
 
-  await fs.mkdir(path.dirname(outputPath), { recursive: true })
-  await fs.writeFile(tmpJsonPath, JSON.stringify(payload, null, 2))
-
-  const scriptPath = path.join(process.cwd(), "scripts", "generate_shopping_list_pdf.py")
-
-  try {
-    const { stdout, stderr } = await execFileAsync("python3", [scriptPath, tmpJsonPath, outputPath])
-    console.log("Shopping list PDF stdout:", stdout)
-    if (stderr) console.log("Shopping list PDF stderr:", stderr)
-    await fs.unlink(tmpJsonPath).catch(() => {})
-
-    return NextResponse.json({
-      success: true,
-      fileName,
-      downloadPath: outputPath,
-      slNumber,
-      status,
-      itemsToBuyCount,
-      totalToBuyPacks,
-      materialCount: shoppingList.length,
-      supplierCount: Object.keys(bySupplier).length,
-    })
-  } catch (err) {
-    await fs.unlink(tmpJsonPath).catch(() => {})
-    const msg = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: "Failed to generate PDF", detail: msg }, { status: 500 })
-  }
+  return new Response(pdfBuffer, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="${encodeURIComponent(fileName)}"`,
+      "Content-Length": String(pdfBuffer.length),
+      "Cache-Control": "no-store",
+      // Optional metadata in headers — useful for the client toast:
+      "X-SL-Number": slNumber,
+      "X-SL-Status": status,
+      "X-Items-To-Buy": String(itemsToBuyCount),
+    },
+  })
 }

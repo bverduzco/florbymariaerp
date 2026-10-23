@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs",
+  "buildCommand": "npx prisma generate && next build",
+  "installCommand": "npm install",
+  "regions": ["iad1"],
+  "functions": {
+    "src/app/api/orders/[id]/pdf/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/plan/pdf/route.ts": {
+      "maxDuration": 60
+    },
+    "src/app/api/orders/draft/route.ts": {
+      "maxDuration": 60
+    }
+  },
+  "crons": []
+}
