@@ -146,28 +146,23 @@ export default function Home() {
           <TabsList className="bg-white border border-rose-100 p-1 h-auto flex-wrap w-full justify-between">
             <TabsTrigger value="intake" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <PlusCircle className="h-4 w-4" />
-              <span className="hidden sm:inline">New Order</span>
-              <span className="sm:hidden">Order</span>
+              <span>New Order</span>
             </TabsTrigger>
             <TabsTrigger value="orders" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <ClipboardList className="h-4 w-4" />
-              <span className="hidden sm:inline">Orders</span>
-              <span className="sm:hidden">ORD</span>
+              <span>Orders</span>
             </TabsTrigger>
             <TabsTrigger value="custom" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <Wand2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Custom</span>
-              <span className="sm:hidden">Cust</span>
+              <span>Custom</span>
             </TabsTrigger>
             <TabsTrigger value="catalogue" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <Flower2 className="h-4 w-4" />
-              <span className="hidden sm:inline">Catalogue</span>
-              <span className="sm:hidden">Cat</span>
+              <span>Catalogue</span>
             </TabsTrigger>
             <TabsTrigger value="plan" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <ClipboardList className="h-4 w-4" />
-              <span className="hidden sm:inline">Plan</span>
-              <span className="sm:hidden">Plan</span>
+              <span>Plan</span>
               {totalPlanQty > 0 && (
                 <Badge className="ml-1 bg-rose-100 text-rose-700 px-1.5 py-0 text-[10px]">
                   {totalPlanQty}
@@ -176,8 +171,7 @@ export default function Home() {
             </TabsTrigger>
             <TabsTrigger value="delivery" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <CalendarDays className="h-4 w-4" />
-              <span className="hidden sm:inline">Delivery</span>
-              <span className="sm:hidden">Del</span>
+              <span>Delivery</span>
               {planWithDeliveries > 0 && (
                 <Badge className="ml-1 bg-rose-100 text-rose-700 px-1.5 py-0 text-[10px]">
                   {planWithDeliveries}
@@ -186,23 +180,19 @@ export default function Home() {
             </TabsTrigger>
             <TabsTrigger value="customers" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Customers</span>
-              <span className="sm:hidden">Cust</span>
+              <span>Customers</span>
             </TabsTrigger>
             <TabsTrigger value="events" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <PartyPopper className="h-4 w-4" />
-              <span className="hidden sm:inline">Events</span>
-              <span className="sm:hidden">Evt</span>
+              <span>Events</span>
             </TabsTrigger>
             <TabsTrigger value="inventory" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <Boxes className="h-4 w-4" />
-              <span className="hidden sm:inline">Inventory</span>
-              <span className="sm:hidden">Inv</span>
+              <span>Inventory</span>
             </TabsTrigger>
             <TabsTrigger value="dashboard" className="gap-1.5 flex-1 data-[state=active]:bg-rose-50 data-[state=active]:text-rose-700">
               <LayoutDashboard className="h-4 w-4" />
-              <span className="hidden sm:inline">Dashboard</span>
-              <span className="sm:hidden">Dash</span>
+              <span>Dashboard</span>
             </TabsTrigger>
           </TabsList>
 
