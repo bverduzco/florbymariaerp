@@ -47,10 +47,6 @@ interface CustomMaterial {
   type: string // flower | foliage
   class: string
   source: string
-  erpSku: string
-  erpName: string
-  matchScore: number | null
-  matchConfidence: string | null
 }
 
 const FLOWERS_MULTIPLIER = 2.5
@@ -62,6 +58,7 @@ export function CustomTab() {
   const router = useRouter()
   const [materials, setMaterials] = useState<CustomMaterial[]>([])
   const [loading, setLoading] = useState(true)
+  const [materialsLoadError, setMaterialsLoadError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState<"all" | "flower" | "foliage">("all")
   const [quantities, setQuantities] = useState<Record<string, number>>({})
@@ -88,10 +85,23 @@ export function CustomTab() {
 
   useEffect(() => {
     fetch("/api/custom-materials", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : { materials: [] }))
-      .then((data) => setMaterials(data.materials ?? []))
-      .catch(() => {
-        toast.error("Failed to load custom materials")
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Unable to load El Gato prices (HTTP ${response.status}).`)
+        }
+        return response.json()
+      })
+      .then((data) => {
+        if (!Array.isArray(data.materials)) {
+          throw new Error("The El Gato prices response was invalid.")
+        }
+        setMaterials(data.materials)
+        setMaterialsLoadError(null)
+      })
+      .catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : "Failed to load El Gato prices."
+        setMaterialsLoadError(message)
+        toast.error(message)
         setMaterials([])
       })
       .finally(() => setLoading(false))
@@ -109,12 +119,7 @@ export function CustomTab() {
     if (typeFilter !== "all") list = list.filter((m) => m.type === typeFilter)
     if (search.trim()) {
       const q = search.trim().toLowerCase()
-      list = list.filter(
-        (m) =>
-          m.name.toLowerCase().includes(q) ||
-          m.erpName.toLowerCase().includes(q) ||
-          m.erpSku.toLowerCase().includes(q),
-      )
+      list = list.filter((m) => m.name.toLowerCase().includes(q))
     }
     return list
   }, [materials, search, typeFilter])
@@ -300,6 +305,7 @@ export function CustomTab() {
         <p className="text-xs text-stone-600 mt-1">
           Pick materials and quantities to design a custom bouquet. When you like it,
           save it as a recipe — it&apos;ll appear in the Catalogue tab following ERP pricing rules.
+          El Gato&apos;s per-stem prices are independent and do not set ERP supplier prices.
         </p>
       </Card>
 
@@ -312,7 +318,7 @@ export function CustomTab() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, ERP SKU, or ERP name…"
+              placeholder="Search El Gato materials by name…"
               className="h-8 pl-7 text-sm"
             />
           </div>
@@ -343,6 +349,16 @@ export function CustomTab() {
               {[1, 2, 3, 4, 5].map((i) => (
                 <div key={i} className="h-14 rounded-md bg-stone-100 animate-pulse" />
               ))}
+            </div>
+          ) : materialsLoadError ? (
+            <div className="text-center py-8 text-red-700">
+              <p className="text-sm">{materialsLoadError}</p>
+            </div>
+          ) : materials.length === 0 ? (
+            <div className="text-center py-8 text-stone-500">
+              <Flower2 className="h-8 w-8 mx-auto text-stone-300 mb-2" />
+              <p className="text-sm">No El Gato prices have been imported yet.</p>
+              <p className="text-xs mt-1">Import the supplier&apos;s per-stem catalogue to build custom items.</p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-8 text-stone-500">
@@ -376,18 +392,6 @@ export function CustomTab() {
                         <span className="capitalize">{m.type}</span>
                         {m.class && <span>· {m.class}</span>}
                         <span>· ${m.pricePerStem}/stem</span>
-                        {m.erpSku && (
-                          <span className="text-stone-400">· ERP: {m.erpSku}</span>
-                        )}
-                        {m.matchConfidence && m.matchConfidence !== "HIGH" && (
-                          <span className={`px-1 rounded text-[9px] ${
-                            m.matchConfidence === "MEDIUM" ? "bg-amber-100 text-amber-800" :
-                            m.matchConfidence === "LOW" ? "bg-orange-100 text-orange-800" :
-                            "bg-red-100 text-red-800"
-                          }`} title={`Match score: ${m.matchScore}`}>
-                            {m.matchConfidence}
-                          </span>
-                        )}
                       </div>
                     </div>
                     <div className="flex items-center rounded-md border border-stone-200 bg-stone-50 shrink-0">

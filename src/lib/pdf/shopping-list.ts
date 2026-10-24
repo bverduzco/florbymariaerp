@@ -22,6 +22,13 @@ const COLOR_BORDER = "#E7E5E4"
 const COLOR_BG_LIGHT = "#FAFAF9"
 const COLOR_INDIGO = "#4338CA"
 
+const LOGO_MARK = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
+  <rect x="1.5" y="1.5" width="27" height="27" rx="4" fill="#2D2D2D"/>
+  <path fill="#FFFFFF" d="M15.47 7.1l-1.3 1.85c-.2.29-.54.47-.9.47h-7.1V7.09c0 .01 9.3.01 9.3.01z"/>
+  <path fill="#FFFFFF" d="M24.3 7.1L13.14 22.91H5.7L16.86 7.1z"/>
+  <path fill="#FFFFFF" d="M14.53 22.91l1.31-1.86c.2-.29.54-.47.9-.47h7.09v2.33H14.53z"/>
+</svg>`
+
 const fonts = {
   Helvetica: {
     normal: "Helvetica",
@@ -100,13 +107,13 @@ function buildDocDefinition(payload: ShoppingListPayload): TDocumentDefinitions 
   const statusText: Content =
     status === "complete"
       ? {
-          text: "✓ Status: Complete — all materials covered by open POs",
+          text: "Status: Complete - all materials covered by open POs",
           bold: true,
           fontSize: 10,
           color: COLOR_EMERALD,
         }
       : {
-          text: `● Status: Pending — ${itemsToBuyCount} item${itemsToBuyCount !== 1 ? "s" : ""} still to buy · ${totalToBuyPacks} packs`,
+          text: `Status: Pending - ${itemsToBuyCount} item${itemsToBuyCount !== 1 ? "s" : ""} still to buy, ${totalToBuyPacks} packs`,
           bold: true,
           fontSize: 10,
           color: COLOR_AMBER,
@@ -131,15 +138,15 @@ function buildDocDefinition(payload: ShoppingListPayload): TDocumentDefinitions 
                   { text: slNumber, bold: true, fontSize: 12, color: COLOR_ROSE },
                 ],
               },
-              { text: weekLabel, color: COLOR_STONE_LIGHT, fontSize: 9, margin: [0, 2, 0, 0] },
+              { text: weekLabel, color: COLOR_STONE_LIGHT, fontSize: 9, margin: [0, 6, 0, 0] },
               {
                 text: `Material needed for orders placed before ${genLabel} (GMT-6)`,
                 color: COLOR_STONE_LIGHT,
                 italics: true,
                 fontSize: 8,
-                margin: [0, 2, 0, 0],
+                margin: [0, 4, 0, 0],
               },
-              statusText,
+              { ...statusText, margin: [0, 6, 0, 0] },
             ],
           },
           {
@@ -169,7 +176,7 @@ function buildDocDefinition(payload: ShoppingListPayload): TDocumentDefinitions 
       ],
     },
     layout: "noBorders",
-    margin: [0, 0, 0, 8],
+    margin: [0, 0, 0, 14],
   }
 
   // === PER-SUPPLIER SECTIONS ===
@@ -181,8 +188,8 @@ function buildDocDefinition(payload: ShoppingListPayload): TDocumentDefinitions 
     const poList = openPOs.map((p) => p.poNumber).filter(Boolean).join(", ")
 
     const headerText = poList
-      ? `${supplierName} — ${group.lineCount} items · Est. cost: $${Math.round(group.totalPackCost).toLocaleString("es-MX")} MXN  ·  Existing POs: ${poList}`
-      : `${supplierName} — ${group.lineCount} items · Est. cost: $${Math.round(group.totalPackCost).toLocaleString("es-MX")} MXN`
+      ? `${supplierName} - ${group.lineCount} items | Est. cost: $${Math.round(group.totalPackCost).toLocaleString("es-MX")} MXN | Existing POs: ${poList}`
+      : `${supplierName} - ${group.lineCount} items | Est. cost: $${Math.round(group.totalPackCost).toLocaleString("es-MX")} MXN`
 
     supplierSections.push({
       text: headerText,
@@ -195,14 +202,14 @@ function buildDocDefinition(payload: ShoppingListPayload): TDocumentDefinitions 
     // Build the table body — each line can have a "subs" SPAN row below it
     const tableBody: Content[][] = []
     tableBody.push([
-      { text: "MATERIAL", color: "white", bold: true, fontSize: 8, fillColor: COLOR_ROSE },
-      { text: "SKU", color: "white", bold: true, fontSize: 8, fillColor: COLOR_ROSE },
-      { text: "NEED", color: "white", bold: true, fontSize: 8, fillColor: COLOR_ROSE, alignment: "right" },
-      { text: "PACK SIZE", color: "white", bold: true, fontSize: 8, fillColor: COLOR_ROSE, alignment: "right" },
-      { text: "PACKS", color: "white", bold: true, fontSize: 8, fillColor: COLOR_ROSE, alignment: "right" },
-      { text: "PACK PRICE", color: "white", bold: true, fontSize: 8, fillColor: COLOR_ROSE, alignment: "right" },
-      { text: "TOTAL", color: "white", bold: true, fontSize: 8, fillColor: COLOR_ROSE, alignment: "right" },
-      { text: "USED BY", color: "white", bold: true, fontSize: 8, fillColor: COLOR_ROSE },
+      { text: "MATERIAL", color: "white", bold: true, fontSize: 8, fillColor: COLOR_ROSE, margin: [4, 5, 4, 5] },
+      { text: "SKU", color: "white", bold: true, fontSize: 8, fillColor: COLOR_ROSE, alignment: "center", margin: [4, 8, 4, 2] },
+      { text: "NEED", color: "white", bold: true, fontSize: 8, fillColor: COLOR_ROSE, alignment: "center", margin: [4, 8, 4, 2] },
+      { text: "PACK SIZE", color: "white", bold: true, fontSize: 8, fillColor: COLOR_ROSE, alignment: "center", margin: [4, 3, 4, 3] },
+      { text: "PACKS", color: "white", bold: true, fontSize: 8, fillColor: COLOR_ROSE, alignment: "center", margin: [4, 8, 4, 2] },
+      { text: "PACK PRICE", color: "white", bold: true, fontSize: 8, fillColor: COLOR_ROSE, alignment: "center", margin: [4, 3, 4, 3] },
+      { text: "TOTAL", color: "white", bold: true, fontSize: 8, fillColor: COLOR_ROSE, alignment: "center", margin: [4, 8, 4, 2] },
+      { text: "USED BY", color: "white", bold: true, fontSize: 8, fillColor: COLOR_ROSE, alignment: "center", margin: [4, 8, 4, 2] },
     ])
 
     let nonSubsRowIndex = 0
@@ -214,7 +221,7 @@ function buildDocDefinition(payload: ShoppingListPayload): TDocumentDefinitions 
       const totalStr = li.totalPackCost ? `$${Math.round(li.totalPackCost).toLocaleString("es-MX")}` : "?"
 
       const usedByParts = li.usedBy.map((u) => {
-        let part = `${u.productName} ×${u.qty}`
+        let part = `${u.productName} x${u.qty}`
         if (u.deliveryDate) {
           const dd = u.deliveryDate.slice(8, 10)
           const mm = u.deliveryDate.slice(5, 7)
@@ -224,14 +231,12 @@ function buildDocDefinition(payload: ShoppingListPayload): TDocumentDefinitions 
       })
       const usedByStr = usedByParts.join("; ")
 
-      const warningText = li.warning
-        ? `\n⚠ ${li.warning}`
-        : ""
+      const warningText = li.warning ? `\nWarning: ${li.warning}` : ""
 
       // Checkbox prefix on material name
       const materialContent: Content = {
         text: [
-          { text: "☐ ", color: COLOR_STONE_LIGHT, fontSize: 11 },
+          { text: "[ ] ", color: COLOR_STONE_LIGHT, fontSize: 9 },
           { text: li.materialName + warningText, color: COLOR_STONE, fontSize: 9 },
         ],
       }
@@ -239,19 +244,19 @@ function buildDocDefinition(payload: ShoppingListPayload): TDocumentDefinitions 
         // Add warning as italic sub-line
         materialContent.stack = [
           { text: li.materialName, color: COLOR_STONE, fontSize: 9 },
-          { text: `⚠ ${li.warning}`, italics: true, color: COLOR_AMBER, fontSize: 7, margin: [0, 1, 0, 0] },
+          { text: `Warning: ${li.warning}`, italics: true, color: COLOR_AMBER, fontSize: 7, margin: [0, 1, 0, 0] },
         ]
       }
 
       tableBody.push([
         materialContent,
-        { text: li.materialSku, color: COLOR_STONE_LIGHT, fontSize: 7 },
-        { text: needStr, color: COLOR_STONE, fontSize: 9, alignment: "right" },
-        { text: packSizeStr, color: COLOR_STONE, fontSize: 9, alignment: "right" },
-        { text: packsStr, bold: true, color: COLOR_ROSE, fontSize: 10, alignment: "right" },
-        { text: packPriceStr, color: COLOR_STONE, fontSize: 9, alignment: "right" },
-        { text: totalStr, bold: true, color: COLOR_STONE, fontSize: 9, alignment: "right" },
-        { text: usedByStr, color: COLOR_STONE_LIGHT, fontSize: 7 },
+        { text: li.materialSku, color: COLOR_STONE_LIGHT, fontSize: 7, alignment: "center" },
+        { text: needStr, color: COLOR_STONE, fontSize: 9, alignment: "center" },
+        { text: packSizeStr, color: COLOR_STONE, fontSize: 9, alignment: "center" },
+        { text: packsStr, bold: true, color: COLOR_ROSE, fontSize: 10, alignment: "center" },
+        { text: packPriceStr, color: COLOR_STONE, fontSize: 9, alignment: "center" },
+        { text: totalStr, bold: true, color: COLOR_STONE, fontSize: 9, alignment: "center" },
+        { text: usedByStr, color: COLOR_STONE_LIGHT, fontSize: 7, alignment: "center" },
       ])
       nonSubsRowIndex += 1
 
@@ -259,7 +264,7 @@ function buildDocDefinition(payload: ShoppingListPayload): TDocumentDefinitions 
       if (li.substitutes) {
         tableBody.push([
           {
-            text: `   ↳ Substitutes: ${li.substitutes}`,
+            text: `   Substitutes: ${li.substitutes}`,
             italics: true,
             color: COLOR_INDIGO,
             fontSize: 7,
@@ -272,7 +277,7 @@ function buildDocDefinition(payload: ShoppingListPayload): TDocumentDefinitions 
 
     const supplierTable: Content = {
       table: {
-        widths: ["32%", "10%", "9%", "8%", "7%", "9%", "9%", "16%"],
+        widths: ["30%", "10%", "9%", "8%", "9%", "10%", "9%", "15%"],
         body: tableBody,
       },
       layout: {
@@ -317,7 +322,7 @@ function buildDocDefinition(payload: ShoppingListPayload): TDocumentDefinitions 
   const footerNote: Content[] = []
   if (warnings.length > 0) {
     footerNote.push({
-      text: `⚠ ${warnings.length} item(s) have unknown pack sizes — confirm with supplier before ordering.`,
+      text: `Warning: ${warnings.length} item(s) have unknown pack sizes - confirm with supplier before ordering.`,
       italics: true,
       color: COLOR_AMBER,
       fontSize: 8,
@@ -337,12 +342,18 @@ function buildDocDefinition(payload: ShoppingListPayload): TDocumentDefinitions 
     content: [
       // Logo + tagline
       {
-        text: [
-          { text: "✿ ", color: COLOR_ROSE, bold: true, fontSize: 20 },
-          { text: "Flor by Maria", color: COLOR_ROSE, bold: true, fontSize: 20 },
+        columns: [
+          { svg: LOGO_MARK, width: 30, height: 30, margin: [0, 0, 9, 0] },
+          {
+            stack: [
+              { text: "Flor by Maria", color: COLOR_ROSE, bold: true, fontSize: 20 },
+              { text: "Lista de compras | Procurement sheet", italics: true, color: COLOR_STONE_LIGHT, fontSize: 9, margin: [0, 1, 0, 0] },
+            ],
+          },
         ],
+        columnGap: 0,
+        margin: [0, 0, 0, 10],
       },
-      { text: "Lista de compras · Procurement sheet", italics: true, color: COLOR_STONE_LIGHT, fontSize: 9, margin: [0, 0, 0, 6] },
       headerTable,
       ...supplierSections,
       ...footerNote,
@@ -357,7 +368,7 @@ function buildDocDefinition(payload: ShoppingListPayload): TDocumentDefinitions 
         },
         {
           columns: [
-            { text: `Flor by Maria · ${slNumber} · Lista de compras`, color: COLOR_STONE_LIGHT, fontSize: 8 },
+            { text: `Flor by Maria | ${slNumber} | Lista de compras`, color: COLOR_STONE_LIGHT, fontSize: 8 },
             { text: `Generated ${genLabel} (GMT-6)`, color: COLOR_STONE_LIGHT, fontSize: 8, alignment: "right" },
           ],
         },

@@ -5,14 +5,13 @@ export const dynamic = "force-dynamic"
 
 /**
  * GET /api/custom-materials
- * Returns all custom materials (e.g. from El Gato catalogue), optionally filtered by ?type=flower|foliage.
+ * Returns only El Gato catalogue materials, optionally filtered by ?type=flower|foliage.
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const type = searchParams.get("type")
-  const source = searchParams.get("source") ?? "El Gato"
 
-  const where: Record<string, unknown> = { source }
+  const where: Record<string, unknown> = { source: "El Gato" }
   if (type) where.type = type
 
   const materials = await db.customMaterial.findMany({
@@ -27,10 +26,6 @@ export async function GET(request: Request) {
     type: m.type,
     class: m.class ?? "",
     source: m.source,
-    erpSku: m.erpSku ?? "",
-    erpName: m.erpName ?? "",
-    matchScore: m.matchScore ?? null,
-    matchConfidence: m.matchConfidence ?? null,
   }))
 
   return NextResponse.json({ materials: payload, count: payload.length })
