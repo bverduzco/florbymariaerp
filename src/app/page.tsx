@@ -106,7 +106,7 @@ export default function Home() {
             </div>
             <div className="flex items-baseline gap-2">
               <h1 className="text-base font-semibold text-stone-800">Flor by Maria</h1>
-              <span className="hidden sm:inline text-xs text-stone-500">v1.6</span>
+              <span className="hidden sm:inline text-xs text-stone-500">v1.8</span>
             </div>
           </div>
 
@@ -270,7 +270,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="mt-auto border-t border-stone-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 text-xs text-stone-500 flex flex-col sm:flex-row justify-between gap-1">
-          <span>Flor by Maria · v1.6 · Currency: MXN</span>
+          <span>Flor by Maria · v1.8 · Currency: MXN</span>
           <span>Source: ERP Excel workbook · {productCount} products loaded</span>
         </div>
       </footer>

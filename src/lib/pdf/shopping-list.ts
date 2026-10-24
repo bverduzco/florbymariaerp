@@ -8,7 +8,6 @@
 // Input: ShoppingListPayload (same shape as v1.7's Python script).
 // Output: PDF buffer (Promise<Buffer>).
 
-import PdfPrinter from "pdfmake"
 import type { TDocumentDefinitions, Content } from "pdfmake/interfaces"
 import { formatSpanishShort, nowGmtMinus6Label, weekRangeLabel } from "./utils"
 
@@ -31,8 +30,6 @@ const fonts = {
     bolditalics: "Helvetica-BoldOblique",
   },
 }
-
-const printer = new PdfPrinter(fonts)
 
 // === Payload interface ===
 export interface ShoppingListLine {
@@ -379,6 +376,9 @@ function buildDocDefinition(payload: ShoppingListPayload): TDocumentDefinitions 
 
 export async function generateShoppingListPdf(payload: ShoppingListPayload): Promise<Buffer> {
   const docDefinition = buildDocDefinition(payload)
+  // Dynamically import pdfmake to avoid bundling issues at build time.
+  const { default: PdfPrinter } = await import("pdfmake")
+  const printer = new PdfPrinter(fonts)
   const pdfDoc = printer.createPdfKitDocument(docDefinition, {})
   return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = []

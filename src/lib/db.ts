@@ -1,23 +1,13 @@
-// src/lib/db.ts — v1.8: Turso adapter setup
+// src/lib/db.ts — v1.8: Database adapter with local + Turso support
 //
-// Replaces the v1.7 PrismaClient singleton with one that uses the libsql
-// driver adapter (so it can talk to Turso over HTTP).
+// Detects the URL scheme and uses the appropriate adapter:
+//   - libsql:// or https:// → @prisma/adapter-libsql (for Turso)
+//   - file: → @prisma/adapter-better-sqlite3 (for local SQLite)
 //
-// v1.7 used:
-//   const db = new PrismaClient()
-//
-// v1.8 uses:
-//   const libsql = createClient({ url: process.env.DATABASE_URL, authToken: ... })
-//   const adapter = new PrismaLibSQL(libsql)
-//   const db = new PrismaClient({ adapter })
-//
-// On localhost, you can still use a local SQLite file by setting:
-//   DATABASE_URL=file:./db/custom.db
-// (the libsql client supports the `file:` URL scheme)
+// This is the right approach because @prisma/adapter-libsql doesn't fully
+// support local file: URLs (it has issues with the URL format).
 
 import { PrismaClient } from "@prisma/client"
-import { PrismaLibSQL } from "@prisma/adapter-libsql"
-import { createClient } from "@libsql/client"
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
@@ -33,27 +23,47 @@ function createPrismaClient(): PrismaClient {
     )
   }
 
-  // Parse authToken from the URL query string if present.
-  // Turso connection strings look like:
-  //   libsql://florbymaria-xxx.turso.io?authToken=eyJ...
-  // The libsql client accepts the URL as-is and extracts the token internally,
-  // so we don't need to do anything special.
-  const libsql = createClient({
-    url: databaseUrl,
-    // If authToken is in the URL, libsql/client picks it up automatically.
-    // If you want to pass it separately for clarity, uncomment:
-    // authToken: process.env.TURSO_AUTH_TOKEN,
-  })
+  // Decide which adapter to use based on the URL scheme.
+  const isTurso = databaseUrl.startsWith("libsql://") ||
+                  databaseUrl.startsWith("https://") ||
+                  databaseUrl.startsWith("http://")
+  const isLocalFile = databaseUrl.startsWith("file:")
 
-  const adapter = new PrismaLibSQL(libsql)
-  return new PrismaClient({ adapter })
+  if (isTurso) {
+    // Use @prisma/adapter-libsql for Turso (libsql over HTTP)
+    const { PrismaLibSQL } = require("@prisma/adapter-libsql")
+    const { createClient } = require("@libsql/client")
+    const libsql = createClient({
+      url: databaseUrl,
+      // authToken is parsed from the URL's ?authToken= query string automatically
+    })
+    const adapter = new PrismaLibSQL(libsql)
+    return new PrismaClient({ adapter })
+  }
+
+  if (isLocalFile) {
+    // Use @prisma/adapter-better-sqlite3 for local SQLite files
+    // (libsql adapter has issues with file: URLs in some Prisma versions)
+    const { PrismaBetterSqlite3 } = require("@prisma/adapter-better-sqlite3")
+    const adapter = new PrismaBetterSqlite3({ url: databaseUrl })
+    return new PrismaClient({ adapter })
+  }
+
+  throw new Error(
+    `Unsupported DATABASE_URL scheme: ${databaseUrl.split(":")[0]}. ` +
+    "Use 'libsql://' for Turso or 'file:' for local SQLite."
+  )
 }
 
-export const db = globalForPrisma.prisma ?? createPrismaClient()
-
-// In development, cache the Prisma client on the global object to prevent
-// exhausting DB connections on hot reloads. In production, each serverless
-// function invocation gets its own PrismaClient (Vercel handles this fine).
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = db
+function getDb(): PrismaClient {
+  if (process.env.NODE_ENV === "production") {
+    if (!globalForPrisma.prisma) {
+      globalForPrisma.prisma = createPrismaClient()
+    }
+    return globalForPrisma.prisma
+  }
+  // In dev, always create fresh (easier debugging, no stale state)
+  return createPrismaClient()
 }
+
+export const db = getDb()

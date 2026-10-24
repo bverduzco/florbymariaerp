@@ -8,7 +8,6 @@
 // Input: order payload (same shape as v1.7's Python script).
 // Output: PDF buffer (Promise<Buffer>).
 
-import PdfPrinter from "pdfmake"
 import type { TDocumentDefinitions, Content } from "pdfmake/interfaces"
 import { formatSpanishLong } from "./utils"
 
@@ -33,8 +32,6 @@ const fonts = {
     bolditalics: "Helvetica-BoldOblique",
   },
 }
-
-const printer = new PdfPrinter(fonts)
 
 // === Payload interface (matches v1.7 Python input) ===
 export interface ReciboPayload {
@@ -348,6 +345,11 @@ function buildDocDefinition(payload: ReciboPayload): TDocumentDefinitions {
  */
 export async function generateReciboPdf(payload: ReciboPayload): Promise<Buffer> {
   const docDefinition = buildDocDefinition(payload)
+  // Dynamically import pdfmake to avoid bundling issues at build time.
+  // pdfmake depends on @foliojs-fork/fontkit which has data files that
+  // Next.js's bundler can't collect during page data collection.
+  const { default: PdfPrinter } = await import("pdfmake")
+  const printer = new PdfPrinter(fonts)
   const pdfDoc = printer.createPdfKitDocument(docDefinition, {})
   return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = []

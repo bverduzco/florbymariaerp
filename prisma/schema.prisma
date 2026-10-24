@@ -1,8 +1,9 @@
 // Floristry ERP — Prisma schema
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+  provider = "prisma-client-js"
+  // Note: In Prisma 6.19+, driverAdapters is no longer a preview feature.
+  // It's stable and works without the previewFeatures declaration.
 }
 
 datasource db {
