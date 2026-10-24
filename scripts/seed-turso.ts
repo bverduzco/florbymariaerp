@@ -1,51 +1,68 @@
 // scripts/seed-turso.ts — Turso-compatible seed script for v1.8
 //
-// This is a fixed version of scripts/seed.ts that uses the Turso adapter
-// (via src/lib/db.ts) instead of a hardcoded SQLite URL.
+// v2 fix: load .env.local SYNCHRONOUSLY before importing db.
+// In v1, the db module was imported at the top of the file, which caused
+// Prisma to initialize with `process.env.DATABASE_URL = undefined` because
+// .env.local hadn't been loaded yet.
+//
+// This version reads .env.local using fs.readFileSync() at the very top
+// of the file (before any other imports), so process.env.DATABASE_URL is
+// set BEFORE we import the db module.
 //
 // Run: npx tsx scripts/seed-turso.ts
-//
-// It reads DATABASE_URL from .env.local automatically.
 
-import { db } from "../src/lib/db"
-import { promises as fs } from "fs"
+import { readFileSync, existsSync } from "fs"
 import path from "path"
 
-// === Load .env.local so DATABASE_URL is available ===
-async function loadEnv() {
-  try {
-    const envContent = await fs.readFile(path.join(process.cwd(), ".env.local"), "utf-8")
-    for (const line of envContent.split("\n")) {
-      const trimmed = line.trim()
-      if (!trimmed || trimmed.startsWith("#")) continue
-      const eqIdx = trimmed.indexOf("=")
-      if (eqIdx === -1) continue
-      const key = trimmed.slice(0, eqIdx).trim()
-      const value = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, "")
-      if (!process.env[key]) {
-        process.env[key] = value
-      }
+// === Step 1: Load .env.local SYNCHRONOUSLY before any other imports ===
+// This must happen before `import { db }` because that import triggers
+// Prisma client initialization.
+function loadEnvSync() {
+  const envPath = path.join(process.cwd(), ".env.local")
+  if (!existsSync(envPath)) {
+    console.warn("WARN: .env.local not found at", envPath)
+    console.warn("Falling back to whatever process.env already has.")
+    return
+  }
+  const content = readFileSync(envPath, "utf-8")
+  for (const line of content.split("\n")) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith("#")) continue
+    const eqIdx = trimmed.indexOf("=")
+    if (eqIdx === -1) continue
+    const key = trimmed.slice(0, eqIdx).trim()
+    const value = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, "")
+    // Only set if not already in process.env (don't override real env vars)
+    if (!process.env[key]) {
+      process.env[key] = value
     }
-  } catch (e) {
-    // .env.local doesn't exist — fall back to whatever process.env already has
   }
 }
 
+loadEnvSync()
+
+// === Step 2: NOW it's safe to import db (Prisma will read DATABASE_URL) ===
+import { db } from "../src/lib/db"
+
+// === Step 3: Verify DATABASE_URL is set ===
+if (!process.env.DATABASE_URL) {
+  console.error("ERROR: DATABASE_URL is not set.")
+  console.error("")
+  console.error("Create a .env.local file at the repo root with:")
+  console.error('  DATABASE_URL=libsql://florbymaria-xxxx.turso.io?authToken=eyJ...')
+  console.error("")
+  console.error("Current process.env.DATABASE_URL:", process.env.DATABASE_URL)
+  process.exit(1)
+}
+
+console.log("=== Turso seed script ===")
+console.log("DATABASE_URL:", process.env.DATABASE_URL.replace(/\?authToken=.*/, "?authToken=***"))
+console.log("")
+
+// === Step 4: Load seed.json ===
 async function main() {
-  await loadEnv()
+  const { promises: fs } = await import("fs")
 
-  if (!process.env.DATABASE_URL) {
-    console.error("ERROR: DATABASE_URL is not set.")
-    console.error("Create a .env.local file with:")
-    console.error('  DATABASE_URL="libsql://florbymaria-xxxx.turso.io?authToken=eyJ..."')
-    process.exit(1)
-  }
-
-  console.log("=== Turso seed script ===")
-  console.log("DATABASE_URL:", process.env.DATABASE_URL.replace(/\?authToken=.*/, "?authToken=***"))
-  console.log("")
-
-  // === Try to load seed.json ===
   let seedData: any
   try {
     const raw = await fs.readFile(path.join(process.cwd(), "src/data/seed.json"), "utf-8")
@@ -89,9 +106,7 @@ async function main() {
   for (const mat of seedData.materials ?? []) {
     try {
       const existing = await db.material.findUnique({ where: { sku: mat.sku } })
-      if (existing) {
-        continue  // skip silently
-      }
+      if (existing) continue
       await db.material.create({
         data: {
           sku: mat.sku,
@@ -124,9 +139,7 @@ async function main() {
   for (const prod of seedData.products ?? []) {
     try {
       const existing = await db.product.findUnique({ where: { sku: prod.sku } })
-      if (existing) {
-        continue
-      }
+      if (existing) continue
       await db.product.create({
         data: {
           sku: prod.sku,
