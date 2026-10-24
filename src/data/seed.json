@@ -1842,7 +1842,7 @@
     },
     {
       "sku": "FLR-TULIPAN",
-      "name": "TULIPAN",
+      "name": "TULIPÁN",
       "category": "flower",
       "unit": "stem",
       "unitCost": 460.0,
@@ -1859,7 +1859,7 @@
     },
     {
       "sku": "FLR-TULIPAN-DOBLE-PETALO",
-      "name": "TULIPAN DOBLE PETALO",
+      "name": "TULIPÁN DOBLE PÉTALO",
       "category": "flower",
       "unit": "stem",
       "unitCost": 498.0,

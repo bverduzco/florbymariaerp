@@ -36,6 +36,9 @@ import {
   Search,
   PlusCircle,
   User,
+  ArrowDownAZ,
+  DollarSign,
+  Type as TypeIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
@@ -64,6 +67,7 @@ export function CustomTab() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [typeFilter, setTypeFilter] = useState<"all" | "flower" | "foliage">("all")
+  const [sortBy, setSortBy] = useState<"name" | "price" | "type">("name")
   const [quantities, setQuantities] = useState<Record<string, number>>({})
   const [saveOpen, setSaveOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -103,7 +107,7 @@ export function CustomTab() {
       .catch(() => {})
   }, [])
 
-  // Filtered materials
+  // Filtered + sorted materials
   const filtered = useMemo(() => {
     let list = materials
     if (typeFilter !== "all") list = list.filter((m) => m.type === typeFilter)
@@ -116,8 +120,34 @@ export function CustomTab() {
           m.erpSku.toLowerCase().includes(q),
       )
     }
-    return list
-  }, [materials, search, typeFilter])
+    // Apply sort
+    const sorted = [...list]
+    if (sortBy === "name") {
+      // Locale-aware sort handles Spanish accents (Tulipán vs Tulipan)
+      sorted.sort((a, b) =>
+        a.name.localeCompare(b.name, "es", { sensitivity: "base" }),
+      )
+    } else if (sortBy === "price") {
+      // Lowest price first; ties broken by name
+      sorted.sort((a, b) => {
+        const diff = a.pricePerStem - b.pricePerStem
+        if (Math.abs(diff) < 0.001) {
+          return a.name.localeCompare(b.name, "es", { sensitivity: "base" })
+        }
+        return diff
+      })
+    } else if (sortBy === "type") {
+      // Flowers first, then foliage; ties broken by name
+      sorted.sort((a, b) => {
+        if (a.type !== b.type) {
+          // "flower" sorts before "foliage" alphabetically
+          return a.type.localeCompare(b.type)
+        }
+        return a.name.localeCompare(b.name, "es", { sensitivity: "base" })
+      })
+    }
+    return sorted
+  }, [materials, search, typeFilter, sortBy])
 
   // Selected line items (qty > 0)
   const selectedLines = useMemo(() => {
@@ -293,7 +323,7 @@ export function CustomTab() {
             <Sparkles className="h-5 w-5 text-rose-700" />
             <h2 className="text-lg font-semibold text-stone-800">Custom Bouquet Builder</h2>
             <Badge variant="outline" className="text-xs">
-              {materials.length} materials from El Gato
+              {materials.length} flowers to choose from!
             </Badge>
           </div>
         </div>
@@ -303,7 +333,7 @@ export function CustomTab() {
         </p>
       </Card>
 
-      {/* Search + filters */}
+      {/* Search + filters + sort */}
       <Card className="bg-white p-3">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative flex-1 min-w-[200px]">
@@ -330,6 +360,48 @@ export function CustomTab() {
                 {t === "all" ? "All" : t + "s"}
               </button>
             ))}
+          </div>
+          {/* Sort buttons */}
+          <div className="flex items-center gap-1 border-l border-stone-200 pl-2 ml-1">
+            <span className="text-[10px] uppercase tracking-wide text-stone-400 mr-1 hidden sm:inline">
+              Sort
+            </span>
+            <button
+              onClick={() => setSortBy("name")}
+              title="Sort alphabetically (A → Z)"
+              className={`text-xs px-2 py-1 rounded-md border transition-colors inline-flex items-center gap-1 ${
+                sortBy === "name"
+                  ? "bg-rose-100 text-rose-800 border-rose-200"
+                  : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
+              }`}
+            >
+              <ArrowDownAZ className="h-3 w-3" />
+              <span className="hidden sm:inline">Name</span>
+            </button>
+            <button
+              onClick={() => setSortBy("price")}
+              title="Sort by price (low → high)"
+              className={`text-xs px-2 py-1 rounded-md border transition-colors inline-flex items-center gap-1 ${
+                sortBy === "price"
+                  ? "bg-rose-100 text-rose-800 border-rose-200"
+                  : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
+              }`}
+            >
+              <DollarSign className="h-3 w-3" />
+              <span className="hidden sm:inline">Price</span>
+            </button>
+            <button
+              onClick={() => setSortBy("type")}
+              title="Sort by type (flowers, then foliage)"
+              className={`text-xs px-2 py-1 rounded-md border transition-colors inline-flex items-center gap-1 ${
+                sortBy === "type"
+                  ? "bg-rose-100 text-rose-800 border-rose-200"
+                  : "bg-white text-stone-600 border-stone-200 hover:bg-stone-50"
+              }`}
+            >
+              <TypeIcon className="h-3 w-3" />
+              <span className="hidden sm:inline">Type</span>
+            </button>
           </div>
         </div>
       </Card>
