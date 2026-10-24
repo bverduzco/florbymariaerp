@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { useCatalogue } from "@/lib/catalogue-store"
 import { usePlanStore } from "@/lib/plan-store"
-import { ErpUploadButton } from "@/components/floristry/erp-upload-button"
 import { BackupButton } from "@/components/floristry/backup-button"
 import { CatalogueGrid } from "@/components/floristry/catalogue-grid"
 import { WeeklyPlan } from "@/components/floristry/weekly-plan"
@@ -13,6 +12,7 @@ import { DeliveryView } from "@/components/floristry/delivery-view"
 import { OrdersTab } from "@/components/floristry/orders-tab"
 import { OrderIntakeForm } from "@/components/floristry/order-intake-form"
 import { GenerateDraftButton } from "@/components/floristry/generate-draft-button"
+import { LogoutButton } from "@/components/floristry/logout-button"
 import { CustomTab } from "@/components/floristry/custom-tab"
 import { InventoryTab } from "@/components/floristry/inventory-tab"
 import { DashboardTab } from "@/components/floristry/dashboard-tab"
@@ -106,7 +106,7 @@ export default function Home() {
             </div>
             <div className="flex items-baseline gap-2">
               <h1 className="text-base font-semibold text-stone-800">Flor by Maria</h1>
-              <span className="hidden sm:inline text-xs text-stone-500">v1.8</span>
+              <span className="hidden sm:inline text-xs text-stone-500">v1.9</span>
             </div>
           </div>
 
@@ -116,8 +116,8 @@ export default function Home() {
                 {productCount} products · updated {new Date(lastRefreshed).toLocaleTimeString()}
               </Badge>
             )}
-            <ErpUploadButton />
             <BackupButton />
+            <LogoutButton />
           </div>
         </div>
       </header>
