@@ -12,134 +12,167 @@ datasource db {
 }
 
 model Supplier {
-  id            String     @id @default(cuid())
-  name          String     @unique
-  contactPerson String?
-  phone         String?
-  email         String?
-  leadTimeDays  Float?
-  paymentTerms  String?
-  notes         String?
-  materials     Material[]
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id             String          @id @default(cuid())
+  name           String          @unique
+  contactPerson  String?
+  phone          String?
+  email          String?
+  leadTimeDays   Float?
+  paymentTerms   String?
+  notes          String?
+  materials      Material[]
+  supplierPrices SupplierPrice[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 }
 
 model Material {
-  id                 String     @id @default(cuid())
-  sku                String     @unique
-  name               String
-  category           String     // flower | foliage | packaging | other
-  unit               String     // pack | stem | wrap | piece | meter
-  unitCost           Float?
-  supplier          String?
-  supplierId         String?
-  supplierRef        Supplier?  @relation(fields: [supplierId], references: [id])
-  currentStockPacks  Float?
-  reorderLevelPacks  Float?
-  reorderQtyPacks    Float?
-  packPrice          Float?
-  unitsPerPack       Float?     // null = unknown / not set
-  colors             String?
-  notes              String?
-  substitutes        String?    // free-text list of acceptable substitute materials (e.g. "White rose → Avalanche or Mondial")
-  recipeLines        RecipeLine[]
-  stockAdjustments   StockAdjustment[]
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
+  id                    String                 @id @default(cuid())
+  sku                   String                 @unique
+  name                  String
+  category              String // flower | foliage | packaging | other
+  unit                  String // pack | stem | wrap | piece | meter
+  unitCost              Float?
+  supplier              String?
+  supplierId            String?
+  supplierRef           Supplier?              @relation(fields: [supplierId], references: [id])
+  currentStockPacks     Float?
+  reorderLevelPacks     Float?
+  reorderQtyPacks       Float?
+  packPrice             Float?
+  unitsPerPack          Float? // null = unknown / not set
+  stockValue            Float?
+  status                String?
+  colors                String?
+  photoUrl              String?
+  materialType          String?
+  preferredSupplier     String?
+  notes                 String?
+  substitutes           String? // free-text list of acceptable substitute materials (e.g. "White rose → Avalanche or Mondial")
+  estimatedLifetimeDays Float?
+  recipeLines           RecipeLine[]
+  stockAdjustments      StockAdjustment[]
+  stockMovements        StockMovement[]
+  supplierPrices        SupplierPrice[]
+  availability          MaterialAvailability[]
+  substitutionsFrom     MaterialSubstitution[] @relation("SubstitutionSource")
+  substitutionsTo       MaterialSubstitution[] @relation("SubstitutionTarget")
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
 }
 
 model Product {
-  id                      String       @id @default(cuid())
-  sku                     String      @unique
-  name                    String
-  category                String      // Bouquet | Arrangement | ...
-  size                    String?     // Large | Medium | Small
-  flowersCost             Float       @default(0)
-  otherMaterialsCost      Float       @default(0)
-  totalCost               Float       @default(0)
-  suggestedPriceBeforeIva Float       @default(0)
-  suggestedPriceWithIva   Float       @default(0)
-  actualPriceBeforeIva     Float       @default(0)
-  actualPriceWithIva      Float       @default(0)
-  marginPct               Float       @default(0)
-  linesToReview           Int         @default(0)
-  description             String?
-  recipeLines             RecipeLine[]
-  createdAt               DateTime    @default(now())
-  updatedAt               DateTime    @updatedAt
+  id                        String       @id @default(cuid())
+  sku                       String       @unique
+  name                      String
+  category                  String // Bouquet | Arrangement | ...
+  size                      String? // Large | Medium | Small
+  flowersCost               Float        @default(0)
+  otherMaterialsCost        Float        @default(0)
+  laborMinutes              Float?
+  laborCost                 Float?
+  overheadPerUnit           Float?
+  flowersMultiplierCost     Float?
+  materialsMultiplierCost   Float?
+  laborDesignSurcharge      Float?
+  totalCost                 Float        @default(0)
+  suggestedPriceBeforeIva   Float        @default(0)
+  suggestedPriceWithIva     Float        @default(0)
+  suggestedPrice4xBeforeIva Float?
+  suggestedPrice4xWithIva   Float?
+  actualPriceBeforeIva      Float        @default(0)
+  actualPriceWithIva        Float        @default(0)
+  marginAmount              Float?
+  marginPct                 Float        @default(0)
+  linesToReview             Int          @default(0)
+  description               String?
+  recipeLines               RecipeLine[]
+  createdAt                 DateTime     @default(now())
+  updatedAt                 DateTime     @updatedAt
 }
 
 model RecipeLine {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   productSku    String
   productId     String
-  product       Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product       Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   componentSku  String
   materialId    String
-  material      Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  material      Material  @relation(fields: [materialId], references: [id], onDelete: Cascade)
   componentName String
   qty           Float
   unit          String
-  unitCost      Float    @default(0)
-  lineCost      Float    @default(0)
-  category      String   @default("other")
+  unitCost      Float     @default(0)
+  lineCost      Float     @default(0)
+  category      String    @default("other")
   color         String?
   check         String?
   notes         String?
-  createdAt     DateTime @default(now())
+  sourceRowKey  String?   @unique
+  version       String?
+  effectiveFrom DateTime?
+  createdAt     DateTime  @default(now())
 }
 
 model Customer {
-  id        String   @id @default(cuid())
-  name      String
-  phone     String?
-  email     String?
-  address   String?
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  orders    Order[]
-  events    Event[]
+  id                   String    @id @default(cuid())
+  externalId           String?   @unique
+  name                 String
+  phone                String?
+  email                String?
+  address              String?
+  notes                String?
+  lifetimeValue        Float?
+  recordedOrderCount   Int?
+  recordedOrderRevenue Float?
+  lastOrderAt          DateTime?
+  recordedEventCount   Int?
+  recordedEventRevenue Float?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  orders               Order[]
+  events               Event[]
 
   @@unique([name, phone])
 }
 
 model Order {
-  id              String   @id @default(cuid())
-  orderNumber     String   @unique // e.g. ORD-1001
-  status          String   @default("draft")
+  id            String  @id @default(cuid())
+  orderNumber   String  @unique // e.g. ORD-1001
+  sourceOrderId String? @unique
+  sourceStatus  String?
+  status        String  @default("draft")
   // draft | quote_sent | awaiting_payment | payment_confirmed | procuring | producing | delivered | fulfilled | cancelled
 
-  customerId      String
-  customer        Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
-  eventId         String?
-  event           Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  eventId    String?
+  event      Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
 
   deliveryDate    DateTime?
   deliveryAddress String?
 
   // Notes
-  cardMessage     String?
-  deliveryNotes   String?
-  internalNotes   String?
+  cardMessage   String?
+  deliveryNotes String?
+  internalNotes String?
 
   // Money
-  deliveryFee     Float    @default(100) // flat rate per address
-  discount        Float    @default(0)
+  deliveryFee Float @default(100) // flat rate per address
+  discount    Float @default(0)
   // subtotal, iva, total are computed (not stored)
 
   // Sales pipeline tracking
-  quoteSentAt       DateTime?
-  quoteSentVia      String? // whatsapp | email | sms | in_person
-  paymentMethod     String? // cash | spei | online_link | card
-  paymentOptionsSentAt DateTime?
-  paymentInstructionsSent Boolean @default(false)
-  paymentStatus     String   @default("not_started")
+  quoteSentAt             DateTime?
+  quoteSentVia            String? // whatsapp | email | sms | in_person
+  paymentMethod           String? // cash | spei | online_link | card
+  paymentOptionsSentAt    DateTime?
+  paymentInstructionsSent Boolean   @default(false)
+  paymentStatus           String    @default("not_started")
   // not_started | pending | confirmed | refunded | failed
-  paymentConfirmedAt DateTime?
-  paymentAmount     Float?
-  paymentReference  String? // SPEI ref, Stripe charge ID, etc.
+  paymentConfirmedAt      DateTime?
+  paymentAmount           Float?
+  paymentReference        String? // SPEI ref, Stripe charge ID, etc.
 
   // Procurement
   procurementStartedAt DateTime?
@@ -148,42 +181,46 @@ model Order {
   fulfilledAt          DateTime?
   cancelledAt          DateTime?
 
-  lineItems       OrderLineItem[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  lineItems OrderLineItem[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 }
 
 model OrderLineItem {
-  id          String  @id @default(cuid())
-  orderId     String
-  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productSku  String
-  productName String
-  productSize String?
-  qty         Int
-  unitPrice   Float // snapshot — locked at order time
-  createdAt   DateTime @default(now())
+  id            String   @id @default(cuid())
+  orderId       String
+  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productSku    String
+  productName   String
+  productSize   String?
+  qty           Int
+  unitPrice     Float // snapshot — locked at order time
+  lineTotal     Float?
+  lineCost      Float?
+  profit        Float?
+  legacyLineKey String?
+  sourceRowKey  String?  @unique
+  createdAt     DateTime @default(now())
 }
 
 /**
  * Materials from external supplier catalogues (e.g. "El Gato" per-stem price list).
  * Each item links to its best-matching ERP SKU via erpSku (may be empty if no match).
- *
  * Used by the Custom tab to build custom bouquets on the fly.
  */
 model CustomMaterial {
-  id           String   @id @default(cuid())
-  name         String
-  pricePerStem Float
-  type         String   // flower | foliage
-  class        String?  // wild | garden | exotic | romantic
-  source       String   @default("El Gato") // which catalogue this came from
-  erpSku       String?  // best-matching ERP SKU (may be null)
-  erpName      String?  // for display, denormalized
-  matchScore   Float?   // 0=perfect, 1=worst
+  id              String   @id @default(cuid())
+  name            String
+  pricePerStem    Float
+  type            String // flower | foliage
+  class           String? // wild | garden | exotic | romantic
+  source          String   @default("El Gato") // which catalogue this came from
+  erpSku          String? // best-matching ERP SKU (may be null)
+  erpName         String? // for display, denormalized
+  matchScore      Float? // 0=perfect, 1=worst
   matchConfidence String? // HIGH | MEDIUM | LOW | VERY_LOW | NO_MATCH
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   customRecipeLines CustomRecipeLine[]
 }
@@ -194,31 +231,31 @@ model CustomMaterial {
  * so it appears in the Catalogue tab.
  */
 model CustomRecipe {
-  id              String   @id @default(cuid())
-  name            String
-  size            String?  // Large | Medium | Small
-  description     String?
+  id                 String   @id @default(cuid())
+  name               String
+  size               String? // Large | Medium | Small
+  description        String?
   // Computed at save time using ERP pricing rules:
-  flowersCost     Float    @default(0)
-  otherMaterialsCost Float @default(0)
-  totalCost       Float    @default(0)
-  suggestedPrice  Float    @default(0)
-  actualPrice     Float    @default(0) // user-set
+  flowersCost        Float    @default(0)
+  otherMaterialsCost Float    @default(0)
+  totalCost          Float    @default(0)
+  suggestedPrice     Float    @default(0)
+  actualPrice        Float    @default(0) // user-set
   // Linked ERP product (created on save — only when hidden=false)
-  erpProductSku   String?  @unique
+  erpProductSku      String?  @unique
   // When true: recipe is saved for reference but NOT created as ERP Product
   // (used by "Create Order" flow — order line item carries the breakdown instead)
-  hidden          Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  hidden             Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
-  lines           CustomRecipeLine[]
+  lines CustomRecipeLine[]
 }
 
 model CustomRecipeLine {
-  id               String   @id @default(cuid())
+  id               String         @id @default(cuid())
   customRecipeId   String
-  customRecipe     CustomRecipe @relation(fields: [customRecipeId], references: [id], onDelete: Cascade)
+  customRecipe     CustomRecipe   @relation(fields: [customRecipeId], references: [id], onDelete: Cascade)
   customMaterialId String
   customMaterial   CustomMaterial @relation(fields: [customMaterialId], references: [id], onDelete: Cascade)
   qty              Int
@@ -226,7 +263,7 @@ model CustomRecipeLine {
   materialName     String
   materialPrice    Float
   materialType     String // flower | foliage
-  createdAt        DateTime @default(now())
+  createdAt        DateTime       @default(now())
 }
 
 /**
@@ -238,8 +275,8 @@ model StockAdjustment {
   id          String   @id @default(cuid())
   materialSku String
   material    Material @relation(fields: [materialSku], references: [sku], onDelete: Cascade)
-  deltaPacks  Float    // signed: +N for receipts/adjustments up, -N for losses/expiration
-  reason      String   // "loss" | "expiration" | "adjustment" | "receipt" | "sample" | "other"
+  deltaPacks  Float // signed: +N for receipts/adjustments up, -N for losses/expiration
+  reason      String // "loss" | "expiration" | "adjustment" | "receipt" | "sample" | "other"
   notes       String?
   createdAt   DateTime @default(now())
 }
@@ -249,27 +286,32 @@ model StockAdjustment {
  * One PO per supplier per shopping list generation.
  */
 model PurchaseOrder {
-  id              String   @id @default(cuid())
-  poNumber        String   @unique // e.g. PO-3001
-  supplier        String
-  status          String   @default("draft") // draft | approved | pending | procured | received | cancelled
-  totalCost       Float    @default(0)
-  notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  lines           PurchaseOrderLine[]
+  id                   String              @id @default(cuid())
+  poNumber             String              @unique // e.g. PO-3001
+  supplier             String
+  status               String              @default("draft") // draft | approved | pending | procured | received | cancelled
+  sourceStatus         String?
+  orderDate            DateTime?
+  expectedDeliveryDate DateTime?
+  totalCost            Float               @default(0)
+  notes                String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  lines                PurchaseOrderLine[]
 }
 
 model PurchaseOrderLine {
-  id              String   @id @default(cuid())
-  poId            String
-  po              PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
-  materialSku     String
-  materialName    String
-  qtyPacks        Int
-  costPerPack     Float
-  lineTotal       Float
-  createdAt       DateTime @default(now())
+  id            String        @id @default(cuid())
+  poId          String
+  po            PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  materialSku   String
+  materialName  String
+  qtyPacks      Int
+  costPerPack   Float
+  lineTotal     Float
+  legacyLineKey String?
+  sourceRowKey  String?       @unique
+  createdAt     DateTime      @default(now())
 }
 
 /**
@@ -277,15 +319,14 @@ model PurchaseOrderLine {
  * from the Shopping List panel. Has its own identifier (SL-0001, SL-0002, ...)
  * so the user can reference "SL-0003 for the week of 26/10" later, even after
  * more orders are added to the plan.
- *
  * Status is computed at generation time:
- *   - "complete" = every line's toBuyPacks = 0 (all materials covered by open POs)
- *   - "pending"  = at least one line still has remaining need (toBuyPacks > 0)
+ * - "complete" = every line's toBuyPacks = 0 (all materials covered by open POs)
+ * - "pending"  = at least one line still has remaining need (toBuyPacks > 0)
  */
 model ShoppingList {
   id              String   @id @default(cuid())
   slNumber        String   @unique // e.g. SL-0001
-  weekStartDate   String?  // ISO yyyy-mm-dd (may be null if user didn't pick a week)
+  weekStartDate   String? // ISO yyyy-mm-dd (may be null if user didn't pick a week)
   status          String   @default("pending") // pending | complete
   itemsToBuyCount Int      @default(0) // count of lines with toBuyPacks > 0
   totalToBuyPacks Int      @default(0) // sum of toBuyPacks across all lines
@@ -300,16 +341,160 @@ model ShoppingList {
  * Events bundle multiple orders under one occasion (wedding, corporate, etc.)
  */
 model Event {
-  id          String   @id @default(cuid())
-  eventNumber String   @unique // EVT-2001
-  name        String
-  customerId  String?
-  customer    Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  eventDate   DateTime?
-  guests      Int?
-  status      String   @default("quote") // quote | confirmed | in_progress | completed | cancelled
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  orders      Order[]
+  id                  String          @id @default(cuid())
+  eventNumber         String          @unique // EVT-2001
+  sourceEventId       String?         @unique
+  sourceStatus        String?
+  name                String
+  customerId          String?
+  customer            Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  eventDate           DateTime?
+  guests              Int?
+  clientName          String?
+  status              String          @default("quote") // quote | confirmed | in_progress | completed | cancelled
+  estimatedTotalPrice Float?
+  estimatedTotalCost  Float?
+  estimatedProfit     Float?
+  depositPaid         Float?
+  balanceDue          Float?
+  deliveryFee         Float?
+  notes               String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  orders              Order[]
+  lineItems           EventLineItem[]
+}
+
+model EventLineItem {
+  id            String   @id @default(cuid())
+  eventId       String
+  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  productSku    String
+  productName   String
+  qty           Int
+  unitPrice     Float
+  lineTotal     Float?
+  lineCost      Float?
+  legacyLineKey String?
+  sourceRowKey  String?  @unique
+  createdAt     DateTime @default(now())
+}
+
+model StockMovement {
+  id           String    @id @default(cuid())
+  materialId   String?
+  material     Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
+  materialSku  String
+  movedAt      DateTime?
+  packs        Float
+  reason       String    @default("other")
+  reference    String?
+  notes        String?
+  sourceRowKey String?   @unique
+  createdAt    DateTime  @default(now())
+}
+
+model SupplierPrice {
+  id           String    @id @default(cuid())
+  materialId   String?
+  material     Material? @relation(fields: [materialId], references: [id], onDelete: SetNull)
+  materialSku  String
+  supplierId   String?
+  supplier     Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  supplierName String
+  recordedAt   DateTime?
+  packPrice    Float?
+  unitsPerPack Float?
+  isLatest     Boolean   @default(false)
+  notes        String?
+  sourceRowKey String?   @unique
+  createdAt    DateTime  @default(now())
+}
+
+model MaterialAvailability {
+  id             String   @id @default(cuid())
+  materialId     String
+  material       Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  availableFrom  DateTime
+  availableUntil DateTime
+  status         String   @default("available")
+  source         String?
+  notes          String?
+  createdAt      DateTime @default(now())
+
+  @@index([materialId, availableFrom, availableUntil])
+}
+
+model MaterialSubstitution {
+  id                   String   @id @default(cuid())
+  materialId           String
+  material             Material @relation("SubstitutionSource", fields: [materialId], references: [id], onDelete: Cascade)
+  substituteMaterialId String
+  substituteMaterial   Material @relation("SubstitutionTarget", fields: [substituteMaterialId], references: [id], onDelete: Cascade)
+  priority             Int      @default(0)
+  accepted             Boolean  @default(true)
+  notes                String?
+  createdAt            DateTime @default(now())
+
+  @@unique([materialId, substituteMaterialId])
+}
+
+model ToolsEquipment {
+  id             String    @id @default(cuid())
+  sku            String    @unique
+  name           String
+  category       String?
+  quantity       Float     @default(0)
+  condition      String?
+  location       String?
+  purchasedAt    DateTime?
+  purchasedFrom  String?
+  purchaseCost   Float?
+  lastServicedAt DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model MenuItem {
+  id             String   @id @default(cuid())
+  item           String   @unique
+  category       String?
+  description    String?
+  priceBeforeIva Float?
+  priceWithIva   Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model WorkbookSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  section   String?
+  value     String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WorkbookVersionHistory {
+  id           String    @id @default(cuid())
+  sourceRowKey String    @unique
+  version      String?
+  recordedAt   DateTime?
+  author       String?
+  summary      String?
+  fileName     String?
+  createdAt    DateTime  @default(now())
+}
+
+model RecipeVersion {
+  id            String    @id @default(cuid())
+  sourceRowKey  String    @unique
+  productSku    String
+  version       String
+  effectiveFrom DateTime?
+  status        String?
+  notes         String?
+  createdAt     DateTime  @default(now())
 }

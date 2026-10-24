@@ -12,7 +12,9 @@
     "db:migrate": "prisma migrate dev",
     "db:reset": "prisma migrate reset",
     "db:turso:init-sql": "prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script --output prisma/turso-init.sql",
-    "db:seed:turso": "npx --yes tsx scripts/seed-turso.ts"
+    "db:seed:turso": "npx --yes tsx scripts/seed-turso.ts",
+    "db:turso:expand-schema": "npx --yes tsx scripts/apply-turso-expansion.ts",
+    "db:import:erp-workbook": "npx --yes tsx scripts/import-erp-workbook.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
