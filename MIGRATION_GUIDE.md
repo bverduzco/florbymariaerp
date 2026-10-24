@@ -109,23 +109,37 @@ npx prisma generate
 
 This regenerates `@prisma/client` with the driver adapter enabled.
 
-### 3.5 — Push schema to Turso
+### 3.5 — Create and apply the schema on Turso
+
+`prisma db push` is for local SQLite here; it does not push directly to a
+`libsql://` database. Generate SQL from the Prisma schema, then apply it with
+the Turso CLI. This initial-schema command is for a **new, empty Turso
+database**; do not rerun it against a database that already has tables.
 
 ```bash
-npx prisma db push
+npx prisma migrate diff \
+  --from-empty \
+  --to-schema-datamodel prisma/schema.prisma \
+  --script \
+  --output prisma/turso-init.sql
+turso db shell florbymaria < prisma/turso-init.sql
 ```
 
-This creates all your tables in the Turso database. Run this once per environment (production, preview, etc.).
+On Windows, install and run the Turso CLI inside WSL as required by the
+[Turso CLI installation guide](https://docs.turso.tech/cli/installation).
+The generated SQL file can be applied with `turso db shell` from that shell.
 
 ### 3.6 — Seed initial data
 
-If you have a `scripts/seed.ts`, run it against Turso:
+After the schema is applied, load the initial data into Turso:
 
 ```bash
-npm run db:seed   # if you have this script
-# or
-npx tsx scripts/seed.ts
+npm run db:seed:turso
 ```
+
+The seed script loads `.env.local` relative to its own location, so it can be
+run from the project root or another working directory. It preserves an
+already-set `DATABASE_URL` from the environment.
 
 ### 3.7 — Migrate existing data from local SQLite
 

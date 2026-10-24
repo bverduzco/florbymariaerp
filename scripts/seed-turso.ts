@@ -1,24 +1,19 @@
 // scripts/seed-turso.ts — Turso-compatible seed script for v1.8
 //
-// v2 fix: load .env.local SYNCHRONOUSLY before importing db.
-// In v1, the db module was imported at the top of the file, which caused
-// Prisma to initialize with `process.env.DATABASE_URL = undefined` because
-// .env.local hadn't been loaded yet.
+// Load .env.local synchronously before dynamically importing the db module,
+// and resolve project files relative to this script rather than the cwd.
 //
-// This version reads .env.local using fs.readFileSync() at the very top
-// of the file (before any other imports), so process.env.DATABASE_URL is
-// set BEFORE we import the db module.
-//
-// Run: npx tsx scripts/seed-turso.ts
+// Run from the project root: npx tsx scripts/seed-turso.ts
 
 import { readFileSync, existsSync } from "fs"
 import path from "path"
+import { fileURLToPath } from "url"
 
-// === Step 1: Load .env.local SYNCHRONOUSLY before any other imports ===
-// This must happen before `import { db }` because that import triggers
-// Prisma client initialization.
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
+
+// === Step 1: Load .env.local synchronously before initializing Prisma ===
 function loadEnvSync() {
-  const envPath = path.join(process.cwd(), ".env.local")
+  const envPath = path.join(projectRoot, ".env.local")
   if (!existsSync(envPath)) {
     console.warn("WARN: .env.local not found at", envPath)
     console.warn("Falling back to whatever process.env already has.")
@@ -41,10 +36,7 @@ function loadEnvSync() {
 
 loadEnvSync()
 
-// === Step 2: NOW it's safe to import db (Prisma will read DATABASE_URL) ===
-import { db } from "../src/lib/db"
-
-// === Step 3: Verify DATABASE_URL is set ===
+// === Step 2: Verify DATABASE_URL is set ===
 if (!process.env.DATABASE_URL) {
   console.error("ERROR: DATABASE_URL is not set.")
   console.error("")
@@ -59,13 +51,14 @@ console.log("=== Turso seed script ===")
 console.log("DATABASE_URL:", process.env.DATABASE_URL.replace(/\?authToken=.*/, "?authToken=***"))
 console.log("")
 
-// === Step 4: Load seed.json ===
+// === Step 3: Load seed.json ===
 async function main() {
+  const { db } = await import("../src/lib/db")
   const { promises: fs } = await import("fs")
 
   let seedData: any
   try {
-    const raw = await fs.readFile(path.join(process.cwd(), "src/data/seed.json"), "utf-8")
+    const raw = await fs.readFile(path.join(projectRoot, "src/data/seed.json"), "utf-8")
     seedData = JSON.parse(raw)
   } catch (e) {
     console.error("ERROR: Could not read src/data/seed.json")

@@ -32,12 +32,7 @@ function createPrismaClient(): PrismaClient {
   if (isTurso) {
     // Use @prisma/adapter-libsql for Turso (libsql over HTTP)
     const { PrismaLibSQL } = require("@prisma/adapter-libsql")
-    const { createClient } = require("@libsql/client")
-    const libsql = createClient({
-      url: databaseUrl,
-      // authToken is parsed from the URL's ?authToken= query string automatically
-    })
-    const adapter = new PrismaLibSQL(libsql)
+    const adapter = new PrismaLibSQL({ url: databaseUrl })
     return new PrismaClient({ adapter })
   }
 
