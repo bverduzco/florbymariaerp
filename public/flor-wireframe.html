@@ -46,6 +46,13 @@
     padding: 24px;
     background: var(--bg);
   }
+  
+  .main-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
 
   /* === Sidebar === */
   .sidebar-header {
@@ -101,6 +108,18 @@
     color: white;
     padding: 1px 6px;
     border-radius: 8px;
+  }
+
+  .top-bar {
+    height: 48px;
+    background: var(--white);
+    border-bottom: 1px solid var(--wireframe-border);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 0 16px;
+    flex-shrink: 0;
+    gap: 12px;
   }
 
   /* === Main content === */
@@ -320,7 +339,6 @@
         <h1>Flor by Maria</h1>
         <div class="ver">ERP Wireframe v1.0</div>
       </div>
-      <span class="wf-btn outline" style="margin-left: auto; font-size: 11px; padding: 4px 10px;" onclick="alert('Logout — would clear auth cookie and redirect to /login')">⎋ Salir</span>
     </div>
 
     <div class="zone">
@@ -407,6 +425,11 @@
       </ul>
     </div>
   </nav>
+
+  <div class="main-wrapper">
+  <div class="top-bar">
+    <span class="wf-btn outline" style="font-size: 12px; padding: 6px 14px;" onclick="alert('Logout — would clear auth cookie and redirect to /login')">⎋ Logout</span>
+  </div>
 
   <!-- ==================== MAIN CONTENT ==================== -->
   <div class="main">
@@ -765,24 +788,28 @@
       <div class="wf-grid-3">
         <div class="wf-card">
           <div class="wf-card-header"><span class="wf-card-title">Peachy Bouquet (Large)</span><span style="color:var(--rose);font-weight:700;">$1,700</span></div>
+          <div style="background:#F3F4F6;border-radius:6px;height:80px;display:flex;align-items:center;justify-content:center;color:#9CA3AF;font-size:11px;margin-bottom:8px;">📷 Image placeholder</div>
           <div class="wf-field placeholder">Cost: $141.78 · Margin: 91.7%</div>
           <div class="wf-field placeholder">3 lines to review</div>
           <span class="wf-btn outline" style="font-size:10px;">View Recipe</span>
         </div>
         <div class="wf-card">
           <div class="wf-card-header"><span class="wf-card-title">Peachy Bouquet (Medium)</span><span style="color:var(--rose);font-weight:700;">$1,280</span></div>
+          <div style="background:#F3F4F6;border-radius:6px;height:80px;display:flex;align-items:center;justify-content:center;color:#9CA3AF;font-size:11px;margin-bottom:8px;">📷 Image placeholder</div>
           <div class="wf-field placeholder">Cost: $106.52 · Margin: 91.7%</div>
           <div class="wf-field placeholder">3 lines to review</div>
           <span class="wf-btn outline" style="font-size:10px;">View Recipe</span>
         </div>
         <div class="wf-card">
           <div class="wf-card-header"><span class="wf-card-title">Peachy Bouquet (Small)</span><span style="color:var(--rose);font-weight:700;">$925</span></div>
+          <div style="background:#F3F4F6;border-radius:6px;height:80px;display:flex;align-items:center;justify-content:center;color:#9CA3AF;font-size:11px;margin-bottom:8px;">📷 Image placeholder</div>
           <div class="wf-field placeholder">Cost: $74.85 · Margin: 91.9%</div>
           <div class="wf-field placeholder">3 lines to review</div>
           <span class="wf-btn outline" style="font-size:10px;">View Recipe</span>
         </div>
         <div class="wf-card">
           <div class="wf-card-header"><span class="wf-card-title">Colores de Otoño (Large)</span><span style="color:var(--rose);font-weight:700;">$1,500</span></div>
+          <div style="background:#F3F4F6;border-radius:6px;height:80px;display:flex;align-items:center;justify-content:center;color:#9CA3AF;font-size:11px;margin-bottom:8px;">📷 Image placeholder</div>
           <div class="wf-field placeholder">Cost: $140.92 · Margin: 90.6%</div>
           <div class="wf-field placeholder">1 line to review</div>
           <span class="wf-btn outline" style="font-size:10px;">View Recipe</span>
@@ -1516,6 +1543,7 @@
     </div>
 
   </div><!-- /main -->
+  </div><!-- /main-wrapper -->
 </div><!-- /app -->
 
 <script>
