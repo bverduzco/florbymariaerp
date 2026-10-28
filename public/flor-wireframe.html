@@ -392,6 +392,9 @@
         <li class="zone-item" onclick="showScreen('settings')" id="nav-settings">
           <span class="icon">⚙️</span> Settings
         </li>
+        <li class="zone-item" onclick="showScreen('log')" id="nav-log">
+          <span class="icon">📝</span> Audit Log
+        </li>
       </ul>
     </div>
 
@@ -1413,6 +1416,78 @@
           <div class="wf-field placeholder">rental_deposit_refund: 7 days</div>
           <div class="wf-field placeholder">privacy_response_days: 20</div>
         </div>
+      </div>
+    </div>
+
+    <!-- ===== AUDIT LOG ===== -->
+    <div class="screen" id="screen-log">
+      <div class="screen-header">
+        <div>
+          <h2>Audit Log</h2>
+          <div class="subtitle">Every write to the database — who, what, when, and what changed</div>
+        </div>
+        <div>
+          <span class="wf-btn">Filter: All ▾</span>
+          <span class="wf-btn">Today ▾</span>
+          <span class="wf-btn outline">Export CSV</span>
+        </div>
+      </div>
+
+      <div class="wf-grid-3" style="margin-bottom: 16px;">
+        <div class="wf-stat"><div class="wf-stat-value">47</div><div class="wf-stat-label">Entries Today</div></div>
+        <div class="wf-stat"><div class="wf-stat-value">312</div><div class="wf-stat-label">This Week</div></div>
+        <div class="wf-stat"><div class="wf-stat-value">2 min ago</div><div class="wf-stat-label">Last Write</div></div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Recent Activity (newest first)</div>
+        <table class="wf-table">
+          <thead><tr><th>Timestamp</th><th>User</th><th>Action</th><th>Table</th><th>Record ID</th><th>Field Changed</th><th>Old Value</th><th>New Value</th><th>Source</th></tr></thead>
+          <tbody>
+            <tr><td>Oct 28 14:32</td><td>Maria</td><td><span class="wf-status accepted">UPDATE</span></td><td>Orders</td><td>ORD-1001</td><td>Status</td><td>Pending</td><td>Delivered</td><td>UI: Mark Delivered</td></tr>
+            <tr><td>Oct 28 14:30</td><td>Maria</td><td><span class="wf-status accepted">UPDATE</span></td><td>Orders</td><td>ORD-1001</td><td>Delivered By</td><td>—</td><td>Maria</td><td>UI: Mark Delivered</td></tr>
+            <tr><td>Oct 28 14:30</td><td>Maria</td><td><span class="wf-status accepted">UPDATE</span></td><td>Orders</td><td>ORD-1001</td><td>Delivery Confirmed At</td><td>—</td><td>2026-10-28 14:30</td><td>UI: Mark Delivered</td></tr>
+            <tr><td>Oct 28 14:15</td><td>Maria</td><td><span class="wf-status draft">CREATE</span></td><td>Losses</td><td>LOSS-0003</td><td>—</td><td>—</td><td>FLR-ROSA-LARGA, 1 pack, spoiled</td><td>UI: Reset Perishable Stock</td></tr>
+            <tr><td>Oct 28 14:15</td><td>Maria</td><td><span class="wf-status draft">CREATE</span></td><td>Stock Movements</td><td>SM-0229</td><td>—</td><td>—</td><td>FLR-ROSA-LARGA, -1 pack, loss</td><td>Auto: from LOSS-0003</td></tr>
+            <tr><td>Oct 28 13:45</td><td>Maria</td><td><span class="wf-status draft">CREATE</span></td><td>Quotes</td><td>QTE-0004</td><td>—</td><td>—</td><td>Wedding, $25,400 MXN</td><td>UI: New Quote</td></tr>
+            <tr><td>Oct 28 13:42</td><td>Maria</td><td><span class="wf-status accepted">UPDATE</span></td><td>Customers</td><td>CUST-003</td><td>Status</td><td>lead</td><td>prospect</td><td>Auto: quote sent</td></tr>
+            <tr><td>Oct 28 11:20</td><td>Maria</td><td><span class="wf-status accepted">UPDATE</span></td><td>Supplier Prices</td><td>15 rows</td><td>Pack Price</td><td>various</td><td>various (García list)</td><td>UI: Price List Update</td></tr>
+            <tr><td>Oct 28 10:05</td><td>Maria</td><td><span class="wf-status draft">CREATE</span></td><td>Ad-hoc Purchases</td><td>ADHOC-0021</td><td>—</td><td>—</td><td>FLR-TULIPAN, 2 packs, $460</td><td>UI: Log Ad-hoc</td></tr>
+            <tr><td>Oct 28 10:05</td><td>Maria</td><td><span class="wf-status draft">CREATE</span></td><td>Stock Movements</td><td>SM-0230</td><td>—</td><td>—</td><td>FLR-TULIPAN, +2 packs</td><td>Auto: from ADHOC-0021</td></tr>
+            <tr><td colspan="9" style="color: var(--stone-light); text-align: center; padding: 12px;">... 37 more entries today · scroll to load more</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Filter Options</div>
+        <div class="wf-grid-2">
+          <div>
+            <div class="wf-field bold">By Action Type:</div>
+            <div class="wf-field placeholder">CREATE · UPDATE · DELETE · all</div>
+          </div>
+          <div>
+            <div class="wf-field bold">By Table:</div>
+            <div class="wf-field placeholder">Orders · Quotes · Materials · Stock Movements · Losses · all</div>
+          </div>
+        </div>
+        <div class="wf-grid-2" style="margin-top: 8px;">
+          <div>
+            <div class="wf-field bold">By User:</div>
+            <div class="wf-field placeholder">Maria · System (auto) · all</div>
+          </div>
+          <div>
+            <div class="wf-field bold">By Date Range:</div>
+            <div class="wf-field placeholder">Today · This week · This month · Custom</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">How It Works</div>
+        <div class="wf-note blue">Every write operation (create, update, delete) in the ERP automatically creates an audit log entry. The entry records: timestamp, who performed the action (user name or 'System' for auto-generated entries), the action type (CREATE/UPDATE/DELETE), which table was affected, the record ID, which field changed (for updates), the old value and new value, and the source (which UI button or API call triggered it).</div>
+        <div class="wf-note">📝 Auto-generated entries: Stock Movements created from Ad-hoc Purchases, Loss entries from Reset Perishable Stock, Customer status changes from Quote status changes, Supplier Prices from Price List Update button — all logged automatically with source = 'Auto'.</div>
+        <div class="wf-note">🔍 The audit log is append-only — entries cannot be edited or deleted. It's the definitive record of everything that happened in the system, useful for compliance, dispute resolution, and debugging.</div>
       </div>
     </div>
 
