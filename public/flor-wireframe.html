@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flor by Maria — ERP Wireframe</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --rose: #BE185D;
+    --rose-light: #FCE7F3;
+    --stone: #44403C;
+    --stone-light: #78716C;
+    --bg: #FAFAF9;
+    --wireframe-bg: #E7E5E4;
+    --wireframe-border: #D6D3D1;
+    --white: #FFFFFF;
+    --green: #047857;
+    --amber: #D97706;
+    --blue: #2563EB;
+    --gray-text: #6B7280;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--stone);
+    font-size: 14px;
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  /* === Layout === */
+  .app { display: flex; height: 100vh; }
+  .sidebar {
+    width: 240px;
+    background: var(--white);
+    border-right: 1px solid var(--wireframe-border);
+    overflow-y: auto;
+    transition: transform 0.2s;
+    z-index: 100;
+    flex-shrink: 0;
+  }
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    background: var(--bg);
+  }
+
+  /* === Sidebar === */
+  .sidebar-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--wireframe-border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sidebar-header .logo {
+    width: 32px; height: 32px;
+    background: var(--rose);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 18px;
+  }
+  .sidebar-header h1 { font-size: 14px; font-weight: 700; color: var(--stone); }
+  .sidebar-header .ver { font-size: 10px; color: var(--stone-light); }
+
+  .zone { padding: 8px 0; }
+  .zone-title {
+    padding: 8px 16px 4px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--stone-light);
+    font-weight: 700;
+  }
+  .zone-items { list-style: none; }
+  .zone-item {
+    padding: 8px 16px 8px 32px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--stone);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.1s;
+    border-left: 3px solid transparent;
+  }
+  .zone-item:hover { background: var(--rose-light); }
+  .zone-item.active {
+    background: var(--rose-light);
+    border-left-color: var(--rose);
+    color: var(--rose);
+    font-weight: 600;
+  }
+  .zone-item .icon { font-size: 16px; opacity: 0.7; }
+  .zone-item .badge {
+    margin-left: auto;
+    font-size: 10px;
+    background: var(--amber);
+    color: white;
+    padding: 1px 6px;
+    border-radius: 8px;
+  }
+
+  /* === Main content === */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .screen-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .screen-header h2 { font-size: 22px; font-weight: 700; color: var(--stone); }
+  .screen-header .subtitle { font-size: 12px; color: var(--stone-light); margin-top: 2px; }
+
+  /* === Wireframe components === */
+  .wf-box {
+    background: var(--wireframe-bg);
+    border: 2px dashed var(--wireframe-border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .wf-box-label {
+    position: absolute;
+    top: -8px; left: 12px;
+    background: var(--bg);
+    padding: 0 6px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--stone-light);
+    font-weight: 600;
+  }
+  .wf-row { display: flex; gap: 12px; margin-bottom: 12px; }
+  .wf-col { flex: 1; }
+  .wf-field {
+    background: var(--white);
+    border: 1px solid var(--wireframe-border);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--gray-text);
+    margin-bottom: 8px;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+  }
+  .wf-field.bold { font-weight: 600; color: var(--stone); }
+  .wf-field.placeholder::before {
+    content: "▸ ";
+    color: var(--stone-light);
+  }
+
+  .wf-btn {
+    display: inline-block;
+    background: var(--stone);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    margin-right: 8px;
+    cursor: pointer;
+  }
+  .wf-btn.primary { background: var(--rose); }
+  .wf-btn.success { background: var(--green); }
+  .wf-btn.warning { background: var(--amber); }
+  .wf-btn.outline {
+    background: transparent;
+    border: 1px solid var(--wireframe-border);
+    color: var(--stone);
+  }
+
+  .wf-table { width: 100%; border-collapse: collapse; }
+  .wf-table th {
+    text-align: left;
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--stone-light);
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--wireframe-border);
+  }
+  .wf-table td {
+    padding: 8px;
+    font-size: 12px;
+    color: var(--gray-text);
+    border-bottom: 1px solid var(--wireframe-border);
+  }
+  .wf-table tr:hover td { background: var(--white); }
+
+  .wf-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .wf-status.draft { background: #E0E7FF; color: #3730A3; }
+  .wf-status.sent { background: #FEF3C7; color: #92400E; }
+  .wf-status.accepted { background: #D1FAE5; color: #065F46; }
+  .wf-status.declined { background: #FEE2E2; color: #991B1B; }
+  .wf-status.pending { background: #FEF3C7; color: #92400E; }
+  .wf-status.paid { background: #D1FAE5; color: #065F46; }
+
+  .wf-card {
+    background: var(--white);
+    border: 1px solid var(--wireframe-border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
+  }
+  .wf-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .wf-card-title { font-size: 13px; font-weight: 600; color: var(--stone); }
+
+  .wf-flow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 12px 0;
+  }
+  .wf-flow-step {
+    background: var(--white);
+    border: 1px solid var(--wireframe-border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    color: var(--stone);
+  }
+  .wf-flow-arrow { color: var(--stone-light); font-size: 14px; }
+
+  .wf-note {
+    background: #FFFBEB;
+    border: 1px solid #FDE68A;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: #92400E;
+    margin: 8px 0;
+  }
+  .wf-note.blue { background: #EFF6FF; border-color: #BFDBFE; color: #1E40AF; }
+
+  .wf-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .wf-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+
+  .wf-stat {
+    background: var(--white);
+    border: 1px solid var(--wireframe-border);
+    border-radius: 8px;
+    padding: 12px;
+    text-align: center;
+  }
+  .wf-stat-value { font-size: 20px; font-weight: 700; color: var(--rose); }
+  .wf-stat-label { font-size: 10px; text-transform: uppercase; color: var(--stone-light); margin-top: 2px; }
+
+  /* === Mobile === */
+  .hamburger {
+    display: none;
+    position: fixed;
+    top: 12px; left: 12px;
+    z-index: 200;
+    background: var(--rose);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    width: 40px; height: 40px;
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    z-index: 99;
+  }
+
+  @media (max-width: 768px) {
+    .hamburger { display: block; }
+    .sidebar {
+      position: fixed;
+      left: 0; top: 0; bottom: 0;
+      transform: translateX(-100%);
+      box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+    }
+    .sidebar.open { transform: translateX(0); }
+    .overlay.open { display: block; }
+    .main { padding: 60px 12px 24px; }
+    .wf-grid-2, .wf-grid-3 { grid-template-columns: 1fr; }
+    .screen-header h2 { font-size: 18px; }
+  }
+
+  /* Scrollbar */
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--wireframe-border); border-radius: 2px; }
+  .main::-webkit-scrollbar { width: 6px; }
+  .main::-webkit-scrollbar-thumb { background: var(--wireframe-border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<button class="hamburger" onclick="toggleSidebar()">☰</button>
+<div class="overlay" onclick="toggleSidebar()"></div>
+
+<div class="app">
+  <!-- ==================== SIDEBAR ==================== -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">✿</div>
+      <div>
+        <h1>Flor by Maria</h1>
+        <div class="ver">ERP Wireframe v1.0</div>
+      </div>
+    </div>
+
+    <div class="zone">
+      <div class="zone-title">Sales</div>
+      <ul class="zone-items">
+        <li class="zone-item" onclick="showScreen('quotes')" id="nav-quotes">
+          <span class="icon">📋</span> Quotes <span class="badge">3</span>
+        </li>
+        <li class="zone-item" onclick="showScreen('orders')" id="nav-orders">
+          <span class="icon">🛒</span> Orders
+        </li>
+        <li class="zone-item" onclick="showScreen('customers')" id="nav-customers">
+          <span class="icon">👥</span> Customers
+        </li>
+        <li class="zone-item" onclick="showScreen('events')" id="nav-events">
+          <span class="icon">🎉</span> Events
+        </li>
+        <li class="zone-item" onclick="showScreen('catalogue')" id="nav-catalogue">
+          <span class="icon">🌸</span> Catalogue
+        </li>
+      </ul>
+    </div>
+
+    <div class="zone">
+      <div class="zone-title">Operations</div>
+      <ul class="zone-items">
+        <li class="zone-item" onclick="showScreen('materials')" id="nav-materials">
+          <span class="icon">📦</span> Materials
+        </li>
+        <li class="zone-item" onclick="showScreen('shoppinglist')" id="nav-shoppinglist">
+          <span class="icon">🛒</span> Shopping List
+        </li>
+        <li class="zone-item" onclick="showScreen('procurement')" id="nav-procurement">
+          <span class="icon">🚚</span> Procurement
+        </li>
+        <li class="zone-item" onclick="showScreen('execution')" id="nav-execution">
+          <span class="icon">🔨</span> Execution Logs
+        </li>
+        <li class="zone-item" onclick="showScreen('losses')" id="nav-losses">
+          <span class="icon">⚠️</span> Losses
+        </li>
+        <li class="zone-item" onclick="showScreen('recipes')" id="nav-recipes">
+          <span class="icon">📖</span> Recipes
+        </li>
+      </ul>
+    </div>
+
+    <div class="zone">
+      <div class="zone-title">Admin</div>
+      <ul class="zone-items">
+        <li class="zone-item" onclick="showScreen('dashboard')" id="nav-dashboard">
+          <span class="icon">📊</span> Dashboard
+        </li>
+        <li class="zone-item" onclick="showScreen('expenses')" id="nav-expenses">
+          <span class="icon">💸</span> Expenses
+        </li>
+        <li class="zone-item" onclick="showScreen('calendar')" id="nav-calendar">
+          <span class="icon">📅</span> Calendar
+        </li>
+        <li class="zone-item" onclick="showScreen('suppliers')" id="nav-suppliers">
+          <span class="icon">🏪</span> Suppliers
+        </li>
+        <li class="zone-item" onclick="showScreen('legal')" id="nav-legal">
+          <span class="icon">📄</span> Legal Templates
+        </li>
+        <li class="zone-item" onclick="showScreen('settings')" id="nav-settings">
+          <span class="icon">⚙️</span> Settings
+        </li>
+      </ul>
+    </div>
+
+    <div class="zone" style="border-top: 1px solid var(--wireframe-border); margin-top: 8px;">
+      <div class="zone-title">Future</div>
+      <ul class="zone-items">
+        <li class="zone-item" onclick="showScreen('staff')" id="nav-staff" style="opacity: 0.5;">
+          <span class="icon">👤</span> Staff & Crew
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ==================== MAIN CONTENT ==================== -->
+  <div class="main">
+
+    <!-- ===== DASHBOARD ===== -->
+    <div class="screen" id="screen-dashboard">
+      <div class="screen-header">
+        <div>
+          <h2>Dashboard</h2>
+          <div class="subtitle">At-a-glance business health · Monthly view</div>
+        </div>
+        <div>
+          <span class="wf-btn outline">This Month ▾</span>
+        </div>
+      </div>
+
+      <div class="wf-grid-3" style="margin-bottom:16px;">
+        <div class="wf-stat"><div class="wf-stat-value">$3,550</div><div class="wf-stat-label">Order Revenue</div></div>
+        <div class="wf-stat"><div class="wf-stat-value">$0</div><div class="wf-stat-label">Event Revenue (est.)</div></div>
+        <div class="wf-stat"><div class="wf-stat-value">91.5%</div><div class="wf-stat-label">Avg. Product Margin</div></div>
+      </div>
+
+      <div class="wf-grid-2">
+        <div class="wf-box">
+          <div class="wf-box-label">Money Out — This Month</div>
+          <div class="wf-field">Formal POs: <strong>$1,481</strong> (18 POs)</div>
+          <div class="wf-field">Ad-hoc purchases: <strong>$1,051</strong> (20 items)</div>
+          <div class="wf-field">Operating expenses: <strong>$0</strong> (6 entries)</div>
+          <div class="wf-field bold" style="border-top: 2px solid var(--wireframe-border);">Total money out: $2,532</div>
+        </div>
+        <div class="wf-box">
+          <div class="wf-box-label">Net Cash Flow</div>
+          <div class="wf-field bold" style="font-size: 18px; color: var(--green);">$1,018</div>
+          <div class="wf-field placeholder">Revenue ($3,550) − Money Out ($2,532)</div>
+          <div class="wf-note blue">📊 When Expenses are filled with real amounts, this becomes real P&L.</div>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Low Stock Watchlist</div>
+        <div class="wf-note">See Materials screen → filter by Status = "REORDER" to view items needing restock.</div>
+        <div class="wf-field placeholder">Currently 0 items need reorder (most materials show NOT TRACKED)</div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Combined Gross Profit</div>
+        <div class="wf-field bold" style="font-size: 18px;">$3,258.52</div>
+        <div class="wf-field placeholder">Order Profit ($3,258) + Event Profit ($0)</div>
+      </div>
+    </div>
+
+    <!-- ===== QUOTES ===== -->
+    <div class="screen" id="screen-quotes">
+      <div class="screen-header">
+        <div>
+          <h2>Quotes</h2>
+          <div class="subtitle">Sales pipeline — from draft to accepted/declined</div>
+        </div>
+        <div>
+          <span class="wf-btn primary">+ New Quote</span>
+        </div>
+      </div>
+
+      <div class="wf-flow">
+        <div class="wf-flow-step">Draft</div>
+        <span class="wf-flow-arrow">→</span>
+        <div class="wf-flow-step">Sent</div>
+        <span class="wf-flow-arrow">→</span>
+        <div class="wf-flow-step">Viewed</div>
+        <span class="wf-flow-arrow">→</span>
+        <div class="wf-flow-step">Negotiating</div>
+        <span class="wf-flow-arrow">→</span>
+        <div class="wf-flow-step">Accepted</div>
+        <span class="wf-flow-arrow">or</span>
+        <div class="wf-flow-step">Declined</div>
+        <span class="wf-flow-arrow">/</span>
+        <div class="wf-flow-step">Expired</div>
+      </div>
+
+      <div class="wf-note blue">When a quote is Accepted → "Convert to Order" button creates an Order (copies lines). Accepted quote without deposit = still Prospect (not Customer).</div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Quote Pipeline</div>
+        <table class="wf-table">
+          <thead>
+            <tr><th>Quote ID</th><th>Date</th><th>Customer</th><th>Event Type</th><th>Event Date</th><th>Total</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>QTE-0001</td><td>Oct 18</td><td>Cliente Ejemplo</td><td>wedding</td><td>Dec 12</td><td>$3,948</td>
+              <td><span class="wf-status accepted">ACCEPTED</span></td>
+              <td><span class="wf-btn outline" style="font-size:10px;padding:2px 6px;">View</span></td>
+            </tr>
+            <tr>
+              <td>QTE-0002</td><td>Oct 25</td><td>(new lead)</td><td>birthday</td><td>Nov 15</td><td>$2,030</td>
+              <td><span class="wf-status sent">SENT</span></td>
+              <td><span class="wf-btn outline" style="font-size:10px;padding:2px 6px;">Mark Viewed</span> <span class="wf-btn outline" style="font-size:10px;padding:2px 6px;">Accept</span></td>
+            </tr>
+            <tr>
+              <td>QTE-0003</td><td>Oct 20</td><td>(new lead)</td><td>corporate</td><td>Nov 30</td><td>$4,188</td>
+              <td><span class="wf-status declined">DECLINED</span></td>
+              <td><span class="wf-field" style="font-size:10px;padding:1px 4px;">Lost: too_expensive</span></td>
+            </tr>
+            <tr>
+              <td colspan="8" style="text-align:center;color:var(--stone-light);padding:20px;">+ Click "New Quote" to create → pick customer (or new lead) → add quote lines → set prices → save as draft</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Quote Detail (when clicked)</div>
+        <div class="wf-grid-2">
+          <div>
+            <div class="wf-field bold">Customer: María González (CUST-001)</div>
+            <div class="wf-field placeholder">Event Type: wedding</div>
+            <div class="wf-field placeholder">Event Date: Dec 12, 2026</div>
+            <div class="wf-field placeholder">Valid Until: Nov 2, 2026</div>
+          </div>
+          <div>
+            <div class="wf-field placeholder">Payer Name: (same as customer)</div>
+            <div class="wf-field placeholder">Payer RFC: (empty — not needed)</div>
+            <div class="wf-field placeholder">Recipient: (same as customer)</div>
+            <div class="wf-field placeholder">Lead Source: referral</div>
+          </div>
+        </div>
+        <table class="wf-table" style="margin-top:8px;">
+          <thead><tr><th>Line</th><th>Product SKU</th><th>Description</th><th>Qty</th><th>Unit Price</th><th>Line Total</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>PRD-PEACHY-L</td><td>Peachy Bouquet (Large)</td><td>1</td><td>$1,700</td><td>$1,700</td></tr>
+            <tr><td>2</td><td>PRD-PEACHY-S</td><td>Peachy Bouquet (Small)</td><td>2</td><td>$925</td><td>$1,850</td></tr>
+            <tr><td colspan="5" style="text-align:right;font-weight:600;">Subtotal</td><td>$3,550</td></tr>
+            <tr><td colspan="5" style="text-align:right;">IVA (16%)</td><td>$568</td></tr>
+            <tr><td colspan="5" style="text-align:right;font-weight:700;color:var(--rose);">Total</td><td style="font-weight:700;color:var(--rose);">$4,118</td></tr>
+            <tr><td colspan="5" style="text-align:right;">Deposit Required (50%)</td><td>$2,059</td></tr>
+          </tbody>
+        </table>
+        <div style="margin-top:8px;">
+          <span class="wf-btn primary">Send via WhatsApp</span>
+          <span class="wf-btn">Download PDF</span>
+          <span class="wf-btn success">Convert to Order</span>
+        </div>
+        <div class="wf-note">📎 Legal templates attached: LT-001 (Privacy Short) + LT-003 (Service Terms). Placeholders auto-filled from Assumptions sheet.</div>
+      </div>
+    </div>
+
+    <!-- ===== ORDERS ===== -->
+    <div class="screen" id="screen-orders">
+      <div class="screen-header">
+        <div>
+          <h2>Orders</h2>
+          <div class="subtitle">Committed sales — from production to delivery to payment</div>
+        </div>
+        <div>
+          <span class="wf-btn primary">+ New Order</span>
+        </div>
+      </div>
+
+      <div class="wf-flow">
+        <div class="wf-flow-step">Pending</div>
+        <span class="wf-flow-arrow">→</span>
+        <div class="wf-flow-step">In Production</div>
+        <span class="wf-flow-arrow">→</span>
+        <div class="wf-flow-step">Delivered</div>
+        <span class="wf-flow-arrow">→</span>
+        <div class="wf-flow-step">Paid</div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Order List</div>
+        <table class="wf-table">
+          <thead>
+            <tr><th>Order ID</th><th>Date</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Delivery</th><th>From Quote</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>ORD-1001</td><td>Oct 21</td><td>Cliente Ejemplo</td><td>2 lines</td><td>$3,550</td>
+              <td><span class="wf-status pending">PENDING</span></td>
+              <td><span class="wf-status pending">NOT CONFIRMED</span></td>
+              <td>QTE-0001</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Order Detail (when clicked)</div>
+        <div class="wf-grid-2">
+          <div>
+            <div class="wf-field bold">Customer: Cliente Ejemplo (CUST-001)</div>
+            <div class="wf-field placeholder">Recipient: (same as customer)</div>
+            <div class="wf-field placeholder">Recipient Phone: (uses customer WhatsApp)</div>
+            <div class="wf-field placeholder">Delivery Date: Oct 22, 2026</div>
+            <div class="wf-field placeholder">Delivery Fee: $0</div>
+          </div>
+          <div>
+            <div class="wf-field placeholder">Payer: (same as customer)</div>
+            <div class="wf-field placeholder">Payer RFC: (empty)</div>
+            <div class="wf-field placeholder">Delivered By: ____</div>
+            <div class="wf-field placeholder">Received By: ____</div>
+            <div class="wf-field placeholder">Delivery Confirmed At: ____</div>
+          </div>
+        </div>
+        <div style="margin-top:8px;">
+          <span class="wf-btn success">Mark Delivered</span>
+          <span class="wf-btn">Record Payment</span>
+          <span class="wf-btn outline">View Execution Log</span>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Payment Tracking (v1.14 gap — needs Excel build)</div>
+        <div class="wf-note">⚠️ Payment Status, Amount Paid, Balance Due not yet built in Excel. Needs: 6 columns on Orders + Payment History sheet.</div>
+      </div>
+    </div>
+
+    <!-- ===== CUSTOMERS ===== -->
+    <div class="screen" id="screen-customers">
+      <div class="screen-header">
+        <div>
+          <h2>Customers</h2>
+          <div class="subtitle">CRM — leads, prospects, customers, referrers</div>
+        </div>
+        <div>
+          <span class="wf-btn primary">+ New Contact</span>
+        </div>
+      </div>
+
+      <div class="wf-flow">
+        <div class="wf-flow-step">Lead</div>
+        <span class="wf-flow-arrow">→</span>
+        <div class="wf-flow-step">Prospect (quote sent)</div>
+        <span class="wf-flow-arrow">→</span>
+        <div class="wf-flow-step">Customer (deposit paid → order)</div>
+        <span class="wf-flow-arrow">→</span>
+        <div class="wf-flow-step">Inactive (12+ months)</div>
+      </div>
+      <div class="wf-note blue">Status is lifecycle only. Is Referrer is a separate flag (TRUE if anyone has this Customer ID in their Referrer ID). Customer Type: direct / planner / corporate / venue.</div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Contact List</div>
+        <table class="wf-table">
+          <thead><tr><th>Customer ID</th><th>Name</th><th>Type</th><th>Status</th><th>Is Referrer</th><th># Orders</th><th>LTV</th><th>Actions</th></tr></thead>
+          <tbody>
+            <tr><td>CUST-001</td><td>Cliente Ejemplo</td><td>direct</td><td><span class="wf-status accepted">customer</span></td><td>No</td><td>1</td><td>$3,550</td><td><span class="wf-btn outline" style="font-size:10px;">New Quote</span></td></tr>
+            <tr><td>CUST-002</td><td>Ana López</td><td>planner</td><td><span class="wf-status accepted">customer</span></td><td>Yes ✓</td><td>0</td><td>$0</td><td><span class="wf-btn outline" style="font-size:10px;">New Quote</span></td></tr>
+            <tr><td>CUST-003</td><td>María Bride</td><td>direct</td><td><span class="wf-status draft">lead</span></td><td>No</td><td>0</td><td>$0</td><td><span class="wf-btn outline" style="font-size:10px;">New Quote</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== EVENTS ===== -->
+    <div class="screen" id="screen-events">
+      <div class="screen-header">
+        <div>
+          <h2>Events</h2>
+          <div class="subtitle">Weddings, corporate, demos, photo shoots — both paid and unpaid</div>
+        </div>
+        <div>
+          <span class="wf-btn primary">+ New Event</span>
+        </div>
+      </div>
+
+      <div class="wf-grid-2">
+        <div class="wf-box">
+          <div class="wf-box-label">Paid Events</div>
+          <div class="wf-card">
+            <div class="wf-card-header">
+              <span class="wf-card-title">EVT-2001 · Boda Whitfield-Cole</span>
+              <span class="wf-status draft">Quote</span>
+            </div>
+            <div class="wf-field placeholder">Date: Dec 12, 2026 · Guests: TBD</div>
+            <div class="wf-field placeholder">Honoree: Bride María González</div>
+            <div class="wf-field placeholder">Payer: (same as customer)</div>
+            <div class="wf-field placeholder">Event Type: wedding · Is Paid: TRUE</div>
+          </div>
+        </div>
+        <div class="wf-box">
+          <div class="wf-box-label">Unpaid Events (marketing/portfolio)</div>
+          <div class="wf-card">
+            <div class="wf-card-header">
+              <span class="wf-card-title">EVT-2003 · Cintermex Bridal Fair</span>
+              <span class="wf-status">executed</span>
+            </div>
+            <div class="wf-field placeholder">Date: Nov 15, 2026</div>
+            <div class="wf-field placeholder">Purpose: Lead generation</div>
+            <div class="wf-field placeholder">Event Type: bridal_fair · Is Paid: FALSE</div>
+            <div class="wf-field placeholder">Actual Cost: $920 (no margin — marketing investment)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== CATALOGUE ===== -->
+    <div class="screen" id="screen-catalogue">
+      <div class="screen-header">
+        <div>
+          <h2>Catalogue</h2>
+          <div class="subtitle">Products with cost breakdown and pricing — what Maria sells</div>
+        </div>
+      </div>
+
+      <div class="wf-grid-3">
+        <div class="wf-card">
+          <div class="wf-card-header"><span class="wf-card-title">Peachy Bouquet (Large)</span><span style="color:var(--rose);font-weight:700;">$1,700</span></div>
+          <div class="wf-field placeholder">Cost: $141.78 · Margin: 91.7%</div>
+          <div class="wf-field placeholder">3 lines to review</div>
+          <span class="wf-btn outline" style="font-size:10px;">View Recipe</span>
+        </div>
+        <div class="wf-card">
+          <div class="wf-card-header"><span class="wf-card-title">Peachy Bouquet (Medium)</span><span style="color:var(--rose);font-weight:700;">$1,280</span></div>
+          <div class="wf-field placeholder">Cost: $106.52 · Margin: 91.7%</div>
+          <div class="wf-field placeholder">3 lines to review</div>
+          <span class="wf-btn outline" style="font-size:10px;">View Recipe</span>
+        </div>
+        <div class="wf-card">
+          <div class="wf-card-header"><span class="wf-card-title">Peachy Bouquet (Small)</span><span style="color:var(--rose);font-weight:700;">$925</span></div>
+          <div class="wf-field placeholder">Cost: $74.85 · Margin: 91.9%</div>
+          <div class="wf-field placeholder">3 lines to review</div>
+          <span class="wf-btn outline" style="font-size:10px;">View Recipe</span>
+        </div>
+        <div class="wf-card">
+          <div class="wf-card-header"><span class="wf-card-title">Colores de Otoño (Large)</span><span style="color:var(--rose);font-weight:700;">$1,500</span></div>
+          <div class="wf-field placeholder">Cost: $140.92 · Margin: 90.6%</div>
+          <div class="wf-field placeholder">1 line to review</div>
+          <span class="wf-btn outline" style="font-size:10px;">View Recipe</span>
+        </div>
+      </div>
+
+      <div class="wf-box" style="margin-top:12px;">
+        <div class="wf-box-label">Menu View (customer-facing price list)</div>
+        <div class="wf-note">📱 Clean list — no cost data. Used for WhatsApp broadcast or print. Auto-generated from Products.</div>
+      </div>
+    </div>
+
+    <!-- ===== MATERIALS ===== -->
+    <div class="screen" id="screen-materials">
+      <div class="screen-header">
+        <div>
+          <h2>Materials</h2>
+          <div class="subtitle">~200 SKUs · stock, pricing, units per pack · ASSUMED flags need supplier verification</div>
+        </div>
+        <div>
+          <span class="wf-btn">Filter: All ▾</span>
+          <span class="wf-btn">Sort: Name ▾</span>
+          <span class="wf-btn warning" style="background: var(--amber);">♻️ Reset Perishable Stock</span>
+        </div>
+      </div>
+
+      <div class="wf-box" style="border-color: var(--amber); background: #FFFBEB;">
+        <div class="wf-box-label" style="color: var(--amber);">Reset Perishable Stock — Confirmation Dialog (appears on click)</div>
+        <div class="wf-field bold" style="color: var(--amber);">⚠️ This will zero out all Flower and Foliage stock and create Loss entries.</div>
+        <div class="wf-field">Materials affected: 8 (Category = Flower or Foliage, Current Stock > 0)</div>
+        <div class="wf-field">Total packs to write off: 12 packs</div>
+        <div class="wf-field">Estimated value loss: $1,420 MXN</div>
+        <div class="wf-field placeholder">For each material, the system will:</div>
+        <div class="wf-field placeholder" style="padding-left: 24px;">1. Create a Loss row (LOSS-NNNN) with Qty Lost = current stock, Reason = "expired"</div>
+        <div class="wf-field placeholder" style="padding-left: 24px;">2. Create a Stock Movement row (negative packs, reason = "loss")</div>
+        <div class="wf-field placeholder" style="padding-left: 24px;">3. Materials.Current Stock auto-zeros via existing formula</div>
+        <div class="wf-field placeholder" style="padding-left: 24px;">4. Packaging, Consumables, and Tools are NOT affected</div>
+        <div class="wf-note">💡 Tip: Physically check your flowers before clicking. Some may still be usable — exclude them by setting their stock to 0 manually first, or adjust the quantity after reset.</div>
+        <div style="margin-top: 8px;">
+          <span class="wf-btn warning" style="background: var(--amber);">✓ Yes, Reset All Perishables</span>
+          <span class="wf-btn outline">Cancel</span>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">After Reset — Losses Created</div>
+        <table class="wf-table">
+          <thead><tr><th>Loss ID</th><th>Material SKU</th><th>Name</th><th>Qty Lost</th><th>Reason</th><th>Cost Impact</th></tr></thead>
+          <tbody>
+            <tr><td>LOSS-0003</td><td>FLR-ROSA-LARGA</td><td>ROSA LARGA</td><td>1 pack</td><td>expired</td><td>$190</td></tr>
+            <tr><td>LOSS-0004</td><td>FLR-LILI</td><td>LILI</td><td>1 pack</td><td>expired</td><td>$205</td></tr>
+            <tr><td>LOSS-0005</td><td>FOL-EUCALIPTO-PARVIFOLIA</td><td>EUCALIPTO PARVIFOLIA</td><td>2 packs</td><td>expired</td><td>$188</td></tr>
+            <tr><td colspan="6" style="color: var(--stone-light);">... remaining items shown in Losses screen</td></tr>
+          </tbody>
+        </table>
+        <div class="wf-field bold">Total written off: 12 packs · $1,420 MXN · View in Losses screen →</div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Materials Grid</div>
+        <table class="wf-table">
+          <thead><tr><th>SKU</th><th>Name</th><th>Category</th><th>Stock</th><th>Pack Price</th><th>Units/Pack</th><th>Unit Cost</th><th>Status</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>FLR-AGAPANDO</td><td>AGAPANDO</td><td>Flower</td><td>0</td><td>$135</td><td>12</td><td>$11.25</td><td>NOT TRACKED</td><td>⚠️ ASSUMED PACK SIZE</td></tr>
+            <tr><td>FLR-ROSA-LARGA</td><td>ROSA LARGA</td><td>Flower</td><td>0</td><td>$190</td><td>24</td><td>$7.92</td><td>NOT TRACKED</td><td>⚠️ ASSUMED PACK SIZE</td></tr>
+            <tr><td>FLR-ROSA-STD</td><td>ROSA STD (García)</td><td>Flower</td><td>0</td><td>$100</td><td>24</td><td>$4.17</td><td>NOT TRACKED</td><td>⚠️ ASSUMED — García preferred</td></tr>
+            <tr><td>PKG-LISTON-D30-40MM</td><td>SILVER D30 4CM</td><td>Consumable</td><td>1</td><td>$55</td><td>22.5</td><td>$2.44</td><td>NOT TRACKED</td><td>Silver ribbon from Maxi Home</td></tr>
+            <tr><td>FLR-CLAVO-GRUESA</td><td>CLAVO GRUESA</td><td>Foliage</td><td>0</td><td>$145</td><td>12</td><td>$12.08</td><td>NOT TRACKED</td><td>⚠️ ASSUMED PACK SIZE</td></tr>
+          </tbody>
+        </table>
+        <div class="wf-note">⚠️ 145 materials have ASSUMED PACK SIZE — filter Notes column by "ASSUMED" to see all. Verify with LA FINCA / García in person.</div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Material Detail (when clicked)</div>
+        <div class="wf-grid-2">
+          <div>
+            <div class="wf-field bold">SKU: FLR-ROSA-LARGA</div>
+            <div class="wf-field placeholder">Preferred Supplier: LA FINCA</div>
+            <div class="wf-field placeholder">Colors: Red, Pink, White, Yellow, Orange, Peach, Lavender</div>
+            <div class="wf-field placeholder">Type: perishable</div>
+          </div>
+          <div>
+            <div class="wf-field placeholder">Pack Price: $190 (from LA FINCA, latest)</div>
+            <div class="wf-field placeholder">Units per Pack: 24 (ASSUMED)</div>
+            <div class="wf-field placeholder">Unit Cost: $7.92/stem</div>
+            <div class="wf-field placeholder">Stock Value: $0 (0 packs × $190)</div>
+          </div>
+        </div>
+        <div class="wf-note blue">📊 Used in: PRD-PEACHY-L (7 stems), PRD-PEACHY-M (9 stems), PRD-PEACHY-S (5 stems). Click to see recipe details.</div>
+      </div>
+    </div>
+
+    <!-- ===== PROCUREMENT ===== -->
+    <div class="screen" id="screen-procurement">
+      <div class="screen-header">
+        <div>
+          <h2>Procurement</h2>
+          <div class="subtitle">Buying materials — formal POs + ad-hoc purchases + supplier comparison</div>
+        </div>
+        <div>
+          <span class="wf-btn primary">+ New PO</span>
+          <span class="wf-btn">+ Log Ad-hoc</span>
+        </div>
+      </div>
+
+      <div class="wf-grid-2">
+        <div class="wf-box">
+          <div class="wf-box-label">Purchase Orders (formal)</div>
+          <table class="wf-table">
+            <thead><tr><th>PO #</th><th>Date</th><th>Supplier</th><th>Items</th><th>Total</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td>PO-3007</td><td>Oct 19</td><td>LA FINCA</td><td>6 items</td><td>$478</td><td>Received</td></tr>
+              <tr><td>PO-3006</td><td>Oct 12</td><td>LA FINCA</td><td>7 items</td><td>$715</td><td>Received</td></tr>
+              <tr><td>PO-3005</td><td>Oct 5</td><td>LA FINCA</td><td>6 items</td><td>$486</td><td>Received</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="wf-box">
+          <div class="wf-box-label">Ad-hoc Purchases (whim / market runs)</div>
+          <table class="wf-table">
+            <thead><tr><th>ID</th><th>Date</th><th>Vendor</th><th>Item</th><th>Qty</th><th>Cost</th><th>Ticket</th></tr></thead>
+            <tbody>
+              <tr><td>ADHOC-0001</td><td>Oct 24</td><td>Maxi Home García</td><td>Silver 4cm ribbon</td><td>1</td><td>$55</td><td>4191513</td></tr>
+              <tr><td>ADHOC-0009</td><td>Oct 25</td><td>Maxi Home García</td><td>Gray 4cm ribbon (2nd)</td><td>1</td><td>$52</td><td>2179918</td></tr>
+              <tr><td>ADHOC-0016</td><td>Oct 25</td><td>Maxi Home García</td><td>Green paper 60×60</td><td>1</td><td>$105</td><td>2179918</td></tr>
+            </tbody>
+          </table>
+          <div class="wf-field bold">Total ad-hoc: $1,051 (20 items)</div>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Supplier Comparison (side-by-side prices)</div>
+        <table class="wf-table">
+          <thead><tr><th>SKU</th><th>LA FINCA</th><th>García</th><th>% vs LF</th><th>BDF</th><th>% vs LF</th><th>Cheapest</th></tr></thead>
+          <tbody>
+            <tr><td>FLR-ESTATIL-CHICO</td><td>$155</td><td>$80</td><td style="color:var(--green);font-weight:600;">-48.4%</td><td>—</td><td>—</td><td style="font-weight:600;">García $80</td></tr>
+            <tr><td>FLR-MARGARITA</td><td>$107</td><td>$60</td><td style="color:var(--green);font-weight:600;">-44.0%</td><td>$85</td><td style="color:var(--green);">-20.6%</td><td style="font-weight:600;">García $60</td></tr>
+            <tr><td>FLR-GIPSOFILIA</td><td>$80</td><td>$80</td><td>0.0%</td><td>—</td><td>—</td><td style="font-weight:600;">LA FINCA $80</td></tr>
+            <tr><td>FLR-GIRASOL-CHICO</td><td>$65</td><td>$100</td><td style="color:var(--amber);font-weight:600;">+53.8%</td><td>—</td><td>—</td><td style="font-weight:600;">LA FINCA $65</td></tr>
+          </tbody>
+        </table>
+        <div class="wf-note">Green = cheaper than LA FINCA. To switch a material's price, change Preferred Supplier on Materials sheet.</div>
+      </div>
+    </div>
+
+    <!-- ===== EXECUTION LOGS ===== -->
+    <div class="screen" id="screen-execution">
+      <div class="screen-header">
+        <div>
+          <h2>Execution Logs</h2>
+          <div class="subtitle">Track what was ACTUALLY used — substitutions, additions, removals</div>
+        </div>
+      </div>
+
+      <div class="wf-flow">
+        <div class="wf-flow-step">Recipe (planned)</div>
+        <span class="wf-flow-arrow">vs</span>
+        <div class="wf-flow-step">Execution Log (actual)</div>
+        <span class="wf-flow-arrow">=</span>
+        <div class="wf-flow-step">Variance (real margin)</div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">"Execute" Button on Order/Event Line Items</div>
+        <div class="wf-grid-2">
+          <div class="wf-card">
+            <div class="wf-card-header"><span class="wf-card-title">Path A: Log as Recipe</span></div>
+            <div class="wf-field placeholder">One click — no dialog</div>
+            <div class="wf-field placeholder">Copies recipe verbatim into Execution Log Lines</div>
+            <div class="wf-field placeholder">Estimated = Actual (margin = quoted − estimated)</div>
+            <span class="wf-btn success">Log as Recipe</span>
+          </div>
+          <div class="wf-card">
+            <div class="wf-card-header"><span class="wf-card-title">Path B: Changes Made</span></div>
+            <div class="wf-field placeholder">Opens editor — left: recipe, right: actual</div>
+            <div class="wf-field placeholder">Per line: keep / substitute / remove / adjust qty</div>
+            <div class="wf-field placeholder">Live cost impact shown as you edit</div>
+            <span class="wf-btn warning">Changes Made →</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Execution Log Detail</div>
+        <table class="wf-table">
+          <thead><tr><th>Exec ID</th><th>Event</th><th>Status</th><th>Est. Cost</th><th>Actual Cost</th><th>Quoted</th><th>Margin</th><th>Variance</th></tr></thead>
+          <tbody>
+            <tr><td>EXE-0001</td><td>EVT-2001</td><td><span class="wf-status accepted">executed</span></td><td>$173</td><td>$173</td><td>$1,700</td><td>89.8%</td><td>$0 ✓</td></tr>
+            <tr><td>EXE-0002</td><td>EVT-2001</td><td><span class="wf-status accepted">executed</span></td><td>$173</td><td>$182</td><td>$1,700</td><td>89.3%</td><td style="color:var(--amber);">+$9 ⚠</td></tr>
+            <tr><td>EXE-0003</td><td>EVT-2003</td><td><span class="wf-status accepted">executed</span></td><td>$850</td><td>$920</td><td>—</td><td>—</td><td style="color:var(--amber);">+$70 (unpaid event)</td></tr>
+          </tbody>
+        </table>
+        <div class="wf-note blue">📊 Unpaid events (demos, photo shoots) track cost only — no margin since there's no quoted price. Actual margin analytics available once enough executions accumulate.</div>
+      </div>
+    </div>
+
+    <!-- ===== LOSSES ===== -->
+    <div class="screen" id="screen-losses">
+      <div class="screen-header">
+        <div>
+          <h2>Losses</h2>
+          <div class="subtitle">Track damaged, spoiled, broken, or lost inventory</div>
+        </div>
+        <div>
+          <span class="wf-btn primary">+ Log Loss</span>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Loss Log</div>
+        <table class="wf-table">
+          <thead><tr><th>Loss ID</th><th>Date</th><th>Material</th><th>Qty Lost</th><th>Reason</th><th>Cost Impact</th><th>Discovered By</th></tr></thead>
+          <tbody>
+            <tr><td>LOSS-0001</td><td>Oct 20</td><td>FLR-ROSA-LARGA</td><td>1 pack</td><td>spoiled</td><td>$190</td><td>Maria</td></tr>
+            <tr><td>LOSS-0002</td><td>Oct 22</td><td>PKG-OASIS-LADRILLO-STD</td><td>2 packs</td><td>broken</td><td>$32</td><td>Maria</td></tr>
+          </tbody>
+        </table>
+        <div class="wf-field bold">Total losses: 3 packs · $222 cost impact</div>
+        <div class="wf-note">Auto-feeds Stock Movements with negative packs. Reason categories: damaged / spoiled / broken / expired / lost / stolen / other.</div>
+      </div>
+    </div>
+
+    <!-- ===== SHOPPING LIST ===== -->
+    <div class="screen" id="screen-shoppinglist">
+      <div class="screen-header">
+        <div>
+          <h2>Weekly Plan & Shopping List</h2>
+          <div class="subtitle">Plan what to make this week → generate shopping list grouped by supplier → one trip</div>
+        </div>
+        <div>
+          <span class="wf-btn">Week of: Oct 26 ▾</span>
+          <span class="wf-btn primary">Generate Shopping List</span>
+        </div>
+      </div>
+
+      <div class="wf-flow">
+        <div class="wf-flow-step">Weekly Plan (what to make)</div>
+        <span class="wf-flow-arrow">→</span>
+        <div class="wf-flow-step">Shopping List (what to buy, by supplier)</div>
+        <span class="wf-flow-arrow">→</span>
+        <div class="wf-flow-step">Create POs / Log Ad-hoc</div>
+        <span class="wf-flow-arrow">→</span>
+        <div class="wf-flow-step">Stock updated</div>
+      </div>
+
+      <div class="wf-grid-2">
+        <div class="wf-box">
+          <div class="wf-box-label">Weekly Plan — Products to Make This Week</div>
+          <table class="wf-table">
+            <thead><tr><th>Product</th><th>Qty</th><th>Delivery Date</th><th>Customer</th></tr></thead>
+            <tbody>
+              <tr><td>Peachy Bouquet (Large)</td><td>2</td><td>Fri Oct 30</td><td>María González</td></tr>
+              <tr><td>Peachy Bouquet (Medium)</td><td>3</td><td>Fri Oct 30</td><td>María González</td></tr>
+              <tr><td>Colores de Otoño (Large)</td><td>1</td><td>Sat Oct 31</td><td>EVT-2003 (demo)</td></tr>
+              <tr><td colspan="4" style="text-align:center;color:var(--stone-light);padding:12px;">+ Add product to plan</td></tr>
+            </tbody>
+          </table>
+          <div class="wf-field bold">Total: 6 pieces · 5 bouquets + 1 arrangement</div>
+        </div>
+
+        <div class="wf-box">
+          <div class="wf-box-label">Summary — Materials Needed</div>
+          <div class="wf-stat" style="margin-bottom:8px;"><div class="wf-stat-value">23</div><div class="wf-stat-label">Distinct materials needed</div></div>
+          <div class="wf-field placeholder">Across 3 suppliers</div>
+          <div class="wf-field placeholder">Est. total cost: $2,847 MXN</div>
+          <div class="wf-note">5 materials already covered by open POs → excluded from shopping list</div>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Shopping List — Grouped by Supplier (for single-trip planning)</div>
+        <div class="wf-note blue">📍 Organized by supplier so Maria can plan her route: LA FINCA first (main flowers), then García (backup roses), then PRO Flor (supplies). One trip, one day — ideally Tuesday (procurement + conditioning day).</div>
+
+        <div style="margin: 12px 0 8px; font-size: 13px; font-weight: 700; color: var(--rose); border-bottom: 2px solid var(--rose); padding-bottom: 4px;">🏪 LA FINCA — 15 items · Est. $1,420</div>
+        <table class="wf-table">
+          <thead><tr><th>SKU</th><th>Material</th><th>Need</th><th>Pack Size</th><th>Packs to Buy</th><th>Pack Price</th><th>Total</th><th>Used By</th></tr></thead>
+          <tbody>
+            <tr><td>FLR-ROSA-LARGA</td><td>ROSA LARGA</td><td>24 stems</td><td>24</td><td><strong>1</strong></td><td>$190</td><td>$190</td><td>Peachy L ×2, Peachy M ×3</td></tr>
+            <tr><td>FLR-LISIANTHUS</td><td>LISIANTHUS</td><td>28 stems</td><td>10</td><td><strong>3</strong></td><td>$230</td><td>$690</td><td>Peachy L ×2, Peachy M ×3, Peachy S ×3</td></tr>
+            <tr><td>FLR-ROSA-INGLESA-TAPATIA</td><td>ROSA INGLESA TAPATIA</td><td>6 stems</td><td>24</td><td><strong>1</strong></td><td>$260</td><td>$260</td><td>Peachy L ×2, Peachy M ×3</td></tr>
+            <tr><td>FOL-EUCALIPTO-MONEDA</td><td>EUCALIPTO MONEDA</td><td>1 stem</td><td>12</td><td><strong>1</strong></td><td>$95</td><td>$95</td><td>Otoño L ×1</td></tr>
+            <tr><td colspan="8" style="color:var(--stone-light);">... 11 more items from LA FINCA</td></tr>
+          </tbody>
+        </table>
+
+        <div style="margin: 16px 0 8px; font-size: 13px; font-weight: 700; color: var(--rose); border-bottom: 2px solid var(--rose); padding-bottom: 4px;">🏪 Florería García — 3 items · Est. $200</div>
+        <table class="wf-table">
+          <thead><tr><th>SKU</th><th>Material</th><th>Need</th><th>Pack Size</th><th>Packs</th><th>Price</th><th>Total</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>FLR-ROSA-STD</td><td>ROSA STD</td><td>12 stems</td><td>24</td><td><strong>1</strong></td><td>$100</td><td>$100</td><td>Backup roses — cheaper than LA FINCA</td></tr>
+            <tr><td>FLR-GIPSOFILIA</td><td>BABY BREATH</td><td>1 bunch</td><td>12</td><td><strong>1</strong></td><td>$80</td><td>$80</td><td>Filler for demo arrangement</td></tr>
+          </tbody>
+        </table>
+
+        <div style="margin: 16px 0 8px; font-size: 13px; font-weight: 700; color: var(--rose); border-bottom: 2px solid var(--rose); padding-bottom: 4px;">🏪 PRO FLOR — 2 items · Est. $58</div>
+        <table class="wf-table">
+          <thead><tr><th>SKU</th><th>Material</th><th>Need</th><th>Pack Size</th><th>Packs</th><th>Price</th><th>Total</th><th>Notes</th></tr></thead>
+          <tbody>
+            <tr><td>PKG-OASIS-LADRILLO-STD</td><td>FOAM BRICK</td><td>1 pack</td><td>1</td><td><strong>1</strong></td><td>$17</td><td>$17</td><td>For Otoño arrangement base</td></tr>
+            <tr><td>PKG-CINTA-FILAMENTO-PRO</td><td>FLORAL TAPE</td><td>1 pack</td><td>1</td><td><strong>1</strong></td><td>$58</td><td>$58</td><td>Running low</td></tr>
+          </tbody>
+        </table>
+
+        <div style="margin-top:16px;">
+          <div class="wf-field bold" style="font-size: 16px;">Grand Total: 20 packs · $1,678 MXN (3 suppliers)</div>
+          <div style="margin-top:12px;">
+            <span class="wf-btn primary">📄 Generate PDF (SL-0001)</span>
+            <span class="wf-btn success">📝 Create POs (1 per supplier)</span>
+            <span class="wf-btn outline">Send to WhatsApp</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Already Covered by Open POs (excluded from shopping list)</div>
+        <table class="wf-table">
+          <thead><tr><th>SKU</th><th>Material</th><th>Need</th><th>On Order</th><th>PO #</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>FLR-MARGARITA-OCRE-LF</td><td>MARGARITA OCRE</td><td>2 packs</td><td>1 pack</td><td>PO-3007</td><td><span class="wf-status accepted">Received</span></td></tr>
+            <tr><td>FOL-RUSCUS-LARGO</td><td>RUSCUS</td><td>1 pack</td><td>1 pack</td><td>PO-3007</td><td><span class="wf-status accepted">Received</span></td></tr>
+          </tbody>
+        </table>
+        <div class="wf-note">These materials were already ordered and received — they're subtracted from the shopping list automatically.</div>
+      </div>
+    </div>
+
+    <!-- ===== RECIPES ===== -->
+    <div class="screen" id="screen-recipes">
+      <div class="screen-header">
+        <div>
+          <h2>Recipes</h2>
+          <div class="subtitle">Bill of materials per product — what goes into each bouquet</div>
+        </div>
+        <div>
+          <span class="wf-btn">Filter: Product ▾</span>
+          <span class="wf-btn">Version: v1 ▾</span>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Recipe: Peachy Bouquet (Large) — v1</div>
+        <table class="wf-table">
+          <thead><tr><th>Material SKU</th><th>Component</th><th>Qty</th><th>Unit</th><th>Unit Cost</th><th>Line Cost</th><th>Category</th><th>Color</th><th>Check</th></tr></thead>
+          <tbody>
+            <tr><td>FLR-LISIANTHUS</td><td>LISIANTHUS</td><td>7</td><td>pack</td><td>—</td><td>—</td><td>Flower</td><td>Pink</td><td style="color:var(--amber);">NO COST</td></tr>
+            <tr><td>FLR-ROSA-LARGA</td><td>ROSA LARGA</td><td>7</td><td>stem</td><td>$7.92</td><td>$55.42</td><td>Flower</td><td>Peach</td><td style="color:var(--green);">OK</td></tr>
+            <tr><td>FLR-ROSA-INGLESA-TAPATIA</td><td>ROSA INGLESA TAPATIA</td><td>1</td><td>stem</td><td>$10.83</td><td>$10.83</td><td>Flower</td><td>Pink</td><td style="color:var(--green);">OK</td></tr>
+            <tr><td>FLR-PEONIA</td><td>PEONIA</td><td>1</td><td>pack</td><td>—</td><td>—</td><td>Flower</td><td>Pink</td><td style="color:var(--amber);">NO COST</td></tr>
+            <tr><td>PKG-PAPEL-COREANO</td><td>PAPEL BLUSH</td><td>1</td><td>wrap</td><td>—</td><td>—</td><td>Packaging</td><td>Pink</td><td style="color:var(--amber);">NO COST</td></tr>
+          </tbody>
+        </table>
+        <div class="wf-field bold">Total Cost: $141.78 · Lines to Review: 3 (NO COST items need pricing)</div>
+        <div class="wf-note">Check column flags: OK / NO COST / NO QTY / SET PACK SIZE / SKU NOT FOUND / ASSUMED PACK</div>
+      </div>
+    </div>
+
+    <!-- ===== EXPENSES ===== -->
+    <div class="screen" id="screen-expenses">
+      <div class="screen-header">
+        <div>
+          <h2>Expenses</h2>
+          <div class="subtitle">Operating expenses — money out that does NOT affect inventory</div>
+        </div>
+        <div>
+          <span class="wf-btn primary">+ Log Expense</span>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Expense Log</div>
+        <table class="wf-table">
+          <thead><tr><th>ID</th><th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th>Vendor</th><th>Linked</th></tr></thead>
+          <tbody>
+            <tr><td>EXP-0001</td><td>Oct 24</td><td>gas</td><td>Round trip to Maxi Home</td><td>$0 ⚠️</td><td>Pemex</td><td>—</td></tr>
+            <tr><td>EXP-0005</td><td>Oct 25</td><td>software</td><td>Vercel subscription</td><td>$0</td><td>Vercel</td><td>—</td></tr>
+            <tr><td>EXP-0006</td><td>Oct 25</td><td>software</td><td>Turso database hosting</td><td>$0</td><td>Turso</td><td>—</td></tr>
+          </tbody>
+        </table>
+        <div class="wf-note">⚠️ All amounts are $0 (ESTIMATE). Replace with actual receipt amounts. Categories: gas / parking / software / utilities / labor / venue_fee / equipment_rental / market_run / other.</div>
+      </div>
+    </div>
+
+    <!-- ===== CALENDAR ===== -->
+    <div class="screen" id="screen-calendar">
+      <div class="screen-header">
+        <div>
+          <h2>Calendar</h2>
+          <div class="subtitle">Capacity management & date blocking · v1.12 spec — NOT YET BUILT</div>
+        </div>
+        <div>
+          <span class="wf-btn">Month ▾</span>
+          <span class="wf-btn primary">Block Date</span>
+        </div>
+      </div>
+
+      <div class="wf-note">⚠️ This screen requires the v1.12 Capacity n Calendar spec to be built in Excel first (BlockedDate + CapacityDay sheets). Not yet implemented.</div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Calendar View (placeholder — month grid)</div>
+        <div class="wf-grid-3">
+          <div class="wf-field placeholder" style="text-align:center;">Mon</div>
+          <div class="wf-field placeholder" style="text-align:center;">Tue</div>
+          <div class="wf-field placeholder" style="text-align:center;">Wed</div>
+          <div class="wf-field placeholder" style="text-align:center;">Thu</div>
+          <div class="wf-field placeholder" style="text-align:center;">Fri</div>
+          <div class="wf-field placeholder" style="text-align:center;background:#FEE2E2;">Sat 🚫</div>
+          <div class="wf-field placeholder" style="text-align:center;background:#F3F4F6;">Sun (off)</div>
+        </div>
+        <div class="wf-note blue">When built: shows orders, events, blocked dates in a month grid. Capacity gauge per day: labor minutes used/available, cooler slots used/available (5 max). Click any date → block it or see what's scheduled.</div>
+      </div>
+
+      <div class="wf-grid-3">
+        <div class="wf-stat"><div class="wf-stat-value">240</div><div class="wf-stat-label">Labor min/day (4hr halftime)</div></div>
+        <div class="wf-stat"><div class="wf-stat-value">5</div><div class="wf-stat-label">Cooler slots (hard limit)</div></div>
+        <div class="wf-stat"><div class="wf-stat-value">±2</div><div class="wf-stat-label">Blocked date warning window</div></div>
+      </div>
+    </div>
+
+    <!-- ===== SUPPLIERS ===== -->
+    <div class="screen" id="screen-suppliers">
+      <div class="screen-header">
+        <div>
+          <h2>Suppliers</h2>
+          <div class="subtitle">15 Monterrey flower & foliage suppliers with contact info</div>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Supplier Directory</div>
+        <table class="wf-table">
+          <thead><tr><th>Supplier</th><th>Type</th><th>Address</th><th>Phone</th><th>Hours</th><th>Rating</th></tr></thead>
+          <tbody>
+            <tr><td>LA FINCA</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td>Florería García</td><td>Wholesaler</td><td>Av. Carranza 123, Centro</td><td>81 1979 9617</td><td>8am–10pm</td><td>4.0 ⭐</td></tr>
+            <tr><td>BDF Palacio Floral</td><td>Wholesaler</td><td>Washington 1927, Centro</td><td>81 8340 5198</td><td>7am–8pm</td><td>4.5 ⭐ (628)</td></tr>
+            <tr><td>El Gato Bodega</td><td>Wholesaler</td><td>Av. Carranza 502, Centro</td><td>81 1468 1435</td><td>7am–8pm daily</td><td>3.6 ⭐ (145)</td></tr>
+            <tr><td>PRO Flor</td><td>Supplies + flowers</td><td>Martín de Zavala 236 Sur</td><td>81 8340 0048</td><td>7am–6pm</td><td>4.8 ⭐ (59)</td></tr>
+            <tr><td>OASIS (Smithers)</td><td>Foam & supplies</td><td>Obrero 227, Santa Catarina</td><td>81 8336 2441</td><td>—</td><td>—</td></tr>
+          </tbody>
+        </table>
+        <div class="wf-field placeholder">10 more suppliers (Holanmex, Uniflor, Costco, Bodega Millán, etc.)</div>
+      </div>
+    </div>
+
+    <!-- ===== LEGAL TEMPLATES ===== -->
+    <div class="screen" id="screen-legal">
+      <div class="screen-header">
+        <div>
+          <h2>Legal Templates</h2>
+          <div class="subtitle">Privacy notices, terms & conditions — with [PLACEHOLDER] substitution</div>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Template Library</div>
+        <table class="wf-table">
+          <thead><tr><th>ID</th><th>Name</th><th>Applies To</th><th>Trigger</th><th>Version</th><th>Text Length</th></tr></thead>
+          <tbody>
+            <tr><td>LT-001</td><td>Aviso de Privacidad (Corto)</td><td>all_quotes</td><td>Bottom of every quote</td><td>v1.0</td><td>719 chars</td></tr>
+            <tr><td>LT-002</td><td>Condiciones de Pedidos Pequeños</td><td>small_orders</td><td>Attached to bouquet orders</td><td>v1.0</td><td>1,077 chars</td></tr>
+            <tr><td>LT-003</td><td>Condiciones del Servicio (Eventos)</td><td>event_quotes</td><td>Attached to event quotes — signed</td><td>v1.0</td><td>3,307 chars</td></tr>
+            <tr><td>LT-004</td><td>Aviso de Privacidad Integral</td><td>all_customers</td><td>Full LFPDPPP notice — website + stored</td><td>v1.0</td><td>5,019 chars</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Template Preview (with placeholder substitution)</div>
+        <div class="wf-field placeholder">[Nombre o razón social] → Assumptions!B5 → "Flor by Maria"</div>
+        <div class="wf-field placeholder">[domicilio] → Assumptions!B6 → (business address)</div>
+        <div class="wf-field placeholder">[TELÉFONO] → Assumptions!B7 → (WhatsApp number)</div>
+        <div class="wf-field placeholder">[BANCO] → Assumptions (new field needed) → (bank name)</div>
+        <div class="wf-field placeholder">[CLABE] → Assumptions (new field needed) → (18-digit CLABE)</div>
+        <div class="wf-note blue">28 placeholders total — see Template Variables sheet for full mapping. 11 new fields needed on Assumptions sheet (banking info, configurable defaults).</div>
+      </div>
+    </div>
+
+    <!-- ===== SETTINGS ===== -->
+    <div class="screen" id="screen-settings">
+      <div class="screen-header">
+        <div>
+          <h2>Settings</h2>
+          <div class="subtitle">Business configuration · pricing rules · banking info</div>
+        </div>
+      </div>
+
+      <div class="wf-grid-2">
+        <div class="wf-box">
+          <div class="wf-box-label">Business Details</div>
+          <div class="wf-field bold">Business name: Flor by Maria</div>
+          <div class="wf-field placeholder">Address: ____</div>
+          <div class="wf-field placeholder">Phone / WhatsApp: ____</div>
+          <div class="wf-field placeholder">Email: ____</div>
+        </div>
+        <div class="wf-box">
+          <div class="wf-box-label">Pricing Rules</div>
+          <div class="wf-field">Flowers multiplier: 2.5x</div>
+          <div class="wf-field">Other materials multiplier: 2.0x</div>
+          <div class="wf-field">Labor & design surcharge: 40%</div>
+          <div class="wf-field">IVA: 16%</div>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Banking Info (for SPEI payments — NEW FIELDS NEEDED)</div>
+        <div class="wf-field placeholder">BANCO: ____ (e.g. BBVA, Santander)</div>
+        <div class="wf-field placeholder">CLABE: ____ (18 digits)</div>
+        <div class="wf-field placeholder">TITULAR: ____ (account holder)</div>
+        <div class="wf-note">These feed into LT-003 (Service Terms) via [BANCO], [CLABE], [TITULAR] placeholders.</div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Configurable Defaults (NEW FIELDS NEEDED)</div>
+        <div class="wf-grid-2">
+          <div class="wf-field placeholder">min_lead_hours: 48</div>
+          <div class="wf-field placeholder">rush_fee_pct: 20%</div>
+          <div class="wf-field placeholder">quote_validity_days: 15</div>
+          <div class="wf-field placeholder">design_change_cutoff: 30 days</div>
+          <div class="wf-field placeholder">rental_deposit_refund: 7 days</div>
+          <div class="wf-field placeholder">privacy_response_days: 20</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== STAFF (FUTURE) ===== -->
+    <div class="screen" id="screen-staff">
+      <div class="screen-header">
+        <div>
+          <h2>Staff & Crew</h2>
+          <div class="subtitle">Future — structured staff tracking with per-person metrics</div>
+        </div>
+      </div>
+
+      <div class="wf-note">⚠️ This screen is for Phase 3. Currently Executed By / Delivered By / Discovered By are free-text fields. This screen replaces them with FK lookups to the Staff sheet.</div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Staff Directory</div>
+        <table class="wf-table">
+          <thead><tr><th>Staff ID</th><th>Name</th><th>Type</th><th>Skills</th><th>Pay Rate</th><th>Active</th></tr></thead>
+          <tbody>
+            <tr><td>STAFF-001</td><td>Maria Verduzco</td><td>internal</td><td>assembly, delivery, design, ...</td><td>—</td><td>Yes ✓</td></tr>
+            <tr><td>STAFF-002</td><td>(Example Assistant)</td><td>freelance</td><td>conditioning, setup, teardown</td><td>$100/hr</td><td>No</td></tr>
+          </tbody>
+        </table>
+        <div class="wf-note blue">Future: link to Execution Logs (who assembled what), Orders (who delivered), Losses (who discovered). Enables per-person metrics: waste rate, on-time delivery, avg assembly time.</div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  document.querySelectorAll('.zone-item').forEach(i => i.classList.remove('active'));
+  const navItem = document.getElementById('nav-' + id);
+  if (navItem) navItem.classList.add('active');
+  // Close sidebar on mobile
+  if (window.innerWidth <= 768) {
+    document.getElementById('sidebar').classList.remove('open');
+    document.querySelector('.overlay').classList.remove('open');
+  }
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.querySelector('.overlay').classList.toggle('open');
+}
+
+// Default screen
+showScreen('dashboard');
+</script>
+
+</body>
+</html>
