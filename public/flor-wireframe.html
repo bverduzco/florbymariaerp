@@ -340,6 +340,9 @@
         <li class="zone-item" onclick="showScreen('catalogue')" id="nav-catalogue">
           <span class="icon">🌸</span> Catalogue
         </li>
+        <li class="zone-item" onclick="showScreen('custom')" id="nav-custom">
+          <span class="icon">🎨</span> Custom Builder
+        </li>
       </ul>
     </div>
 
@@ -386,7 +389,7 @@
           <span class="icon">📄</span> Legal Templates
         </li>
         <li class="zone-item" onclick="showScreen('settings')" id="nav-settings">
-          <span class="icon">⚙️</span> Settings
+          <span class="icon">⚙️</span> Settings & Price Lists
         </li>
       </ul>
     </div>
@@ -1052,6 +1055,70 @@
       </div>
     </div>
 
+    <!-- ===== CUSTOM BUILDER ===== -->
+    <div class="screen" id="screen-custom">
+      <div class="screen-header">
+        <div>
+          <h2>Custom Bouquet Builder</h2>
+          <div class="subtitle">Pick materials and quantities to design a custom bouquet · 67 flowers to choose from!</div>
+        </div>
+        <div>
+          <span class="wf-btn">Sort: Name ▾</span>
+          <span class="wf-btn">Filter: All ▾</span>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Material List (left column)</div>
+        <table class="wf-table">
+          <thead><tr><th>Material</th><th>Type</th><th>Price/Stem</th><th>Qty</th><th>Line Total</th></tr></thead>
+          <tbody>
+            <tr><td>Clavel Blanco</td><td>flower</td><td>$7.92</td><td>5</td><td>$39.58</td></tr>
+            <tr><td>Eucalipto Dolar</td><td>foliage</td><td>$8.08</td><td>3</td><td>$24.25</td></tr>
+            <tr><td>Rosa Larga</td><td>flower</td><td>$7.92</td><td>7</td><td>$55.42</td></tr>
+            <tr><td colspan="5" style="color: var(--stone-light); text-align: center; padding: 12px;">... 64 more materials available · sort by Name / Price / Type</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="wf-grid-2">
+        <div class="wf-box">
+          <div class="wf-box-label">Live Preview (right column, sticky)</div>
+          <div class="wf-field bold">Materials: 3 · Stems: 15</div>
+          <div class="wf-field">Flowers cost: $95.00</div>
+          <div class="wf-field">Other materials: $24.25</div>
+          <div class="wf-field">Total cost: $119.25</div>
+          <div class="wf-field">Flowers ×2.5: $237.50</div>
+          <div class="wf-field">Other ×2.0: $48.50</div>
+          <div class="wf-field">Labor +40%: $114.40</div>
+          <div class="wf-field bold" style="font-size: 16px; color: var(--rose);">Suggested price: $400.40</div>
+          <div class="wf-field">With IVA (16%): $464.46</div>
+          <div class="wf-field placeholder">Your price: $____ (set manually)</div>
+          <div style="margin-top: 8px;">
+            <span class="wf-btn primary">💾 Save as Recipe</span>
+            <span class="wf-btn success">📦 Create Order</span>
+          </div>
+        </div>
+        <div class="wf-box">
+          <div class="wf-box-label">Selected Materials</div>
+          <div class="wf-card">
+            <div class="wf-card-header"><span class="wf-card-title">Rosa Larga ×7</span><span>$55.42</span></div>
+            <div class="wf-field placeholder">Color: Peach · Unit: stem</div>
+          </div>
+          <div class="wf-card">
+            <div class="wf-card-header"><span class="wf-card-title">Clavel Blanco ×5</span><span>$39.58</span></div>
+            <div class="wf-field placeholder">Color: White · Unit: stem</div>
+          </div>
+          <div class="wf-card">
+            <div class="wf-card-header"><span class="wf-card-title">Eucalipto Dolar ×3</span><span>$24.25</span></div>
+            <div class="wf-field placeholder">Color: Green · Unit: stem</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="wf-note blue">🎨 When saved as recipe, appears in Catalogue tab following ERP pricing rules. When "Create Order" clicked, creates order with custom bouquet + breakdown.</div>
+    </div>
+
     <!-- ===== RECIPES ===== -->
     <div class="screen" id="screen-recipes">
       <div class="screen-header">
@@ -1247,6 +1314,52 @@
           <div class="wf-field placeholder">rental_deposit_refund: 7 days</div>
           <div class="wf-field placeholder">privacy_response_days: 20</div>
         </div>
+      </div>
+
+      <div class="wf-box" style="border-color: var(--rose); background: #FDF2F8;">
+        <div class="wf-box-label" style="color: var(--rose);">Price List Management</div>
+        <div class="wf-field bold" style="color: var(--rose);">Update supplier price lists from received quotes</div>
+        <div class="wf-note blue">When you receive a new price quote from a supplier (WhatsApp photo, email, PDF), use this to update all prices at once. Each update creates new rows in Supplier Prices (is_latest = yes on new, no on old).</div>
+
+        <div style="margin-top: 12px;">
+          <div class="wf-field bold">Supplier: <span style="color: var(--rose);">LA FINCA ▾</span></div>
+          <div class="wf-field placeholder">Upload price list photo/PDF or enter prices manually</div>
+          <div class="wf-grid-2" style="margin-top: 8px;">
+            <div class="wf-field placeholder">Bulk paste: SKU, Price per line</div>
+            <div class="wf-field placeholder">Or upload Excel/CSV from supplier</div>
+          </div>
+        </div>
+
+        <table class="wf-table" style="margin-top: 12px;">
+          <thead><tr><th>SKU</th><th>Material</th><th>Old Price</th><th>New Price</th><th>Change</th><th>Units/Pack</th></tr></thead>
+          <tbody>
+            <tr><td>FLR-ROSA-LARGA</td><td>ROSA LARGA</td><td>$190</td><td>$200</td><td style="color: var(--amber); font-weight: 600;">+5.3%</td><td>24</td></tr>
+            <tr><td>FLR-ALSTROMELIA</td><td>ALSTROMELIA</td><td>$42</td><td>$45</td><td style="color: var(--amber); font-weight: 600;">+7.1%</td><td>12</td></tr>
+            <tr><td>FLR-GIPSOFILIA</td><td>GIPSOFILIA</td><td>$80</td><td>$80</td><td style="color: var(--green);">no change</td><td>12</td></tr>
+            <tr><td colspan="6" style="color: var(--stone-light); text-align: center; padding: 8px;">... preview all changes before applying</td></tr>
+          </tbody>
+        </table>
+
+        <div class="wf-field bold" style="margin-top: 8px;">3 prices changing · 1 unchanged · 0 new materials</div>
+        <div class="wf-note">⚠️ This will update Materials.Pack Price + Materials.Unit Cost for all affected SKUs. Recipes and Product costs will recalculate automatically.</div>
+
+        <div style="margin-top: 8px;">
+          <span class="wf-btn primary">✓ Apply Price Update</span>
+          <span class="wf-btn outline">Cancel</span>
+          <span class="wf-btn outline">Switch Supplier ▾</span>
+        </div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Price Update History</div>
+        <table class="wf-table">
+          <thead><tr><th>Date</th><th>Supplier</th><th>SKUs Updated</th><th>Avg Change</th><th>Applied By</th></tr></thead>
+          <tbody>
+            <tr><td>Oct 25, 2026</td><td>Florería García</td><td>15 SKUs</td><td style="color: var(--green);">-15.2% avg</td><td>Maria</td></tr>
+            <tr><td>Oct 19, 2026</td><td>LA FINCA</td><td>6 SKUs</td><td style="color: var(--amber);">+3.4% avg</td><td>Maria</td></tr>
+            <tr><td>Oct 14, 2026</td><td>PRO FLOR</td><td>10 SKUs</td><td>— (new supplier)</td><td>Maria</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
