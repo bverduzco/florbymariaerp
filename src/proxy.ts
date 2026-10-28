@@ -37,6 +37,7 @@ const PUBLIC_PREFIXES = [
   "/favicon.ico",
   "/logo.svg",
   "/robots.txt",
+  "/flor-wireframe.html",
 ]
 
 // In Next.js 16, this must be named `proxy` (or be a default export).
