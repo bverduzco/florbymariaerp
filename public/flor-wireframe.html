@@ -1350,11 +1350,6 @@
           <h2>Calendar</h2>
           <div class="subtitle">Capacity + season/holiday/trend overlay · v1.8.1</div>
         </div>
-        <div>
-          <span class="wf-btn">November 2026 ▾</span>
-          <button id="markersToggleBtn" class="wf-btn outline" onclick="toggleMarkers(this)" style="cursor: pointer;" title="Show/hide season/holiday/trend overlay">🎨 Markers: ON</button>
-          <span class="wf-btn warning" style="background: var(--amber);">🚫 Block Date</span>
-        </div>
       </div>
 
       <!-- Horizontal compact summary bar (replaces vertical 4-card grid) -->
@@ -1381,6 +1376,13 @@
         </div>
       </div>
 
+      <!-- Action buttons row — left-aligned, under the summary bar (v1.8.1 reorder) -->
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center;">
+        <span class="wf-btn">November 2026 ▾</span>
+        <button id="markersToggleBtn" class="wf-btn outline" onclick="toggleMarkers(this)" style="cursor: pointer;" title="Show/hide season/holiday/trend overlay">🎨 Markers: ON</button>
+        <span class="wf-btn warning" style="background: var(--amber);">🚫 Block Date</span>
+      </div>
+
       <!-- Season markers legend (v1.8.1) — toggled by Markers button -->
       <div id="markersLegend" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; font-size: 12px;">
         <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 12px; background: #EDE9FE; color: #5B21B6; border: 1px solid #C4B5FD;">
@@ -1405,6 +1407,11 @@
         </span>
       </div>
 
+      <!-- ============================================================ -->
+      <!-- v1.8.1 ORDER: Month grid → Order schedule → Season → Block → Rhythm -->
+      <!-- ============================================================ -->
+
+      <!-- 1️⃣ Month Grid -->
       <div class="wf-box">
         <div class="wf-box-label">November 2026 — Month Grid</div>
         <table class="wf-table" style="text-align: center;">
@@ -1469,11 +1476,25 @@
           🟢 Green = available · 🟡 Yellow = approaching limit · 🔴 Red = blocked · ⬜ Gray = off day<br>
           <strong>Purple strip</strong> = active SeasonMarker (Wedding Season Oct–Feb). <strong>Orange outline on Nov 1</strong> = Día de Muertos holiday overlaps Wedding Season.<br>
           Click any date → see details, markers, or block it.<br>
-          💡 Use the <strong>🎨 Markers: ON/OFF</strong> button in the top bar to hide the overlay if it feels busy.
+          💡 Use the <strong>🎨 Markers: ON/OFF</strong> button above to hide the overlay if it feels busy.
         </div>
       </div>
 
-      <!-- SeasonMarkers management (v1.8.1 new) -->
+      <!-- 2️⃣ Order Schedule -->
+      <div class="wf-box">
+        <div class="wf-box-label">Order Schedule — Pipeline & Conflict Flags</div>
+        <table class="wf-table">
+          <thead><tr><th>Order/Event</th><th>Delivery Date</th><th>Procurement</th><th>Assembly</th><th>Labor Min</th><th>Cooler</th><th>Date Conflict</th><th>Adjacent</th><th>Rush</th><th>Warnings</th></tr></thead>
+          <tbody>
+            <tr><td>ORD-1001</td><td>Oct 22</td><td>Oct 19</td><td>Oct 21</td><td>30</td><td>1</td><td>FALSE</td><td>FALSE</td><td>FALSE</td><td>—</td></tr>
+            <tr><td>EVT-2001</td><td>Dec 12</td><td>Dec 9</td><td>Dec 11</td><td>480</td><td>3</td><td>FALSE</td><td style="color: var(--amber);">TRUE</td><td>FALSE</td><td>⚠ Near blocked date (Dec 8 Sunday)</td></tr>
+          </tbody>
+        </table>
+        <div class="wf-note blue">📅 Pipeline: Procurement = Delivery − 3 days · Assembly = Delivery − 1 day · Conditioning same day as Procurement.<br>
+        ⚠️ Shopping List WARNS (doesn't block) when capacity exceeded or dates are near blocked. Maria can override.</div>
+      </div>
+
+      <!-- 3️⃣ Season / Holiday / Trend Markers -->
       <div class="wf-box" style="border-color: #8B5CF6; background: #F5F3FF;">
         <div class="wf-box-label" style="color: #5B21B6;">📅 Season / Holiday / Trend Markers (v1.8.1)</div>
         <table class="wf-table">
@@ -1490,6 +1511,7 @@
         <div class="wf-note blue">ℹ️ <strong>Markers never block</strong>. They tint day cells in the grid and surface hints in the Shopping List (yellow banner, optional acknowledge). Edit in <code>SeasonMarkers</code> Excel sheet — Excel-first per project convention.</div>
       </div>
 
+      <!-- 4️⃣ Block Date Dialog -->
       <div class="wf-box" style="border-color: var(--amber); background: #FFFBEB;">
         <div class="wf-box-label" style="color: var(--amber);">Block Date Dialog (appears on click)</div>
         <div class="wf-field bold" style="color: var(--amber);">📅 Block: November 30, 2026</div>
@@ -1502,19 +1524,7 @@
         </div>
       </div>
 
-      <div class="wf-box">
-        <div class="wf-box-label">Order Schedule — Pipeline & Conflict Flags</div>
-        <table class="wf-table">
-          <thead><tr><th>Order/Event</th><th>Delivery Date</th><th>Procurement</th><th>Assembly</th><th>Labor Min</th><th>Cooler</th><th>Date Conflict</th><th>Adjacent</th><th>Rush</th><th>Warnings</th></tr></thead>
-          <tbody>
-            <tr><td>ORD-1001</td><td>Oct 22</td><td>Oct 19</td><td>Oct 21</td><td>30</td><td>1</td><td>FALSE</td><td>FALSE</td><td>FALSE</td><td>—</td></tr>
-            <tr><td>EVT-2001</td><td>Dec 12</td><td>Dec 9</td><td>Dec 11</td><td>480</td><td>3</td><td>FALSE</td><td style="color: var(--amber);">TRUE</td><td>FALSE</td><td>⚠ Near blocked date (Dec 8 Sunday)</td></tr>
-          </tbody>
-        </table>
-        <div class="wf-note blue">📅 Pipeline: Procurement = Delivery − 3 days · Assembly = Delivery − 1 day · Conditioning same day as Procurement.<br>
-        ⚠️ Shopping List WARNS (doesn't block) when capacity exceeded or dates are near blocked. Maria can override.</div>
-      </div>
-
+      <!-- 5️⃣ Weekly Rhythm -->
       <div class="wf-box">
         <div class="wf-box-label">Weekly Rhythm</div>
         <table class="wf-table">
