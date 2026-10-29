@@ -30,6 +30,7 @@ export async function GET(
     "v1.8": "ERP Zai v1.8.xlsx",
     "v1.8.1": "ERP Zai v1.8.1.xlsx",
     "v1.8.2": "ERP Zai v1.8.2.xlsx",
+    "v1.8.3": "ERP Zai v1.8.3.xlsx",
   };
 
   const fileName = VERSION_MAP[version];

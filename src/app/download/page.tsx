@@ -26,6 +26,7 @@ const VERSION_BY_FILENAME: Record<string, string> = {
   "ERP Zai v1.8.xlsx": "v1.8",
   "ERP Zai v1.8.1.xlsx": "v1.8.1",
   "ERP Zai v1.8.2.xlsx": "v1.8.2",
+  "ERP Zai v1.8.3.xlsx": "v1.8.3",
 };
 
 export default async function DownloadIndex() {
