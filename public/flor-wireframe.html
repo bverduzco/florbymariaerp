@@ -398,6 +398,9 @@
         <li class="zone-item" onclick="showScreen('expenses')" id="nav-expenses">
           <span class="icon">💸</span> Expenses
         </li>
+        <li class="zone-item" onclick="showScreen('payments')" id="nav-payments">
+          <span class="icon">💰</span> Payments
+        </li>
         <li class="zone-item" onclick="showScreen('calendar')" id="nav-calendar">
           <span class="icon">📅</span> Calendar
         </li>
@@ -530,6 +533,20 @@
         <div class="wf-box-label">Combined Gross Profit</div>
         <div class="wf-field bold" style="font-size: 18px;">$3,258.52</div>
         <div class="wf-field placeholder">Order Profit ($3,258) + Event Profit ($0)</div>
+      </div>
+
+      <div class="wf-box" style="border-color: var(--green); background: #ECFDF5;">
+        <div class="wf-box-label" style="color: var(--green);">Money In — This Month</div>
+        <div class="wf-field">Customer payments (orders): <strong style="color: var(--green);">$3,550</strong></div>
+        <div class="wf-field">Event deposits: <strong>$0</strong></div>
+        <div class="wf-field">Event final payments: <strong>$0</strong></div>
+        <div class="wf-field bold" style="border-top: 2px solid var(--wireframe-border); color: var(--green);">Total money in: $3,550</div>
+      </div>
+
+      <div class="wf-box" style="border-color: var(--rose); background: #FDF2F8;">
+        <div class="wf-box-label" style="color: var(--rose);">Net Cash Flow</div>
+        <div class="wf-field bold" style="font-size: 20px; color: var(--green);">+$1,018</div>
+        <div class="wf-field placeholder">Money In ($3,550) − Money Out ($2,532)</div>
       </div>
     </div>
 
@@ -687,14 +704,22 @@
         </div>
         <div style="margin-top:8px;">
           <span class="wf-btn success">Mark Delivered</span>
-          <span class="wf-btn">Record Payment</span>
+          <span class="wf-btn primary">💰 Record Payment</span>
           <span class="wf-btn outline">View Execution Log</span>
         </div>
       </div>
 
+      <div class="wf-box" style="border-color: var(--green); background: #ECFDF5;">
+        <div class="wf-box-label" style="color: var(--green);">Payment Status</div>
+        <div class="wf-field bold" style="color: var(--green);">✅ PAID — $3,550 of $3,550 (100%)</div>
+        <div class="wf-field placeholder">Amount Paid: $3,550 · Balance Due: $0 · Method: spei</div>
+        <div class="wf-note" style="background: #ECFDF5; border-color: #A7F3D0; color: #065F46;">✅ Procurement UNLOCKED — this order is fully paid. Materials can be procured.</div>
+      </div>
+
       <div class="wf-box">
-        <div class="wf-box-label">Payment Tracking (v1.14 gap — needs Excel build)</div>
-        <div class="wf-note">⚠️ Payment Status, Amount Paid, Balance Due not yet built in Excel. Needs: 6 columns on Orders + Payment History sheet.</div>
+        <div class="wf-box-label">Unpaid Orders (procurement blocked)</div>
+        <div class="wf-note">⚠️ Unpaid orders CANNOT be procured. The Shopping List excludes unpaid orders and shows a warning. Small orders must be 100% paid before any materials are bought.</div>
+        <div class="wf-field placeholder">No unpaid orders — all current orders are paid ✓</div>
       </div>
     </div>
 
@@ -920,11 +945,11 @@
         <div class="wf-box">
           <div class="wf-box-label">Purchase Orders (formal)</div>
           <table class="wf-table">
-            <thead><tr><th>PO #</th><th>Date</th><th>Supplier</th><th>Items</th><th>Total</th><th>Status</th></tr></thead>
+            <thead><tr><th>PO #</th><th>Date</th><th>Supplier</th><th>Items</th><th>Total</th><th>Receipt</th><th>Payment</th><th>Action</th></tr></thead>
             <tbody>
-              <tr><td>PO-3007</td><td>Oct 19</td><td>LA FINCA</td><td>6 items</td><td>$478</td><td>Received</td></tr>
-              <tr><td>PO-3006</td><td>Oct 12</td><td>LA FINCA</td><td>7 items</td><td>$715</td><td>Received</td></tr>
-              <tr><td>PO-3005</td><td>Oct 5</td><td>LA FINCA</td><td>6 items</td><td>$486</td><td>Received</td></tr>
+              <tr><td>PO-3007</td><td>Oct 19</td><td>LA FINCA</td><td>6 items</td><td>$478</td><td><span class="wf-status accepted">Received</span></td><td><span class="wf-status accepted">PAID</span></td><td><span class="wf-btn outline" style="font-size:10px;padding:2px 6px;">💰 Pay</span></td></tr>
+              <tr><td>PO-3006</td><td>Oct 12</td><td>LA FINCA</td><td>7 items</td><td>$715</td><td><span class="wf-status accepted">Received</span></td><td><span class="wf-status accepted">PAID</span></td><td><span class="wf-btn outline" style="font-size:10px;padding:2px 6px;">💰 Pay</span></td></tr>
+              <tr><td>PO-3005</td><td>Oct 5</td><td>LA FINCA</td><td>6 items</td><td>$486</td><td><span class="wf-status accepted">Received</span></td><td><span class="wf-status accepted">PAID</span></td><td><span class="wf-btn outline" style="font-size:10px;padding:2px 6px;">💰 Pay</span></td></tr>
             </tbody>
           </table>
         </div>
@@ -1230,6 +1255,66 @@
         <div class="wf-field bold">Total Cost: $141.78 · Lines to Review: 3 (NO COST items need pricing)</div>
         <div class="wf-note">Check column flags: OK / NO COST / NO QTY / SET PACK SIZE / SKU NOT FOUND / ASSUMED PACK</div>
       </div>
+    </div>
+
+    <!-- ===== PAYMENTS ===== -->
+    <div class="screen" id="screen-payments">
+      <div class="screen-header">
+        <div>
+          <h2>Payments</h2>
+          <div class="subtitle">Unified money ledger — all payments in and out</div>
+        </div>
+        <div>
+          <span class="wf-btn">Filter: All ▾</span>
+          <span class="wf-btn primary">+ Record Payment</span>
+        </div>
+      </div>
+
+      <div class="wf-grid-3" style="margin-bottom: 16px;">
+        <div class="wf-stat"><div class="wf-stat-value" style="color: var(--green);">$3,550</div><div class="wf-stat-label">Money In (This Month)</div></div>
+        <div class="wf-stat"><div class="wf-stat-value" style="color: var(--amber);">$1,679</div><div class="wf-stat-label">Money Out (This Month)</div></div>
+        <div class="wf-stat"><div class="wf-stat-value" style="color: var(--green);">$1,871</div><div class="wf-stat-label">Net Cash Flow</div></div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Recent Payments (newest first)</div>
+        <table class="wf-table">
+          <thead><tr><th>Payment ID</th><th>Date</th><th>Direction</th><th>Type</th><th>Linked ID</th><th>Name</th><th>Amount</th><th>Method</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>PAY-0001</td><td>Oct 21</td><td><span style="color: var(--green); font-weight: 600;">IN ▲</span></td><td>order_full</td><td>ORD-1001</td><td>Cliente Ejemplo</td><td>$3,550</td><td>spei</td><td><span class="wf-status accepted">confirmed</span></td></tr>
+            <tr><td>PAY-0002</td><td>Oct 19</td><td><span style="color: var(--amber); font-weight: 600;">OUT ▼</span></td><td>po</td><td>PO-3007</td><td>LA FINCA</td><td>$478</td><td>transfer</td><td><span class="wf-status accepted">confirmed</span></td></tr>
+            <tr><td>PAY-0003</td><td>Oct 12</td><td><span style="color: var(--amber); font-weight: 600;">OUT ▼</span></td><td>po</td><td>PO-3006</td><td>LA FINCA</td><td>$715</td><td>transfer</td><td><span class="wf-status accepted">confirmed</span></td></tr>
+            <tr><td>PAY-0004</td><td>Oct 5</td><td><span style="color: var(--amber); font-weight: 600;">OUT ▼</span></td><td>po</td><td>PO-3005</td><td>LA FINCA</td><td>$486</td><td>transfer</td><td><span class="wf-status accepted">confirmed</span></td></tr>
+            <tr><td>PAY-0005</td><td>Oct 18</td><td><span style="color: var(--green); font-weight: 600;">IN ▲</span></td><td>event_deposit</td><td>EVT-2001</td><td>Cliente Ejemplo</td><td>$0</td><td>—</td><td><span class="wf-status pending">pending</span></td></tr>
+          </tbody>
+        </table>
+        <div class="wf-field bold">Total: $3,550 in · $1,679 out · Net: +$1,871</div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Record Payment Dialog (appears on click)</div>
+        <div class="wf-grid-2">
+          <div>
+            <div class="wf-field bold">Direction: <span style="color: var(--green);">Inbound ▲</span> / <span style="color: var(--amber);">Outbound ▼</span></div>
+            <div class="wf-field placeholder">Type: order_full / event_deposit / event_final / po / expense / other</div>
+            <div class="wf-field placeholder">Linked ID: ORD-NNNN / EVT-NNNN / PO-NNNN</div>
+            <div class="wf-field placeholder">Amount: $____ MXN</div>
+          </div>
+          <div>
+            <div class="wf-field placeholder">Method: cash / spei / card / transfer / online_link</div>
+            <div class="wf-field placeholder">Reference: transaction ID or WhatsApp confirmation</div>
+            <div class="wf-field placeholder">Status: confirmed / pending / bounced</div>
+            <div class="wf-field placeholder">Notes: free text</div>
+          </div>
+        </div>
+        <div style="margin-top: 8px;">
+          <span class="wf-btn primary">✓ Save Payment</span>
+          <span class="wf-btn outline">Cancel</span>
+        </div>
+        <div class="wf-note blue">💰 Orders/Events/POs payment status columns update automatically from this sheet via SUMIFS formulas.</div>
+      </div>
+
+      <div class="wf-note">BUSINESS RULES: Small orders = 100% before procurement · Events = 50% deposit + 50% balance (14 days before event) · Suppliers = COD (full upfront).</div>
     </div>
 
     <!-- ===== EXPENSES ===== -->
