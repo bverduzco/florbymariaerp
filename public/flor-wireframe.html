@@ -1348,35 +1348,121 @@
       <div class="screen-header">
         <div>
           <h2>Calendar</h2>
-          <div class="subtitle">Capacity management & date blocking · v1.12 spec — NOT YET BUILT</div>
+          <div class="subtitle">Capacity management & date blocking · v1.8</div>
         </div>
         <div>
-          <span class="wf-btn">Month ▾</span>
-          <span class="wf-btn primary">Block Date</span>
+          <span class="wf-btn">November 2026 ▾</span>
+          <span class="wf-btn warning" style="background: var(--amber);">🚫 Block Date</span>
         </div>
       </div>
 
-      <div class="wf-note">⚠️ This screen requires the v1.12 Capacity n Calendar spec to be built in Excel first (BlockedDate + CapacityDay sheets). Not yet implemented.</div>
+      <div class="wf-grid-4" style="grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;">
+        <div class="wf-stat"><div class="wf-stat-value">240</div><div class="wf-stat-label">Labor min/day</div></div>
+        <div class="wf-stat"><div class="wf-stat-value">5</div><div class="wf-stat-label">Cooler slots (hard limit)</div></div>
+        <div class="wf-stat"><div class="wf-stat-value" style="color: var(--amber);">2</div><div class="wf-stat-label">Blocked dates (this month)</div></div>
+        <div class="wf-stat"><div class="wf-stat-value" style="color: var(--green);">3/5</div><div class="wf-stat-label">Cooler slots used (this week)</div></div>
+      </div>
 
       <div class="wf-box">
-        <div class="wf-box-label">Calendar View (placeholder — month grid)</div>
-        <div class="wf-grid-3">
-          <div class="wf-field placeholder" style="text-align:center;">Mon</div>
-          <div class="wf-field placeholder" style="text-align:center;">Tue</div>
-          <div class="wf-field placeholder" style="text-align:center;">Wed</div>
-          <div class="wf-field placeholder" style="text-align:center;">Thu</div>
-          <div class="wf-field placeholder" style="text-align:center;">Fri</div>
-          <div class="wf-field placeholder" style="text-align:center;background:#FEE2E2;">Sat 🚫</div>
-          <div class="wf-field placeholder" style="text-align:center;background:#F3F4F6;">Sun (off)</div>
+        <div class="wf-box-label">November 2026 — Month Grid</div>
+        <table class="wf-table" style="text-align: center;">
+          <thead><tr><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr></thead>
+          <tbody>
+            <tr>
+              <td style="background:#D1FAE5;color:#065F46;">2<br><small>0/240 min</small></td>
+              <td style="background:#D1FAE5;color:#065F46;">3<br><small>60/360 min</small><br><small>PROC</small></td>
+              <td style="background:#D1FAE5;color:#065F46;">4<br><small>0/240 min</small></td>
+              <td style="background:#FEF3C7;color:#92400E;">5<br><small>240/240 ⚠️</small><br><small>ASSEM</small></td>
+              <td style="background:#D1FAE5;color:#065F46;">6<br><small>120/240 min</small><br><small>DELIVER</small></td>
+              <td style="background:#F3F4F6;color:#9CA3AF;">7<br><small>OFF</small></td>
+              <td style="background:#FEE2E2;color:#991B1B;">8<br><small>🚫 BLOCKED</small><br><small>Sunday</small></td>
+            </tr>
+            <tr>
+              <td style="background:#D1FAE5;color:#065F46;">9<br><small>0/240 min</small></td>
+              <td style="background:#D1FAE5;color:#065F46;">10<br><small>90/360 min</small><br><small>PROC</small></td>
+              <td style="background:#D1FAE5;color:#065F46;">11<br><small>0/240 min</small></td>
+              <td style="background:#D1FAE5;color:#065F46;">12<br><small>60/240 min</small></td>
+              <td style="background:#D1FAE5;color:#065F46;">13<br><small>0/240 min</small></td>
+              <td style="background:#FEE2E2;color:#991B1B;">14<br><small>🚫 EVENT LOCK</small><br><small>EVT-2001</small></td>
+              <td style="background:#FEE2E2;color:#991B1B;">15<br><small>🚫 BLOCKED</small><br><small>EVT-2003 teardown</small></td>
+            </tr>
+            <tr>
+              <td style="background:#D1FAE5;color:#065F46;">16<br><small>0/240 min</small></td>
+              <td style="background:#D1FAE5;color:#065F46;">17<br><small>0/360 min</small><br><small>PROC</small></td>
+              <td style="background:#D1FAE5;color:#065F46;">18<br><small>0/240 min</small></td>
+              <td style="background:#D1FAE5;color:#065F46;">19<br><small>0/240 min</small></td>
+              <td style="background:#D1FAE5;color:#065F46;">20<br><small>0/240 min</small></td>
+              <td style="background:#F3F4F6;color:#9CA3AF;">21<br><small>OFF</small></td>
+              <td style="background:#FEE2E2;color:#991B1B;">22<br><small>🚫 BLOCKED</small><br><small>Sunday</small></td>
+            </tr>
+            <tr>
+              <td style="background:#D1FAE5;color:#065F46;">23<br><small>0/240 min</small></td>
+              <td style="background:#D1FAE5;color:#065F46;">24<br><small>0/360 min</small><br><small>PROC</small></td>
+              <td style="background:#FEE2E2;color:#991B1B;">25<br><small>⚠️ Near blocked</small></td>
+              <td style="background:#FEE2E2;color:#991B1B;">26<br><small>🚫 BLOCKED</small><br><small>Personal</small></td>
+              <td style="background:#FEF3C7;color:#92400E;">27<br><small>⚠️ Near blocked</small></td>
+              <td style="background:#F3F4F6;color:#9CA3AF;">28<br><small>OFF</small></td>
+              <td style="background:#FEE2E2;color:#991B1B;">29<br><small>🚫 BLOCKED</small><br><small>Sunday</small></td>
+            </tr>
+            <tr>
+              <td style="background:#D1FAE5;color:#065F46;">30<br><small>0/240 min</small></td>
+              <td style="background:#D1FAE5;color:#065F46;">1<br><small>0/360 min</small></td>
+              <td>2</td>
+              <td>3</td>
+              <td>4</td>
+              <td>5</td>
+              <td style="background:#FEE2E2;color:#991B1B;">6<br><small>🚫 BLOCKED</small><br><small>Sunday</small></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="wf-note">
+          🟢 Green = available (0-80% capacity) · 🟡 Yellow = 80-100% (approaching limit) · 🔴 Red = blocked or >100% · ⬜ Gray = off day<br>
+          Click any date → see details or block it. Tue=PROC (360 min), other days=240 min, Sun=0 (auto-blocked).
         </div>
-        <div class="wf-note blue">When built: shows orders, events, blocked dates in a month grid. Capacity gauge per day: labor minutes used/available, cooler slots used/available (5 max). Click any date → block it or see what's scheduled.</div>
       </div>
 
-      <div class="wf-grid-3">
-        <div class="wf-stat"><div class="wf-stat-value">240</div><div class="wf-stat-label">Labor min/day (4hr halftime)</div></div>
-        <div class="wf-stat"><div class="wf-stat-value">5</div><div class="wf-stat-label">Cooler slots (hard limit)</div></div>
-        <div class="wf-stat"><div class="wf-stat-value">±2</div><div class="wf-stat-label">Blocked date warning window</div></div>
+      <div class="wf-box" style="border-color: var(--amber); background: #FFFBEB;">
+        <div class="wf-box-label" style="color: var(--amber);">Block Date Dialog (appears on click)</div>
+        <div class="wf-field bold" style="color: var(--amber);">📅 Block: November 30, 2026</div>
+        <div class="wf-field placeholder">Reason: vacation / sick / personal / holiday / event_lock / other</div>
+        <div class="wf-field placeholder">Notes: free text</div>
+        <div class="wf-note">⚠️ Blocking this date will flag any orders with pipeline dates on or within ±2 days of this date. Shopping List will show a warning but won't block.</div>
+        <div style="margin-top: 8px;">
+          <span class="wf-btn warning" style="background: var(--amber);">✓ Block This Date</span>
+          <span class="wf-btn outline">Cancel</span>
+        </div>
       </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Order Schedule — Pipeline & Conflict Flags</div>
+        <table class="wf-table">
+          <thead><tr><th>Order/Event</th><th>Delivery Date</th><th>Procurement</th><th>Assembly</th><th>Labor Min</th><th>Cooler</th><th>Date Conflict</th><th>Adjacent</th><th>Rush</th><th>Warnings</th></tr></thead>
+          <tbody>
+            <tr><td>ORD-1001</td><td>Oct 22</td><td>Oct 19</td><td>Oct 21</td><td>30</td><td>1</td><td>FALSE</td><td>FALSE</td><td>FALSE</td><td>—</td></tr>
+            <tr><td>EVT-2001</td><td>Dec 12</td><td>Dec 9</td><td>Dec 11</td><td>480</td><td>3</td><td>FALSE</td><td style="color: var(--amber);">TRUE</td><td>FALSE</td><td>⚠ Near blocked date (Dec 8 Sunday)</td></tr>
+          </tbody>
+        </table>
+        <div class="wf-note blue">📅 Pipeline: Procurement = Delivery − 3 days · Assembly = Delivery − 1 day · Conditioning same day as Procurement.<br>
+        ⚠️ Shopping List WARNS (doesn't block) when capacity exceeded or dates are near blocked. Maria can override.</div>
+      </div>
+
+      <div class="wf-box">
+        <div class="wf-box-label">Weekly Rhythm</div>
+        <table class="wf-table">
+          <thead><tr><th>Day</th><th>Activity</th><th>Minutes</th><th>Cooler</th></tr></thead>
+          <tbody>
+            <tr><td>Monday</td><td>Ordering + admin</td><td>240 (4 hrs)</td><td>5 slots</td></tr>
+            <tr><td>Tuesday</td><td>Procurement + Conditioning (heavy day)</td><td>360 (6 hrs)</td><td>5 slots</td></tr>
+            <tr><td>Wednesday</td><td>Idle (flowers hydrating in cooler)</td><td>240 (4 hrs)</td><td>5 slots</td></tr>
+            <tr><td>Thursday</td><td>Assembly</td><td>240 (4 hrs)</td><td>5 slots</td></tr>
+            <tr><td>Friday</td><td>Assembly finishing + delivery</td><td>240 (4 hrs)</td><td>5 slots</td></tr>
+            <tr><td>Saturday</td><td>Event day / Off</td><td>240 (if event) / 0 (off)</td><td>5 slots</td></tr>
+            <tr><td style="color: var(--red);">Sunday</td><td style="color: var(--red);">OFF (auto-blocked)</td><td style="color: var(--red);">0</td><td style="color: var(--red);">0</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="wf-note">EVENT LOCKOUT RULE: When an event is on Saturday, the system auto-blocks Friday + Saturday + Sunday (Option A). No other orders can be scheduled on those days. Procurement for the event happens on the preceding Tuesday.</div>
     </div>
 
     <!-- ===== SUPPLIERS ===== -->
