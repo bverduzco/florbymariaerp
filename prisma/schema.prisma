@@ -65,6 +65,11 @@ model Product {
   marginPct               Float       @default(0)
   linesToReview           Int         @default(0)
   description             String?
+  // v1.8.3: Cloudinary public_id for product photo.
+  // Mirrors the "Cloudinary Public ID" column on the Products Excel sheet (col X).
+  // When set, <AssetImage> renders the photo via Cloudinary transformation URLs.
+  // Null = no photo yet (Excel cell blank).
+  cloudinaryPublicId      String?
   recipeLines             RecipeLine[]
   createdAt               DateTime    @default(now())
   updatedAt               DateTime    @updatedAt
