@@ -1348,77 +1348,145 @@
       <div class="screen-header">
         <div>
           <h2>Calendar</h2>
-          <div class="subtitle">Capacity management & date blocking · v1.8</div>
+          <div class="subtitle">Capacity + season/holiday/trend overlay · v1.8.1</div>
         </div>
         <div>
           <span class="wf-btn">November 2026 ▾</span>
+          <span class="wf-btn outline">Markers ▾</span>
           <span class="wf-btn warning" style="background: var(--amber);">🚫 Block Date</span>
         </div>
       </div>
 
-      <div class="wf-grid-4" style="grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;">
-        <div class="wf-stat"><div class="wf-stat-value">240</div><div class="wf-stat-label">Labor min/day</div></div>
-        <div class="wf-stat"><div class="wf-stat-value">5</div><div class="wf-stat-label">Cooler slots (hard limit)</div></div>
-        <div class="wf-stat"><div class="wf-stat-value" style="color: var(--amber);">2</div><div class="wf-stat-label">Blocked dates (this month)</div></div>
-        <div class="wf-stat"><div class="wf-stat-value" style="color: var(--green);">3/5</div><div class="wf-stat-label">Cooler slots used (this week)</div></div>
+      <!-- Horizontal compact summary bar (replaces vertical 4-card grid) -->
+      <div style="display: flex; flex-wrap: wrap; gap: 0; align-items: stretch; margin-bottom: 16px; border: 1px solid #E5E7EB; border-radius: 8px; overflow: hidden; background: #FFFFFF;">
+        <div style="flex: 1 1 0; padding: 10px 14px; border-right: 1px solid #E5E7EB; min-width: 120px;">
+          <div style="font-size: 18px; font-weight: 700; color: var(--stone);">240 <span style="font-size: 11px; font-weight: 500; color: var(--stone-light);">min/day</span></div>
+          <div style="font-size: 11px; color: var(--stone-light); margin-top: 2px;">Labor cap · Tue=360</div>
+        </div>
+        <div style="flex: 1 1 0; padding: 10px 14px; border-right: 1px solid #E5E7EB; min-width: 120px;">
+          <div style="font-size: 18px; font-weight: 700; color: var(--stone);">5 <span style="font-size: 11px; font-weight: 500; color: var(--stone-light);">slots</span></div>
+          <div style="font-size: 11px; color: var(--stone-light); margin-top: 2px;">Cooler hard limit</div>
+        </div>
+        <div style="flex: 1 1 0; padding: 10px 14px; border-right: 1px solid #E5E7EB; min-width: 120px;">
+          <div style="font-size: 18px; font-weight: 700; color: var(--green);">3/5 <span style="font-size: 11px; font-weight: 500; color: var(--stone-light);">used</span></div>
+          <div style="font-size: 11px; color: var(--stone-light); margin-top: 2px;">Cooler this week · 2 left</div>
+        </div>
+        <div style="flex: 1 1 0; padding: 10px 14px; border-right: 1px solid #E5E7EB; min-width: 120px;">
+          <div style="font-size: 18px; font-weight: 700; color: var(--amber);">2 <span style="font-size: 11px; font-weight: 500; color: var(--stone-light);">blocked</span></div>
+          <div style="font-size: 11px; color: var(--stone-light); margin-top: 2px;">This month</div>
+        </div>
+        <div style="flex: 1 1 0; padding: 10px 14px; min-width: 120px;">
+          <div style="font-size: 18px; font-weight: 700; color: #8B5CF6;">3 <span style="font-size: 11px; font-weight: 500; color: var(--stone-light);">markers</span></div>
+          <div style="font-size: 11px; color: var(--stone-light); margin-top: 2px;">Active this month</div>
+        </div>
+      </div>
+
+      <!-- Season markers legend (v1.8.1) -->
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; font-size: 12px;">
+        <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 12px; background: #EDE9FE; color: #5B21B6; border: 1px solid #C4B5FD;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: #8B5CF6; display: inline-block;"></span>
+          Wedding Season (Oct–Feb)
+        </span>
+        <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 12px; background: #FFF7ED; color: #9A3412; border: 1px solid #FDBA74;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: #F59E0B; display: inline-block;"></span>
+          Día de Muertos (Nov 1–2)
+        </span>
+        <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 12px; background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: #EF4444; display: inline-block;"></span>
+          Valentine's Feb 14 (HIGH)
+        </span>
+        <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 12px; background: #F0FDF4; color: #166534; border: 1px solid #BBF7D0;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: #10B981; display: inline-block;"></span>
+          Prom Season (May–Jun)
+        </span>
+        <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 12px; background: #EFF6FF; color: #1E40AF; border: 1px solid #BFDBFE;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: #3B82F6; display: inline-block;"></span>
+          Slow August (TREND)
+        </span>
       </div>
 
       <div class="wf-box">
         <div class="wf-box-label">November 2026 — Month Grid</div>
         <table class="wf-table" style="text-align: center;">
-          <thead><tr><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr></thead>
+          <thead><tr>
+            <th style="text-align: center; padding: 8px 4px;">Mon</th>
+            <th style="text-align: center; padding: 8px 4px;">Tue</th>
+            <th style="text-align: center; padding: 8px 4px;">Wed</th>
+            <th style="text-align: center; padding: 8px 4px;">Thu</th>
+            <th style="text-align: center; padding: 8px 4px;">Fri</th>
+            <th style="text-align: center; padding: 8px 4px;">Sat</th>
+            <th style="text-align: center; padding: 8px 4px;">Sun</th>
+          </tr></thead>
           <tbody>
             <tr>
-              <td style="background:#D1FAE5;color:#065F46;">2<br><small>0/240 min</small></td>
-              <td style="background:#D1FAE5;color:#065F46;">3<br><small>60/360 min</small><br><small>PROC</small></td>
-              <td style="background:#D1FAE5;color:#065F46;">4<br><small>0/240 min</small></td>
-              <td style="background:#FEF3C7;color:#92400E;">5<br><small>240/240 ⚠️</small><br><small>ASSEM</small></td>
-              <td style="background:#D1FAE5;color:#065F46;">6<br><small>120/240 min</small><br><small>DELIVER</small></td>
-              <td style="background:#F3F4F6;color:#9CA3AF;">7<br><small>OFF</small></td>
-              <td style="background:#FEE2E2;color:#991B1B;">8<br><small>🚫 BLOCKED</small><br><small>Sunday</small></td>
+              <td style="background:#D1FAE5;color:#065F46; height: 56px;"><div style="font-weight: 600;">2</div><small style="opacity: 0.7;">—</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">3</div><small>PROC</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">4</div><small style="opacity: 0.7;">—</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#FEF3C7;color:#92400E;"><div style="font-weight: 600;">5</div><small>ASSEM ⚠️</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">6</div><small>DELIVER</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#F3F4F6;color:#9CA3AF;"><div style="font-weight: 600;">7</div><small>OFF</small></td>
+              <td style="background:#FEE2E2;color:#991B1B;"><div style="font-weight: 600;">8</div><small>🚫 BLOCKED</small></td>
             </tr>
             <tr>
-              <td style="background:#D1FAE5;color:#065F46;">9<br><small>0/240 min</small></td>
-              <td style="background:#D1FAE5;color:#065F46;">10<br><small>90/360 min</small><br><small>PROC</small></td>
-              <td style="background:#D1FAE5;color:#065F46;">11<br><small>0/240 min</small></td>
-              <td style="background:#D1FAE5;color:#065F46;">12<br><small>60/240 min</small></td>
-              <td style="background:#D1FAE5;color:#065F46;">13<br><small>0/240 min</small></td>
-              <td style="background:#FEE2E2;color:#991B1B;">14<br><small>🚫 EVENT LOCK</small><br><small>EVT-2001</small></td>
-              <td style="background:#FEE2E2;color:#991B1B;">15<br><small>🚫 BLOCKED</small><br><small>EVT-2003 teardown</small></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">9</div><small style="opacity: 0.7;">—</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">10</div><small>PROC</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">11</div><small style="opacity: 0.7;">—</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">12</div><small>ASSEM</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">13</div><small>DELIVER</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#FEE2E2;color:#991B1B;"><div style="font-weight: 600;">14</div><small>🚫 EVENT LOCK</small></td>
+              <td style="background:#FEE2E2;color:#991B1B;"><div style="font-weight: 600;">15</div><small>🚫 BLOCKED</small></td>
             </tr>
             <tr>
-              <td style="background:#D1FAE5;color:#065F46;">16<br><small>0/240 min</small></td>
-              <td style="background:#D1FAE5;color:#065F46;">17<br><small>0/360 min</small><br><small>PROC</small></td>
-              <td style="background:#D1FAE5;color:#065F46;">18<br><small>0/240 min</small></td>
-              <td style="background:#D1FAE5;color:#065F46;">19<br><small>0/240 min</small></td>
-              <td style="background:#D1FAE5;color:#065F46;">20<br><small>0/240 min</small></td>
-              <td style="background:#F3F4F6;color:#9CA3AF;">21<br><small>OFF</small></td>
-              <td style="background:#FEE2E2;color:#991B1B;">22<br><small>🚫 BLOCKED</small><br><small>Sunday</small></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">16</div><small style="opacity: 0.7;">—</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">17</div><small>PROC</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">18</div><small style="opacity: 0.7;">—</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">19</div><small>ASSEM</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">20</div><small>DELIVER</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#F3F4F6;color:#9CA3AF;"><div style="font-weight: 600;">21</div><small>OFF</small></td>
+              <td style="background:#FEE2E2;color:#991B1B;"><div style="font-weight: 600;">22</div><small>🚫 BLOCKED</small></td>
             </tr>
             <tr>
-              <td style="background:#D1FAE5;color:#065F46;">23<br><small>0/240 min</small></td>
-              <td style="background:#D1FAE5;color:#065F46;">24<br><small>0/360 min</small><br><small>PROC</small></td>
-              <td style="background:#FEE2E2;color:#991B1B;">25<br><small>⚠️ Near blocked</small></td>
-              <td style="background:#FEE2E2;color:#991B1B;">26<br><small>🚫 BLOCKED</small><br><small>Personal</small></td>
-              <td style="background:#FEF3C7;color:#92400E;">27<br><small>⚠️ Near blocked</small></td>
-              <td style="background:#F3F4F6;color:#9CA3AF;">28<br><small>OFF</small></td>
-              <td style="background:#FEE2E2;color:#991B1B;">29<br><small>🚫 BLOCKED</small><br><small>Sunday</small></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">23</div><small style="opacity: 0.7;">—</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">24</div><small>PROC</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#FEE2E2;color:#991B1B;"><div style="font-weight: 600;">25</div><small>⚠ Near blocked</small></td>
+              <td style="background:#FEE2E2;color:#991B1B;"><div style="font-weight: 600;">26</div><small>🚫 BLOCKED</small></td>
+              <td style="background:#FEF3C7;color:#92400E;"><div style="font-weight: 600;">27</div><small>⚠ Near blocked</small></td>
+              <td style="background:#F3F4F6;color:#9CA3AF;"><div style="font-weight: 600;">28</div><small>OFF</small></td>
+              <td style="background:#FEE2E2;color:#991B1B;"><div style="font-weight: 600;">29</div><small>🚫 BLOCKED</small></td>
             </tr>
             <tr>
-              <td style="background:#D1FAE5;color:#065F46;">30<br><small>0/240 min</small></td>
-              <td style="background:#D1FAE5;color:#065F46;">1<br><small>0/360 min</small></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">30</div><small style="opacity: 0.7;">—</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">1</div><small>PROC</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px; box-shadow: 0 0 0 1px #F59E0B;"></div></td>
               <td>2</td>
               <td>3</td>
               <td>4</td>
               <td>5</td>
-              <td style="background:#FEE2E2;color:#991B1B;">6<br><small>🚫 BLOCKED</small><br><small>Sunday</small></td>
+              <td style="background:#FEE2E2;color:#991B1B;"><div style="font-weight: 600;">6</div><small>🚫 BLOCKED</small></td>
             </tr>
           </tbody>
         </table>
         <div class="wf-note">
-          🟢 Green = available (0-80% capacity) · 🟡 Yellow = 80-100% (approaching limit) · 🔴 Red = blocked or >100% · ⬜ Gray = off day<br>
-          Click any date → see details or block it. Tue=PROC (360 min), other days=240 min, Sun=0 (auto-blocked).
+          🟢 Green = available · 🟡 Yellow = approaching limit · 🔴 Red = blocked · ⬜ Gray = off day<br>
+          <strong>Purple strip</strong> = active SeasonMarker (Wedding Season Oct–Feb). <strong>Orange outline on Nov 1</strong> = Día de Muertos holiday overlaps Wedding Season.<br>
+          Click any date → see details, markers, or block it.
         </div>
+      </div>
+
+      <!-- SeasonMarkers management (v1.8.1 new) -->
+      <div class="wf-box" style="border-color: #8B5CF6; background: #F5F3FF;">
+        <div class="wf-box-label" style="color: #5B21B6;">📅 Season / Holiday / Trend Markers (v1.8.1)</div>
+        <table class="wf-table">
+          <thead><tr><th>Name</th><th>Type</th><th>Span</th><th>Color</th><th>Intensity</th><th>Recurrence</th><th>Effect</th></tr></thead>
+          <tbody>
+            <tr><td>Wedding Season</td><td>SEASON</td><td>Oct 1 – Feb 28</td><td><span style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: #8B5CF6; vertical-align: middle;"></span> Purple</td><td>HIGH</td><td>Yearly</td><td>Display only · tints day cells</td></tr>
+            <tr><td>Día de Muertos</td><td>HOLIDAY</td><td>Nov 1 – Nov 2</td><td><span style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: #F59E0B; vertical-align: middle;"></span> Orange</td><td>MEDIUM</td><td>Yearly</td><td>Display + hint</td></tr>
+            <tr><td>Día de las Madres</td><td>HOLIDAY</td><td>May 10</td><td><span style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: #EC4899; vertical-align: middle;"></span> Pink</td><td>HIGH</td><td>Yearly</td><td>Display + hint (roses +30%)</td></tr>
+            <tr><td>Valentine's (Amor y Amistad)</td><td>HOLIDAY</td><td>Feb 14</td><td><span style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: #EF4444; vertical-align: middle;"></span> Red</td><td>HIGH</td><td>Yearly</td><td>Display + hint (red roses spike)</td></tr>
+            <tr><td>Prom Season</td><td>SEASON</td><td>May 15 – Jun 30</td><td><span style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: #10B981; vertical-align: middle;"></span> Green</td><td>MEDIUM</td><td>Yearly</td><td>Display only</td></tr>
+            <tr><td>Slow August</td><td>TREND</td><td>Aug 1 – Aug 31</td><td><span style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: #3B82F6; vertical-align: middle;"></span> Blue</td><td>LOW</td><td>Yearly</td><td>Display only · caption</td></tr>
+          </tbody>
+        </table>
+        <div class="wf-note blue">ℹ️ <strong>Markers never block</strong>. They tint day cells in the grid and surface hints in the Shopping List (yellow banner, optional acknowledge). Edit in <code>SeasonMarkers</code> Excel sheet — Excel-first per project convention.</div>
       </div>
 
       <div class="wf-box" style="border-color: var(--amber); background: #FFFBEB;">
@@ -1463,6 +1531,7 @@
       </div>
 
       <div class="wf-note">EVENT LOCKOUT RULE: When an event is on Saturday, the system auto-blocks Friday + Saturday + Sunday (Option A). No other orders can be scheduled on those days. Procurement for the event happens on the preceding Tuesday.</div>
+      <div class="wf-note" style="background: #F5F3FF; border-color: #C4B5FD;">v1.8.1 ADDITION: SeasonMarkers are informational only. They never block quotes, never trigger hard warnings. They only tint calendar day cells and optionally surface yellow hint banners in the Shopping List when a HIGH-intensity HOLIDAY overlaps the procurement window.</div>
     </div>
 
     <!-- ===== SUPPLIERS ===== -->
