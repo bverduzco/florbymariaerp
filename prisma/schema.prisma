@@ -1,15 +1,28 @@
 // Floristry ERP — Prisma schema
+//
+// v1.9 (in progress): Catch-up batch — adds ~22 missing models that
+// already exist as Excel sheets but weren't yet in Prisma. Grouped by domain:
+//   A. Calendar & Capacity (BlockedDate, CapacityDay, SeasonMarker)
+//   B. Sales Pipeline (Quote, QuoteLine, EventLineItem)
+//   C. Money (Payment, Expense)
+//   D. Procurement & Inventory (SupplierPrice, StockMovement, Loss, AdHocPurchase)
+//   E. Execution (ExecutionLog, ExecutionLogLine)
+//   F. Reference (Staff, Tool, RecipeVersion, MaterialAvailability,
+//      MaterialSubstitution, RibbonProperty, PaperProperty, WorkbookSetting,
+//      LegalTemplate, TemplateVariable)
 
 generator client {
   provider = "prisma-client-js"
-  // Note: In Prisma 6.19+, driverAdapters is no longer a preview feature.
-  // It's stable and works without the previewFeatures declaration.
 }
 
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// EXISTING MODELS (v1.0 – v1.8.3)
+// ────────────────────────────────────────────────────────────────────────────
 
 model Supplier {
   id            String     @id @default(cuid())
@@ -21,6 +34,7 @@ model Supplier {
   paymentTerms  String?
   notes         String?
   materials     Material[]
+  supplierPrices SupplierPrice[]
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 }
@@ -42,9 +56,19 @@ model Material {
   unitsPerPack       Float?     // null = unknown / not set
   colors             String?
   notes              String?
-  substitutes        String?    // free-text list of acceptable substitute materials (e.g. "White rose → Avalanche or Mondial")
+  substitutes        String?
   recipeLines        RecipeLine[]
   stockAdjustments   StockAdjustment[]
+  // v1.9: back-relations for new models
+  supplierPrices     SupplierPrice[]
+  stockMovements     StockMovement[]
+  losses             Loss[]
+  adHocPurchases     AdHocPurchase[]
+  materialAvailabilities MaterialAvailability[]
+  substitutionsAsPrimary   MaterialSubstitution[] @relation("PrimaryMaterial")
+  substitutionsAsSubstitute MaterialSubstitution[] @relation("SubstituteMaterial")
+  ribbonProperty     RibbonProperty?
+  paperProperty      PaperProperty?
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 }
@@ -66,11 +90,12 @@ model Product {
   linesToReview           Int         @default(0)
   description             String?
   // v1.8.3: Cloudinary public_id for product photo.
-  // Mirrors the "Cloudinary Public ID" column on the Products Excel sheet (col X).
-  // When set, <AssetImage> renders the photo via Cloudinary transformation URLs.
-  // Null = no photo yet (Excel cell blank).
   cloudinaryPublicId      String?
   recipeLines             RecipeLine[]
+  // v1.9: back-relations
+  quoteLines              QuoteLine[]
+  eventLineItems          EventLineItem[]
+  recipeVersions          RecipeVersion[]
   createdAt               DateTime    @default(now())
   updatedAt               DateTime    @updatedAt
 }
@@ -106,15 +131,16 @@ model Customer {
   updatedAt DateTime @updatedAt
   orders    Order[]
   events    Event[]
+  // v1.9: back-relations
+  quotes    Quote[]
 
   @@unique([name, phone])
 }
 
 model Order {
   id              String   @id @default(cuid())
-  orderNumber     String   @unique // e.g. ORD-1001
+  orderNumber     String   @unique
   status          String   @default("draft")
-  // draft | quote_sent | awaiting_payment | payment_confirmed | procuring | producing | delivered | fulfilled | cancelled
 
   customerId      String
   customer        Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
@@ -124,29 +150,23 @@ model Order {
   deliveryDate    DateTime?
   deliveryAddress String?
 
-  // Notes
   cardMessage     String?
   deliveryNotes   String?
   internalNotes   String?
 
-  // Money
-  deliveryFee     Float    @default(100) // flat rate per address
+  deliveryFee     Float    @default(100)
   discount        Float    @default(0)
-  // subtotal, iva, total are computed (not stored)
 
-  // Sales pipeline tracking
   quoteSentAt       DateTime?
-  quoteSentVia      String? // whatsapp | email | sms | in_person
-  paymentMethod     String? // cash | spei | online_link | card
+  quoteSentVia      String?
+  paymentMethod     String?
   paymentOptionsSentAt DateTime?
   paymentInstructionsSent Boolean @default(false)
   paymentStatus     String   @default("not_started")
-  // not_started | pending | confirmed | refunded | failed
   paymentConfirmedAt DateTime?
   paymentAmount     Float?
-  paymentReference  String? // SPEI ref, Stripe charge ID, etc.
+  paymentReference  String?
 
-  // Procurement
   procurementStartedAt DateTime?
   producedAt           DateTime?
   deliveredAt          DateTime?
@@ -166,53 +186,38 @@ model OrderLineItem {
   productName String
   productSize String?
   qty         Int
-  unitPrice   Float // snapshot — locked at order time
+  unitPrice   Float
   createdAt   DateTime @default(now())
 }
 
-/**
- * Materials from external supplier catalogues (e.g. "El Gato" per-stem price list).
- * Each item links to its best-matching ERP SKU via erpSku (may be empty if no match).
- *
- * Used by the Custom tab to build custom bouquets on the fly.
- */
 model CustomMaterial {
   id           String   @id @default(cuid())
   name         String
   pricePerStem Float
-  type         String   // flower | foliage
-  class        String?  // wild | garden | exotic | romantic
-  source       String   @default("El Gato") // which catalogue this came from
-  erpSku       String?  // best-matching ERP SKU (may be null)
-  erpName      String?  // for display, denormalized
-  matchScore   Float?   // 0=perfect, 1=worst
-  matchConfidence String? // HIGH | MEDIUM | LOW | VERY_LOW | NO_MATCH
+  type         String
+  class        String?
+  source       String   @default("El Gato")
+  erpSku       String?
+  erpName      String?
+  matchScore   Float?
+  matchConfidence String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   customRecipeLines CustomRecipeLine[]
 }
 
-/**
- * A custom bouquet built by the user in the Custom tab.
- * When saved, also creates a Product + RecipeLine in the ERP tables
- * so it appears in the Catalogue tab.
- */
 model CustomRecipe {
   id              String   @id @default(cuid())
   name            String
-  size            String?  // Large | Medium | Small
+  size            String?
   description     String?
-  // Computed at save time using ERP pricing rules:
   flowersCost     Float    @default(0)
   otherMaterialsCost Float @default(0)
   totalCost       Float    @default(0)
   suggestedPrice  Float    @default(0)
-  actualPrice     Float    @default(0) // user-set
-  // Linked ERP product (created on save — only when hidden=false)
+  actualPrice     Float    @default(0)
   erpProductSku   String?  @unique
-  // When true: recipe is saved for reference but NOT created as ERP Product
-  // (used by "Create Order" flow — order line item carries the breakdown instead)
   hidden          Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -227,37 +232,27 @@ model CustomRecipeLine {
   customMaterialId String
   customMaterial   CustomMaterial @relation(fields: [customMaterialId], references: [id], onDelete: Cascade)
   qty              Int
-  // Snapshot of the material at the time of recipe creation
   materialName     String
   materialPrice    Float
-  materialType     String // flower | foliage
+  materialType     String
   createdAt        DateTime @default(now())
 }
 
-/**
- * UI-initiated stock movements (losses, expirations, adjustments, receipts).
- * These are separate from the Excel's Stock Movements tab — they track
- * changes made through the app's Inventory tab.
- */
 model StockAdjustment {
   id          String   @id @default(cuid())
   materialSku String
   material    Material @relation(fields: [materialSku], references: [sku], onDelete: Cascade)
-  deltaPacks  Float    // signed: +N for receipts/adjustments up, -N for losses/expiration
-  reason      String   // "loss" | "expiration" | "adjustment" | "receipt" | "sample" | "other"
+  deltaPacks  Float
+  reason      String
   notes       String?
   createdAt   DateTime @default(now())
 }
 
-/**
- * Purchase Orders generated from the Shopping List.
- * One PO per supplier per shopping list generation.
- */
 model PurchaseOrder {
   id              String   @id @default(cuid())
-  poNumber        String   @unique // e.g. PO-3001
+  poNumber        String   @unique
   supplier        String
-  status          String   @default("draft") // draft | approved | pending | procured | received | cancelled
+  status          String   @default("draft")
   totalCost       Float    @default(0)
   notes           String?
   createdAt       DateTime @default(now())
@@ -277,44 +272,541 @@ model PurchaseOrderLine {
   createdAt       DateTime @default(now())
 }
 
-/**
- * Shopping List snapshot — created each time the user generates a PDF
- * from the Shopping List panel. Has its own identifier (SL-0001, SL-0002, ...)
- * so the user can reference "SL-0003 for the week of 26/10" later, even after
- * more orders are added to the plan.
- *
- * Status is computed at generation time:
- *   - "complete" = every line's toBuyPacks = 0 (all materials covered by open POs)
- *   - "pending"  = at least one line still has remaining need (toBuyPacks > 0)
- */
 model ShoppingList {
   id              String   @id @default(cuid())
-  slNumber        String   @unique // e.g. SL-0001
-  weekStartDate   String?  // ISO yyyy-mm-dd (may be null if user didn't pick a week)
-  status          String   @default("pending") // pending | complete
-  itemsToBuyCount Int      @default(0) // count of lines with toBuyPacks > 0
-  totalToBuyPacks Int      @default(0) // sum of toBuyPacks across all lines
-  totalCost       Float    @default(0) // sum of totalPackCost (est. cost)
-  materialCount   Int      @default(0) // distinct materials in the snapshot
-  supplierCount   Int      @default(0) // distinct suppliers
-  generatedAt     DateTime @default(now()) // when the PDF was generated
+  slNumber        String   @unique
+  weekStartDate   String?
+  status          String   @default("pending")
+  itemsToBuyCount Int      @default(0)
+  totalToBuyPacks Int      @default(0)
+  totalCost       Float    @default(0)
+  materialCount   Int      @default(0)
+  supplierCount   Int      @default(0)
+  generatedAt     DateTime @default(now())
   createdAt       DateTime @default(now())
 }
 
-/**
- * Events bundle multiple orders under one occasion (wedding, corporate, etc.)
- */
 model Event {
   id          String   @id @default(cuid())
-  eventNumber String   @unique // EVT-2001
+  eventNumber String   @unique
   name        String
   customerId  String?
   customer    Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
   eventDate   DateTime?
   guests      Int?
-  status      String   @default("quote") // quote | confirmed | in_progress | completed | cancelled
+  status      String   @default("quote")
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   orders      Order[]
+  // v1.9: back-relations
+  lineItems   EventLineItem[]
+  executionLogs ExecutionLog[]
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// v1.9 BATCH A — CALENDAR & CAPACITY (v1.8 + v1.8.1 specs)
+// ────────────────────────────────────────────────────────────────────────────
+
+// v1.8: Dates when Maria is unavailable (Sundays, holidays, vacation, etc.)
+// Auto-seeded with Sundays × 12 months + Mexican holidays.
+// Hard-blocks: quotes can't be scheduled on these dates.
+model BlockedDate {
+  id          String   @id @default(cuid())
+  date        DateTime @unique
+  reason      String   // sunday | holiday | vacation | sick | personal | event_lock | other
+  notes       String?
+  blockedBy   String   @default("system")  // system | Maria | staff_id
+  sourceRowKey String? @unique
+  createdAt   DateTime @default(now())
+
+  @@index([date])
+}
+
+// v1.8: Per-day capacity for Maria (single florist).
+// Pre-populated for 90 days with day-of-week defaults.
+// WARN-only (not hard-block) when capacity exceeded.
+model CapacityDay {
+  id                  String   @id @default(cuid())
+  date                DateTime @unique
+  dayOfWeek           String   // Monday | Tuesday | ...
+  isWorkingDay        Boolean  @default(true)
+  isProcurementDay    Boolean  @default(false)
+  minutesAvailable    Int      @default(240)  // Mon=240, Tue=360 (procurement), Sun=0
+  minutesUsed         Int      @default(0)
+  utilizationPct      Float?   // computed (0-1.0+) — null when minutesAvailable=0
+  coolerSlotsAvailable Int     @default(5)   // hard physical limit
+  coolerSlotsUsed      Int     @default(0)
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([date])
+}
+
+// v1.8.1: Season / Holiday / Trend markers for the Calendar screen.
+// Informational ONLY — never blocks quotes. Tints day cells + surfaces hints.
+model SeasonMarker {
+  id             String   @id @default(cuid())
+  markerId       String   @unique  // sm_001, sm_002, ...
+  name           String                            // "Día de las Madres"
+  type           String                            // SEASON | HOLIDAY | TREND
+  startDate      DateTime
+  endDate        DateTime?                         // null = single day
+  color          String   @default("#A78BFA")    // hex
+  intensity      String?                           // HIGH | MEDIUM | LOW (nullable for TREND)
+  description    String?
+  recurrence     String   @default("NONE")        // NONE | YEARLY_FIXED | YEARLY_NTH_WEEKDAY
+  recurrenceRule String?                            // e.g. "second-sunday-may"
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([startDate])
+  @@index([type])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// v1.9 BATCH B — SALES PIPELINE
+// ────────────────────────────────────────────────────────────────────────────
+
+// Formal proposals sent to customers. Lifecycle:
+//   draft → sent → viewed → negotiating → accepted → declined → expired
+// When accepted, an Order is created (manually) and Linked Order ID is set.
+model Quote {
+  id              String   @id @default(cuid())
+  quoteNumber     String   @unique  // QTE-0001
+  quoteDate       DateTime
+  customerId      String?
+  customer        Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerName    String?   // denormalized for display when no customer link
+  eventType       String?   // wedding | birthday | corporate | ...
+  eventDate       DateTime?
+  status          String   @default("draft")
+  // draft | sent | viewed | negotiating | accepted | declined | expired
+  validUntil      DateTime?
+  subtotal        Float    @default(0)
+  iva             Float    @default(0)
+  total           Float    @default(0)
+  depositRequired Float    @default(0)
+  linkedOrderId   String?  // FK to Order.orderNumber when converted (loose ref)
+  lostReason      String?  // too_expensive | went_elsewhere | postponed | unresponsive | other
+  leadSource      String?  // instagram | referral | walk_in | wedding_planner | google | other
+  notes           String?
+  sourceRowKey    String?  @unique
+  lines           QuoteLine[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([status])
+  @@index([quoteDate])
+}
+
+// One row per item in a quote. Links to Quote ID + optionally a Product SKU.
+model QuoteLine {
+  id            String   @id @default(cuid())
+  quoteId       String
+  quote         Quote     @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  lineNumber    Int       // 1, 2, 3...
+  productSku    String?   // null = custom item
+  product       Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productId     String?
+  description   String    // pulled from Products or typed manually
+  qty           Int       @default(1)
+  unitPrice     Float
+  lineTotal     Float
+  notes         String?
+  sourceRowKey  String?  @unique
+  createdAt     DateTime @default(now())
+
+  @@index([quoteId])
+}
+
+// Products used within each Event. Mirrors Orders' OrderLineItem pattern.
+model EventLineItem {
+  id              String   @id @default(cuid())
+  eventId         String
+  event           Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  productSku      String
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
+  productId       String
+  productName     String    // denormalized
+  qty             Int       @default(0)
+  unitPrice       Float     @default(0)
+  lineTotal       Float     @default(0)
+  lineCost        Float     @default(0)
+  lineKey         String    @unique  // EVT-2001|1
+  profit          Float?
+  legacyLineKey   String?
+  sourceRowKey    String?  @unique
+  createdAt       DateTime @default(now())
+
+  @@index([eventId])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// v1.9 BATCH C — MONEY
+// ────────────────────────────────────────────────────────────────────────────
+
+// Unified money ledger — ALL payments (in + out). One row per payment event.
+// Inbound: customers → Maria (order_full, event_deposit, event_final)
+// Outbound: Maria → suppliers (po, expense)
+model Payment {
+  id              String   @id @default(cuid())
+  paymentNumber   String   @unique  // PAY-0001
+  date            DateTime
+  direction       String   // inbound | outbound
+  type            String   // order_full | event_deposit | event_final | po | expense | other
+  linkedId        String?  // Order.orderNumber | Event.eventNumber | PO.poNumber | Expense.expenseNumber
+  linkedName      String?  // human-readable (e.g. "Cliente Ejemplo" or "LA FINCA")
+  amount          Float
+  method          String?  // cash | spei | transfer | card | online_link
+  reference       String?  // SPEI ref, Stripe charge ID, ticket #
+  status          String   @default("confirmed") // pending | confirmed | refunded | failed
+  recordedBy      String?  // staff name or STAFF-NNNN (future FK)
+  notes           String?
+  sourceRowKey    String?  @unique
+  createdAt       DateTime @default(now())
+
+  @@index([date])
+  @@index([direction])
+  @@index([linkedId])
+}
+
+// Operating expenses — money out that does NOT affect inventory.
+// Categories: gas | parking | software | utilities | labor | venue_fee |
+//             equipment_rental | market_run | other
+model Expense {
+  id              String   @id @default(cuid())
+  expenseNumber   String   @unique  // EXP-0001
+  date            DateTime
+  category        String
+  description     String
+  amount          Float
+  vendorPayee     String?
+  linkedOrder     String?  // Order.orderNumber (loose ref)
+  linkedEvent     String?  // Event.eventNumber (loose ref)
+  paymentMethod   String?  // cash | card | transfer
+  notes           String?
+  sourceRowKey    String?  @unique
+  createdAt       DateTime @default(now())
+
+  @@index([date])
+  @@index([category])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// v1.9 BATCH D — PROCUREMENT & INVENTORY
+// ────────────────────────────────────────────────────────────────────────────
+
+// Every price quote, ever. Add a new row when you get a new quote (don't edit old).
+// Mark only the LATEST row per (SKU, supplier) as Is Latest = true.
+model SupplierPrice {
+  id              String   @id @default(cuid())
+  date            DateTime
+  materialSku     String
+  material        Material @relation(fields: [materialSku], references: [sku], onDelete: Cascade)
+  supplierName    String   // denormalized for display + queryability
+  supplierId      String?
+  supplier        Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  packPrice       Float
+  unitsPerPack    Float?
+  isLatest        Boolean  @default(false)
+  notes           String?
+  sourceRowKey    String?  @unique
+  createdAt       DateTime @default(now())
+
+  @@index([materialSku])
+  @@index([supplierName])
+  @@index([date])
+}
+
+// Append-only ledger of every stock in/out event. NEVER edit past rows.
+// Packs column is SIGNED: +N for receipts, -N for shipments/waste.
+// Distinct from StockAdjustment (UI-initiated) — this is the canonical ledger
+// seeded from Excel and the audit source of truth.
+model StockMovement {
+  id              String   @id @default(cuid())
+  date            DateTime
+  materialSku     String
+  material        Material @relation(fields: [materialSku], references: [sku], onDelete: Cascade)
+  packs           Float    // signed: +N for receipts, -N for shipments/waste
+  reason          String   // initial_balance | PO_received | Ad-hoc_purchase | loss | adjustment | sample | other
+  reference       String?  // PO-3001 | ADHOC-0001 | LOSS-0001
+  notes           String?
+  sourceRowKey    String?  @unique
+  createdAt       DateTime @default(now())
+
+  @@index([materialSku])
+  @@index([date])
+  @@index([reason])
+}
+
+// Tracks damaged, broken, spoiled, or otherwise lost inventory.
+// Auto-feeds Stock Movements with negative packs (reason='loss').
+model Loss {
+  id              String   @id @default(cuid())
+  lossNumber      String   @unique  // LOSS-0001
+  date            DateTime
+  materialSku     String
+  material        Material @relation(fields: [materialSku], references: [sku], onDelete: Cascade)
+  qtyLostPacks    Float
+  reason          String   // damaged | spoiled | broken | expired | lost | stolen | other
+  discoveredBy    String?  // free-text name or STAFF-NNNN (future FK)
+  costImpact      Float?   // computed: qtyLostPacks × packPrice
+  notes           String?
+  sourceRowKey    String?  @unique
+  createdAt       DateTime @default(now())
+
+  @@index([date])
+  @@index([materialSku])
+}
+
+// One row per individual item purchased outside the formal PO process.
+// Auto-feeds Stock Movements + Supplier Prices.
+model AdHocPurchase {
+  id              String   @id @default(cuid())
+  adhocNumber     String   @unique  // ADHOC-0001
+  date            DateTime
+  vendor          String   // Maxi Home García, Mercado Estrella, etc.
+  materialSku     String
+  material        Material @relation(fields: [materialSku], references: [sku], onDelete: Cascade)
+  qtyPacks        Float
+  unitCost        Float
+  total           Float
+  ticketNumber    String?
+  paymentMethod   String?  // cash | card
+  notes           String?
+  sourceRowKey    String?  @unique
+  createdAt       DateTime @default(now())
+
+  @@index([date])
+  @@index([vendor])
+  @@index([materialSku])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// v1.9 BATCH E — EXECUTION
+// ────────────────────────────────────────────────────────────────────────────
+
+// One row per execution event (one bouquet/arrangement being made).
+// Links to Events (works for both paid events AND unpaid like demos).
+model ExecutionLog {
+  id              String   @id @default(cuid())
+  executionNumber String   @unique  // EXE-0001
+  eventId         String?
+  event           Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  eventLineItemKey String?  // EVT-2001|1 (loose ref — points to EventLineItem.lineKey)
+  executedAt      DateTime
+  executedBy      String?  // free-text name or STAFF-NNNN (future FK)
+  status          String   @default("executed")
+  // planned | executed | partial | redone | cancelled
+  estimatedCost   Float?
+  actualCost      Float?
+  quotedPrice     Float?
+  priceAdjustment Float    @default(0)
+  marginDollars   Float?
+  marginPct        Float?
+  notes           String?
+  sourceRowKey    String?  @unique
+  lines           ExecutionLogLine[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([executedAt])
+}
+
+// One row per material used per execution. Captures substitutions, additions,
+// removals, qty adjustments. Line Cost = Qty Used × Unit Cost (snapshot).
+model ExecutionLogLine {
+  id              String   @id @default(cuid())
+  executionLogId  String
+  executionLog    ExecutionLog @relation(fields: [executionLogId], references: [id], onDelete: Cascade)
+  materialSku     String
+  materialName    String   // denormalized
+  qtyUsed         Float
+  unit            String
+  unitCost        Float    // snapshot at execution time
+  lineCost        Float    // qtyUsed × unitCost
+  type            String   // recipe | addition | substitution | removal
+  originalMaterialSku String?  // when type=substitution, the SKU being replaced
+  originalQty     Float?   // when type=substitution or removal, the qty in recipe
+  notes           String?
+  sourceRowKey    String?  @unique
+  createdAt       DateTime @default(now())
+
+  @@index([executionLogId])
+  @@index([materialSku])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// v1.9 BATCH F — REFERENCE DATA
+// ────────────────────────────────────────────────────────────────────────────
+
+// People who do operational work (assembly, delivery, conditioning, setup).
+// Structured with IDs so metrics can be calculated per person.
+// Will replace free-text on Executed By / Delivered By / Discovered By in future.
+model Staff {
+  id              String   @id @default(cuid())
+  staffNumber     String   @unique  // STAFF-001
+  name            String
+  shortName       String?
+  phone           String?
+  email           String?
+  type            String   // internal | freelance
+  skills          String?  // comma-separated: assembly, delivery, conditioning, setup, teardown, design
+  payRate         Float?   // MXN/hr (null for owner)
+  notes           String?
+  active          Boolean  @default(true)
+  dateAdded       DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Durable tools/equipment you reuse: scissors, buckets, vases, etc.
+// NOT in recipes and NOT in shopping list. Tracked separately.
+model Tool {
+  id              String   @id @default(cuid())
+  sku             String   @unique  // TOOL-TIJERAS-001
+  itemName        String
+  category        String   // Cutting | Container | Hardware | ...
+  qty             Int      @default(1)
+  condition       String?  // Good | Fair | Needs Repair | Retired
+  location        String?
+  datePurchased   DateTime?
+  purchasedFrom   String?
+  purchaseCost    Float?
+  lastServiced    DateTime?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// One row per (product, version). When you change a recipe, bump the version,
+// set Effective From = today, mark new row 'active' and old one 'superseded'.
+model RecipeVersion {
+  id              String   @id @default(cuid())
+  productSku      String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId       String
+  version         String   // v1, v2, v3...
+  effectiveFrom   DateTime
+  status          String   @default("active")  // active | superseded
+  notes           String?
+  sourceRowKey    String?  @unique
+  createdAt       DateTime @default(now())
+
+  @@unique([productId, version])
+  @@index([productSku])
+}
+
+// Time-windowed availability per material (e.g. seasonal flowers).
+model MaterialAvailability {
+  id              String   @id @default(cuid())
+  materialSku     String
+  material        Material @relation(fields: [materialSku], references: [sku], onDelete: Cascade)
+  availableFrom   DateTime
+  availableUntil  DateTime?
+  status          String   @default("available")  // available | limited | out_of_season
+  source          String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([materialSku])
+}
+
+// Structured substitution graph. Each row: "if materialId is unavailable,
+// substituteMaterialId is an acceptable replacement at this priority."
+model MaterialSubstitution {
+  id              String   @id @default(cuid())
+  materialSku     String
+  material        Material @relation("PrimaryMaterial", fields: [materialSku], references: [sku], onDelete: Cascade)
+  substituteSku   String
+  substitute     Material @relation("SubstituteMaterial", fields: [substituteSku], references: [sku], onDelete: Cascade)
+  priority        Int      @default(0)  // 0 = best match, higher = worse
+  accepted        Boolean  @default(true)
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@unique([materialSku, substituteSku])
+}
+
+// Stable physical properties of ribbon SKUs. One row per unique SKU.
+model RibbonProperty {
+  id              String   @id @default(cuid())
+  sku             String   @unique
+  material        Material @relation(fields: [sku], references: [sku], onDelete: Cascade)
+  brand           String?
+  color           String?
+  colorCode       String?
+  widthCm         Float?
+  lengthM         Float?
+  fabric          String?
+  printSolid      String?  // Print | Solid
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Stable physical properties of paper SKUs (Papel Coreano).
+model PaperProperty {
+  id              String   @id @default(cuid())
+  sku             String   @unique
+  material        Material @relation(fields: [sku], references: [sku], onDelete: Cascade)
+  size            String?
+  sheetsPerPack   Int?
+  waterproof      Boolean?
+  printSolid      String?
+  color           String?
+  edge            String?
+  straightCurvy   String?  // Straight | Curvy
+  translucent     Boolean?
+  shinyMatte      String?  // Shiny | Matte
+  occasion        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// Generic key-value store for workbook-level configuration.
+// Anything that doesn't fit in Assumptions (pricing rules) goes here.
+model WorkbookSetting {
+  id              String   @id @default(cuid())
+  key             String   @unique  // e.g. defaultDeliveryFee, website_url
+  section         String   @default("general")  // pricing | branding | sync | integrations
+  value           String   // stored as text — cast at read time
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([section])
+}
+
+// Legal/business document templates with [PLACEHOLDER] substitution.
+// UI does string replacement at render time.
+model LegalTemplate {
+  id              String   @id @default(cuid())
+  templateNumber   String   @unique  // LT-001
+  name             String
+  appliesTo        String   // all_quotes | small_orders | event_quotes | all_customers
+  trigger          String   // Shown at bottom of quote | Attached to small order | ...
+  templateText     String   // full text with [PLACEHOLDERS]
+  placeholdersNeeded String?  // comma-separated list
+  version          String   @default("v1.0")
+  lastUpdated      DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// Reference table mapping each [PLACEHOLDER] to its data source.
+// The UI uses this to know where to get the value for each placeholder.
+model TemplateVariable {
+  id              String   @id @default(cuid())
+  placeholder     String   @unique  // e.g. [Nombre o razón social]
+  dataSource      String   // Business config | Customer | Quote | Auto-generated
+  sheet            String?  // Assumptions | Customers | Quotes | N/A
+  cellOrField     String?  // B5 | name | ...
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
