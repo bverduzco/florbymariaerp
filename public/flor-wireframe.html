@@ -1352,7 +1352,7 @@
         </div>
         <div>
           <span class="wf-btn">November 2026 ▾</span>
-          <span class="wf-btn outline">Markers ▾</span>
+          <button id="markersToggleBtn" class="wf-btn outline" onclick="toggleMarkers(this)" style="cursor: pointer;" title="Show/hide season/holiday/trend overlay">🎨 Markers: ON</button>
           <span class="wf-btn warning" style="background: var(--amber);">🚫 Block Date</span>
         </div>
       </div>
@@ -1381,8 +1381,8 @@
         </div>
       </div>
 
-      <!-- Season markers legend (v1.8.1) -->
-      <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; font-size: 12px;">
+      <!-- Season markers legend (v1.8.1) — toggled by Markers button -->
+      <div id="markersLegend" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; font-size: 12px;">
         <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 12px; background: #EDE9FE; color: #5B21B6; border: 1px solid #C4B5FD;">
           <span style="width: 8px; height: 8px; border-radius: 50%; background: #8B5CF6; display: inline-block;"></span>
           Wedding Season (Oct–Feb)
@@ -1419,35 +1419,35 @@
           </tr></thead>
           <tbody>
             <tr>
-              <td style="background:#D1FAE5;color:#065F46; height: 56px;"><div style="font-weight: 600;">2</div><small style="opacity: 0.7;">—</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
-              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">3</div><small>PROC</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
-              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">4</div><small style="opacity: 0.7;">—</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
-              <td style="background:#FEF3C7;color:#92400E;"><div style="font-weight: 600;">5</div><small>ASSEM ⚠️</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
-              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">6</div><small>DELIVER</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46; height: 56px;"><div style="font-weight: 600;">2</div><small style="opacity: 0.7;">—</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">3</div><small>PROC</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">4</div><small style="opacity: 0.7;">—</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#FEF3C7;color:#92400E;"><div style="font-weight: 600;">5</div><small>ASSEM ⚠️</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">6</div><small>DELIVER</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
               <td style="background:#F3F4F6;color:#9CA3AF;"><div style="font-weight: 600;">7</div><small>OFF</small></td>
               <td style="background:#FEE2E2;color:#991B1B;"><div style="font-weight: 600;">8</div><small>🚫 BLOCKED</small></td>
             </tr>
             <tr>
-              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">9</div><small style="opacity: 0.7;">—</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
-              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">10</div><small>PROC</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
-              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">11</div><small style="opacity: 0.7;">—</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
-              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">12</div><small>ASSEM</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
-              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">13</div><small>DELIVER</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">9</div><small style="opacity: 0.7;">—</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">10</div><small>PROC</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">11</div><small style="opacity: 0.7;">—</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">12</div><small>ASSEM</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">13</div><small>DELIVER</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
               <td style="background:#FEE2E2;color:#991B1B;"><div style="font-weight: 600;">14</div><small>🚫 EVENT LOCK</small></td>
               <td style="background:#FEE2E2;color:#991B1B;"><div style="font-weight: 600;">15</div><small>🚫 BLOCKED</small></td>
             </tr>
             <tr>
-              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">16</div><small style="opacity: 0.7;">—</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
-              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">17</div><small>PROC</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
-              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">18</div><small style="opacity: 0.7;">—</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
-              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">19</div><small>ASSEM</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
-              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">20</div><small>DELIVER</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">16</div><small style="opacity: 0.7;">—</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">17</div><small>PROC</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">18</div><small style="opacity: 0.7;">—</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">19</div><small>ASSEM</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">20</div><small>DELIVER</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
               <td style="background:#F3F4F6;color:#9CA3AF;"><div style="font-weight: 600;">21</div><small>OFF</small></td>
               <td style="background:#FEE2E2;color:#991B1B;"><div style="font-weight: 600;">22</div><small>🚫 BLOCKED</small></td>
             </tr>
             <tr>
-              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">23</div><small style="opacity: 0.7;">—</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
-              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">24</div><small>PROC</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">23</div><small style="opacity: 0.7;">—</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">24</div><small>PROC</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
               <td style="background:#FEE2E2;color:#991B1B;"><div style="font-weight: 600;">25</div><small>⚠ Near blocked</small></td>
               <td style="background:#FEE2E2;color:#991B1B;"><div style="font-weight: 600;">26</div><small>🚫 BLOCKED</small></td>
               <td style="background:#FEF3C7;color:#92400E;"><div style="font-weight: 600;">27</div><small>⚠ Near blocked</small></td>
@@ -1455,8 +1455,8 @@
               <td style="background:#FEE2E2;color:#991B1B;"><div style="font-weight: 600;">29</div><small>🚫 BLOCKED</small></td>
             </tr>
             <tr>
-              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">30</div><small style="opacity: 0.7;">—</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
-              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">1</div><small>PROC</small><div style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px; box-shadow: 0 0 0 1px #F59E0B;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">30</div><small style="opacity: 0.7;">—</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px;"></div></td>
+              <td style="background:#D1FAE5;color:#065F46;"><div style="font-weight: 600;">1</div><small>PROC</small><div class="season-strip" style="height: 3px; background: #8B5CF6; border-radius: 2px; margin-top: 4px; box-shadow: 0 0 0 1px #F59E0B;"></div></td>
               <td>2</td>
               <td>3</td>
               <td>4</td>
@@ -1468,7 +1468,8 @@
         <div class="wf-note">
           🟢 Green = available · 🟡 Yellow = approaching limit · 🔴 Red = blocked · ⬜ Gray = off day<br>
           <strong>Purple strip</strong> = active SeasonMarker (Wedding Season Oct–Feb). <strong>Orange outline on Nov 1</strong> = Día de Muertos holiday overlaps Wedding Season.<br>
-          Click any date → see details, markers, or block it.
+          Click any date → see details, markers, or block it.<br>
+          💡 Use the <strong>🎨 Markers: ON/OFF</strong> button in the top bar to hide the overlay if it feels busy.
         </div>
       </div>
 
@@ -1803,6 +1804,38 @@ function showScreen(id) {
 function toggleSidebar() {
   document.getElementById('sidebar').classList.toggle('open');
   document.querySelector('.overlay').classList.toggle('open');
+}
+
+// Toggle season/holiday/trend markers overlay on Calendar screen (v1.8.1)
+// Hides the purple strips inside day cells + the legend pill row.
+// Date / rhythm / capacity colors remain visible regardless.
+let markersVisible = true;
+function toggleMarkers(btn) {
+  markersVisible = !markersVisible;
+  // Toggle all in-cell strips
+  document.querySelectorAll('.season-strip').forEach(el => {
+    el.style.display = markersVisible ? '' : 'none';
+  });
+  // Toggle the legend pill row above the grid
+  const legend = document.getElementById('markersLegend');
+  if (legend) {
+    legend.style.display = markersVisible ? 'flex' : 'none';
+  }
+  // Update button label + active state
+  if (btn) {
+    btn.textContent = markersVisible ? '🎨 Markers: ON' : '🎨 Markers: OFF';
+    if (markersVisible) {
+      btn.classList.remove('outline');
+      btn.style.background = '#EDE9FE';
+      btn.style.borderColor = '#8B5CF6';
+      btn.style.color = '#5B21B6';
+    } else {
+      btn.classList.add('outline');
+      btn.style.background = '';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    }
+  }
 }
 
 // Default screen
