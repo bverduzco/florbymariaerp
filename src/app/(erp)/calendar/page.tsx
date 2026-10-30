@@ -18,8 +18,6 @@
 // Markers toggle is a real client-side toggle (hidden via state).
 
 import { db as prisma } from "@/lib/db"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { CalendarGrid } from "./calendar-grid"
 import { MarkersToggle } from "./markers-toggle"
 import { BlockDateDialog } from "./block-date-dialog"
@@ -101,15 +99,13 @@ export default async function CalendarPage() {
     })
 
   return (
-    <main className="min-h-screen bg-stone-50 px-6 py-10">
-      <div className="mx-auto max-w-6xl">
-        {/* ─── Screen header ─── */}
-        <header className="mb-6">
-          <div className="text-xs uppercase tracking-wider text-stone-500">
-            Capacity + season/holiday/trend overlay · v1.8.1
+    <div>
+        <div className="fmd-screen-header">
+          <div>
+            <h1>Calendar</h1>
+            <div className="fmd-subtitle">Capacity + season/holiday/trend overlay · v1.8.1</div>
           </div>
-          <h1 className="mt-1 text-3xl font-bold text-stone-900">Calendar</h1>
-        </header>
+        </div>
 
         {/* ─── Horizontal compact summary bar ─── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-0 mb-4 border border-stone-200 rounded-lg overflow-hidden bg-white">
@@ -153,11 +149,8 @@ export default async function CalendarPage() {
         </div>
 
         {/* ─── Month grid ─── */}
-        <Card className="mb-6 border-stone-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">November 2026 — Month Grid</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <div className="fmd-box">
+          <div className="fmd-box-label">November 2026 — Month Grid</div>
             <CalendarGrid
               month={11}
               year={2026}
@@ -174,15 +167,11 @@ export default async function CalendarPage() {
               <strong>Purple strip</strong> = active SeasonMarker (Wedding Season Oct–Feb).
               Click any date → see details, markers, or block it.
             </div>
-          </CardContent>
-        </Card>
+        </div>
 
         {/* ─── Order schedule ─── */}
-        <Card className="mb-6 border-stone-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Order Schedule — Pipeline &amp; Conflict Flags</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <div className="fmd-box">
+          <div className="fmd-box-label">Order Schedule — Pipeline &amp; Conflict Flags</div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -238,15 +227,11 @@ export default async function CalendarPage() {
               <br />
               ⚠️ Shopping List WARNS (doesn&apos;t block) when capacity exceeded or dates are near blocked.
             </div>
-          </CardContent>
-        </Card>
+        </div>
 
         {/* ─── Weekly rhythm ─── */}
-        <Card className="border-stone-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Weekly Rhythm</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <div className="fmd-box">
+          <div className="fmd-box-label">Weekly Rhythm</div>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-stone-200 text-stone-600 text-xs uppercase tracking-wider">
@@ -278,16 +263,14 @@ export default async function CalendarPage() {
                 ))}
               </tbody>
             </table>
-          </CardContent>
-        </Card>
+          </div>
 
         <div className="mt-6 text-xs text-stone-500 leading-relaxed">
           <strong>EVENT LOCKOUT RULE:</strong> When an event is on Saturday, the system auto-blocks Friday + Saturday + Sunday (Option A). No other orders can be scheduled on those days. Procurement for the event happens on the preceding Tuesday.
           <br />
           <strong className="mt-2 inline-block">v1.8.1 ADDITION:</strong> SeasonMarkers are informational only. They never block quotes, never trigger hard warnings. They only tint calendar day cells and optionally surface yellow hint banners in the Shopping List when a HIGH-intensity HOLIDAY overlaps the procurement window.
         </div>
-      </div>
-    </main>
+    </div>
   )
 }
 
