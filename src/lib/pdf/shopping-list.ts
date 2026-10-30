@@ -24,7 +24,16 @@ const COLOR_INDIGO = "#4338CA"
 
 const LOGO_MARK = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
   <rect x="1.5" y="1.5" width="27" height="27" rx="6" fill="#BE185D"/>
-  <text x="15" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#FFFFFF">✿</text>
+  <g fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round">
+    <circle cx="15" cy="15" r="2.5" fill="#FFFFFF" stroke="none"/>
+    <path d="M15 15 Q15 7 15 4.5"/>
+    <path d="M15 15 Q21 10 23 8"/>
+    <path d="M15 15 Q21 20 23 22"/>
+    <path d="M15 15 Q9 20 7 22"/>
+    <path d="M15 15 Q9 10 7 8"/>
+    <path d="M15 15 Q20 15 25.5 15"/>
+    <path d="M15 15 Q10 15 4.5 15"/>
+  </g>
 </svg>`
 
 const fonts = {
