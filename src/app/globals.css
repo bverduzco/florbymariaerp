@@ -144,3 +144,183 @@
   --background: #FAFAF9;
   --card: #ffffff;
 }
+
+/* === Wireframe-matching component styles === */
+/* Apply these alongside Tailwind classes on page elements */
+
+/* Screen header — matches .screen-header */
+.fmd-screen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.fmd-screen-header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #44403C;
+}
+.fmd-screen-header .fmd-subtitle {
+  font-size: 12px;
+  color: #78716C;
+  margin-top: 2px;
+}
+
+/* Box — matches .wf-box (flat, no shadow, border) */
+.fmd-box {
+  background: #ffffff;
+  border: 1px solid #D6D3D1;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.fmd-box-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #78716C;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+/* Table — matches .wf-table */
+.fmd-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.fmd-table th {
+  text-align: left;
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #78716C;
+  padding: 6px 8px;
+  border-bottom: 1px solid #D6D3D1;
+  font-weight: 600;
+}
+.fmd-table td {
+  padding: 8px;
+  font-size: 12px;
+  color: #6B7280;
+  border-bottom: 1px solid #D6D3D1;
+}
+.fmd-table tr:hover td {
+  background: #ffffff;
+}
+
+/* Status pill — matches .wf-status */
+.fmd-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.fmd-status.draft { background: #E0E7FF; color: #3730A3; }
+.fmd-status.sent { background: #FEF3C7; color: #92400E; }
+.fmd-status.viewed { background: #E0E7FF; color: #3730A3; }
+.fmd-status.negotiating { background: #FEF3C7; color: #92400E; }
+.fmd-status.accepted { background: #D1FAE5; color: #065F46; }
+.fmd-status.declined { background: #FEE2E2; color: #991B1B; }
+.fmd-status.expired { background: #F3F4F6; color: #6B7280; }
+.fmd-status.confirmed { background: #D1FAE5; color: #065F46; }
+.fmd-status.in_progress { background: #FEF3C7; color: #92400E; }
+.fmd-status.completed { background: #D1FAE5; color: #065F46; }
+.fmd-status.cancelled { background: #FEE2E2; color: #991B1B; }
+.fmd-status.pending { background: #FEF3C7; color: #92400E; }
+.fmd-status.paid { background: #D1FAE5; color: #065F46; }
+.fmd-status.not_started { background: #F3F4F6; color: #6B7280; }
+
+/* Button — matches .wf-btn */
+.fmd-btn {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.1s;
+}
+.fmd-btn:hover { opacity: 0.9; }
+.fmd-btn.primary { background: #BE185D; color: white; }
+.fmd-btn.dark { background: #44403C; color: white; }
+.fmd-btn.success { background: #047857; color: white; }
+.fmd-btn.warning { background: #D97706; color: white; }
+.fmd-btn.outline {
+  background: transparent;
+  border: 1px solid #D6D3D1;
+  color: #44403C;
+}
+
+/* Stat cell — matches .wf-stat (compact KPI) */
+.fmd-stat {
+  background: #ffffff;
+  border: 1px solid #D6D3D1;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+}
+.fmd-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #BE185D;
+}
+.fmd-stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: #78716C;
+  margin-top: 2px;
+}
+
+/* Note — matches .wf-note */
+.fmd-note {
+  background: #FFFBEB;
+  border: 1px solid #FDE68A;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: #92400E;
+  margin: 8px 0;
+}
+.fmd-note.blue {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #1E40AF;
+}
+
+/* Flow step — matches .wf-flow-step */
+.fmd-flow-step {
+  background: #ffffff;
+  border: 1px solid #D6D3D1;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: #44403C;
+}
+
+/* KPI bar — horizontal compact strip */
+.fmd-kpi-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin-bottom: 16px;
+  border: 1px solid #D6D3D1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+.fmd-kpi-cell {
+  flex: 1 1 0;
+  padding: 10px 14px;
+  border-right: 1px solid #D6D3D1;
+  min-width: 120px;
+}
+.fmd-kpi-cell:last-child { border-right: none; }
+.fmd-kpi-value {
+  font-size: 18px;
+  font-weight: 700;
+}
+.fmd-kpi-label {
+  font-size: 10px;
+  color: #78716C;
+  margin-top: 2px;
+}

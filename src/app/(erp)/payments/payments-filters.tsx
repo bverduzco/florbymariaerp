@@ -89,62 +89,36 @@ export function PaymentsFilters({ payments }: PaymentsFiltersProps) {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div style={{ overflowX: "auto" }}>
+        <table className="fmd-table">
           <thead>
-            <tr className="border-b border-stone-200 text-stone-600 text-xs uppercase tracking-wider">
-              <th className="text-left py-2 px-3">Payment #</th>
-              <th className="text-left py-2 px-3">Date</th>
-              <th className="text-left py-2 px-3">Direction</th>
-              <th className="text-left py-2 px-3">Type</th>
-              <th className="text-left py-2 px-3">Linked</th>
-              <th className="text-left py-2 px-3">Method</th>
-              <th className="text-left py-2 px-3">Status</th>
-              <th className="text-right py-2 px-3">Amount</th>
+            <tr>
+              <th>Payment #</th>
+              <th>Date</th>
+              <th>Direction</th>
+              <th>Type</th>
+              <th>Linked</th>
+              <th>Method</th>
+              <th>Status</th>
+              <th style={{ textAlign: "right" }}>Amount</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={8} className="py-12 text-center text-stone-400">
-                  No payments in this view.
-                </td>
-              </tr>
+              <tr><td colSpan={8} style={{ textAlign: "center", padding: "24px", color: "#9CA3AF" }}>No payments in this view.</td></tr>
             ) : (
               filtered.map((p) => {
                 const isInbound = p.direction === "inbound"
                 return (
-                  <tr key={p.id} className="border-b border-stone-100 hover:bg-stone-50">
-                    <td className="py-2 px-3 font-mono text-xs">{p.paymentNumber}</td>
-                    <td className="py-2 px-3">
-                      {new Date(p.date).toLocaleDateString("es-MX", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </td>
-                    <td className="py-2 px-3">
-                      <span className={isInbound ? "text-emerald-700 font-medium" : "text-red-700 font-medium"}>
-                        {isInbound ? "→ In" : "← Out"}
-                      </span>
-                    </td>
-                    <td className="py-2 px-3">{TYPE_LABELS[p.type] ?? p.type}</td>
-                    <td className="py-2 px-3">
-                      <div>{p.linkedName ?? "—"}</div>
-                      <div className="text-xs text-stone-500 font-mono">{p.linkedId ?? ""}</div>
-                    </td>
-                    <td className="py-2 px-3 capitalize">{p.method ?? "—"}</td>
-                    <td className="py-2 px-3">
-                      <Badge
-                        variant="outline"
-                        className={`text-xs ${STATUS_COLORS[p.status] ?? STATUS_COLORS.confirmed}`}
-                      >
-                        {p.status}
-                      </Badge>
-                    </td>
-                    <td className={`py-2 px-3 text-right font-bold ${
-                      isInbound ? "text-emerald-700" : "text-red-700"
-                    }`}>
+                  <tr key={p.id}>
+                    <td style={{ fontFamily: "monospace", fontSize: "11px" }}>{p.paymentNumber}</td>
+                    <td>{new Date(p.date).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}</td>
+                    <td style={{ fontWeight: 600, color: isInbound ? "#047857" : "#991B1B" }}>{isInbound ? "→ In" : "← Out"}</td>
+                    <td>{TYPE_LABELS[p.type] ?? p.type}</td>
+                    <td>{p.linkedName ?? "—"}</td>
+                    <td style={{ textTransform: "capitalize" }}>{p.method ?? "—"}</td>
+                    <td><span className={`fmd-status ${p.status}`}>{p.status}</span></td>
+                    <td style={{ textAlign: "right", fontWeight: 700, color: isInbound ? "#047857" : "#991B1B" }}>
                       {isInbound ? "+" : "-"}${p.amount.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
                     </td>
                   </tr>
@@ -153,11 +127,11 @@ export function PaymentsFilters({ payments }: PaymentsFiltersProps) {
             )}
           </tbody>
           <tfoot>
-            <tr className="border-t-2 border-stone-300 font-bold">
-              <td colSpan={7} className="py-3 px-3 text-right text-stone-600 text-xs uppercase tracking-wider">
-                Total ({filter === "all" ? "all" : filter}):
+            <tr style={{ fontWeight: 700, borderTop: "2px solid #D6D3D1" }}>
+              <td colSpan={7} style={{ textAlign: "right", fontSize: "10px", textTransform: "uppercase", color: "#78716C", padding: "12px 8px" }}>
+                Total ({filter}):
               </td>
-              <td className="py-3 px-3 text-right">
+              <td style={{ textAlign: "right", padding: "12px 8px", color: "#44403C" }}>
                 ${filtered.reduce((sum, p) => sum + p.amount, 0).toLocaleString("es-MX", { maximumFractionDigits: 2 })}
               </td>
             </tr>
