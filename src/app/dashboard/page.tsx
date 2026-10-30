@@ -138,8 +138,12 @@ export default async function DashboardPage() {
           <QuickLink href="/products" label="Products" desc="Catalogue with Cloudinary photos" emoji="💐" />
           <QuickLink href="/customers" label="Customers" desc="Contact list + order history" emoji="👥" />
           <QuickLink href="/orders" label="Orders" desc="Active orders with payment status" emoji="📦" />
+          <QuickLink href="/events" label="Events" desc="Weddings, corporate jobs, demos" emoji="💒" />
           <QuickLink href="/suppliers" label="Suppliers" desc="Vendor directory + contact info" emoji="🏭" />
+          <QuickLink href="/materials" label="Materials" desc="Inventory grid + reorder status" emoji="🌿" />
           <QuickLink href="/payments" label="Payments" desc="Unified money ledger" emoji="💵" />
+          <QuickLink href="/expenses" label="Expenses" desc="Operating costs (gas, software, etc.)" emoji="💸" />
+          <QuickLink href="/staff" label="Staff" desc="Team members + skills" emoji="👤" />
           <QuickLink href="/demo-cloudinary" label="Cloudinary Demo" desc="How product photos wire in" emoji="🖼" />
         </div>
 
