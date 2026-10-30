@@ -108,35 +108,27 @@ export default async function CalendarPage() {
         </div>
 
         {/* ─── Horizontal compact summary bar ─── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-0 mb-4 border border-stone-200 rounded-lg overflow-hidden bg-white">
-          <KpiCell
-            value={`${avgLaborPerDay}`}
-            unit="min/day"
-            label={`Labor cap · Tue=360`}
-          />
-          <KpiCell
-            value={`${coolerHardLimit}`}
-            unit="slots"
-            label="Cooler hard limit"
-          />
-          <KpiCell
-            value={`${coolerSlotsUsedThisWeek}/${coolerHardLimit}`}
-            unit="used"
-            label="Cooler this week"
-            color="green"
-          />
-          <KpiCell
-            value={`${blockedCount}`}
-            unit="blocked"
-            label="This month"
-            color="amber"
-          />
-          <KpiCell
-            value={`${activeMarkers}`}
-            unit="markers"
-            label="Active this month"
-            color="purple"
-          />
+        <div className="fmd-kpi-bar">
+          <div className="fmd-kpi-cell">
+            <div className="fmd-kpi-value" style={{ color: "#44403C" }}>{avgLaborPerDay} <span style={{ fontSize: "11px", color: "#78716C" }}>min/day</span></div>
+            <div className="fmd-kpi-label">Labor cap · Tue=360</div>
+          </div>
+          <div className="fmd-kpi-cell">
+            <div className="fmd-kpi-value" style={{ color: "#44403C" }}>{coolerHardLimit} <span style={{ fontSize: "11px", color: "#78716C" }}>slots</span></div>
+            <div className="fmd-kpi-label">Cooler hard limit</div>
+          </div>
+          <div className="fmd-kpi-cell">
+            <div className="fmd-kpi-value" style={{ color: "#047857" }}>{coolerSlotsUsedThisWeek}/{coolerHardLimit} <span style={{ fontSize: "11px", color: "#78716C" }}>used</span></div>
+            <div className="fmd-kpi-label">Cooler this week</div>
+          </div>
+          <div className="fmd-kpi-cell">
+            <div className="fmd-kpi-value" style={{ color: "#D97706" }}>{blockedCount} <span style={{ fontSize: "11px", color: "#78716C" }}>blocked</span></div>
+            <div className="fmd-kpi-label">This month</div>
+          </div>
+          <div className="fmd-kpi-cell">
+            <div className="fmd-kpi-value" style={{ color: "#BE185D" }}>{activeMarkers} <span style={{ fontSize: "11px", color: "#78716C" }}>markers</span></div>
+            <div className="fmd-kpi-label">Active this month</div>
+          </div>
         </div>
 
         {/* ─── Action button row ─── */}
@@ -172,59 +164,46 @@ export default async function CalendarPage() {
         {/* ─── Order schedule ─── */}
         <div className="fmd-box">
           <div className="fmd-box-label">Order Schedule — Pipeline &amp; Conflict Flags</div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+            <div style={{ overflowX: "auto" }}>
+              <table className="fmd-table">
                 <thead>
-                  <tr className="border-b border-stone-200 text-stone-600 text-xs uppercase tracking-wider">
-                    <th className="text-left py-2 px-3">Quote</th>
-                    <th className="text-left py-2 px-3">Customer</th>
-                    <th className="text-left py-2 px-3">Type</th>
-                    <th className="text-left py-2 px-3">Delivery</th>
-                    <th className="text-left py-2 px-3">Procurement</th>
-                    <th className="text-left py-2 px-3">Assembly</th>
-                    <th className="text-right py-2 px-3">Labor min</th>
-                    <th className="text-right py-2 px-3">Cooler</th>
-                    <th className="text-left py-2 px-3">Conflict</th>
-                    <th className="text-right py-2 px-3">Total</th>
+                  <tr>
+                    <th>Quote</th>
+                    <th>Customer</th>
+                    <th>Type</th>
+                    <th>Delivery</th>
+                    <th>Procurement</th>
+                    <th>Assembly</th>
+                    <th style={{ textAlign: "right" }}>Labor min</th>
+                    <th style={{ textAlign: "right" }}>Cooler</th>
+                    <th>Conflict</th>
+                    <th style={{ textAlign: "right" }}>Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {orderSchedule.length === 0 ? (
-                    <tr>
-                      <td colSpan={10} className="py-6 text-center text-stone-400 text-sm">
-                        No active quotes with delivery dates.
-                      </td>
-                    </tr>
+                    <tr><td colSpan={10} style={{ textAlign: "center", padding: "16px", color: "#9CA3AF" }}>No active quotes with delivery dates.</td></tr>
                   ) : (
                     orderSchedule.map((o) => (
-                      <tr key={o.id} className="border-b border-stone-100 hover:bg-stone-50">
-                        <td className="py-2 px-3 font-mono text-xs">{o.id}</td>
-                        <td className="py-2 px-3">{o.customer}</td>
-                        <td className="py-2 px-3 capitalize">{o.type}</td>
-                        <td className="py-2 px-3">{o.deliveryDate.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</td>
-                        <td className="py-2 px-3 text-stone-500">{o.procurementDate.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</td>
-                        <td className="py-2 px-3 text-stone-500">{o.assemblyDate.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</td>
-                        <td className="py-2 px-3 text-right">{o.laborMin}</td>
-                        <td className="py-2 px-3 text-right">{o.cooler}</td>
-                        <td className="py-2 px-3">
-                          {o.dateConflict ? (
-                            <Badge variant="destructive" className="text-xs">⚠ Conflict</Badge>
-                          ) : (
-                            <span className="text-stone-400 text-xs">OK</span>
-                          )}
-                        </td>
-                        <td className="py-2 px-3 text-right font-medium">
-                          ${o.total.toLocaleString("es-MX", { maximumFractionDigits: 0 })}
-                        </td>
+                      <tr key={o.id}>
+                        <td style={{ fontFamily: "monospace", fontSize: "11px" }}>{o.id}</td>
+                        <td style={{ color: "#44403C" }}>{o.customer}</td>
+                        <td style={{ textTransform: "capitalize" }}>{o.type}</td>
+                        <td>{o.deliveryDate.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</td>
+                        <td style={{ color: "#78716C" }}>{o.procurementDate.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</td>
+                        <td style={{ color: "#78716C" }}>{o.assemblyDate.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</td>
+                        <td style={{ textAlign: "right" }}>{o.laborMin}</td>
+                        <td style={{ textAlign: "right" }}>{o.cooler}</td>
+                        <td>{o.dateConflict ? <span className="fmd-status cancelled">⚠ Conflict</span> : <span style={{ color: "#D6D3D1" }}>OK</span>}</td>
+                        <td style={{ textAlign: "right", fontWeight: 600, color: "#44403C" }}>${o.total.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</td>
                       </tr>
                     ))
                   )}
                 </tbody>
               </table>
             </div>
-            <div className="mt-3 text-xs text-stone-500">
-              📅 Pipeline: Procurement = Delivery − 3 days · Assembly = Delivery − 1 day · Conditioning same day as Procurement.
-              <br />
+            <div className="fmd-note blue" style={{ marginTop: "8px" }}>
+              📅 Pipeline: Procurement = Delivery − 3 days · Assembly = Delivery − 1 day · Conditioning same day as Procurement.<br />
               ⚠️ Shopping List WARNS (doesn&apos;t block) when capacity exceeded or dates are near blocked.
             </div>
         </div>
@@ -232,13 +211,13 @@ export default async function CalendarPage() {
         {/* ─── Weekly rhythm ─── */}
         <div className="fmd-box">
           <div className="fmd-box-label">Weekly Rhythm</div>
-            <table className="w-full text-sm">
+            <table className="fmd-table">
               <thead>
-                <tr className="border-b border-stone-200 text-stone-600 text-xs uppercase tracking-wider">
-                  <th className="text-left py-2 px-3">Day</th>
-                  <th className="text-left py-2 px-3">Activity</th>
-                  <th className="text-right py-2 px-3">Minutes</th>
-                  <th className="text-right py-2 px-3">Cooler</th>
+                <tr>
+                  <th>Day</th>
+                  <th>Activity</th>
+                  <th style={{ textAlign: "right" }}>Minutes</th>
+                  <th style={{ textAlign: "right" }}>Cooler</th>
                 </tr>
               </thead>
               <tbody>
@@ -251,53 +230,21 @@ export default async function CalendarPage() {
                   ["Saturday", "Event day / Off", "240 (if event) / 0 (off)", "5 slots"],
                   ["Sunday", "OFF (auto-blocked)", "0", "0"],
                 ].map(([day, activity, minutes, cooler], idx) => (
-                  <tr
-                    key={day}
-                    className={`border-b border-stone-100 hover:bg-stone-50 ${idx === 6 ? "text-red-700" : ""}`}
-                  >
-                    <td className="py-2 px-3 font-medium">{day}</td>
-                    <td className="py-2 px-3">{activity}</td>
-                    <td className="py-2 px-3 text-right">{minutes}</td>
-                    <td className="py-2 px-3 text-right">{cooler}</td>
+                  <tr key={day} style={idx === 6 ? { color: "#991B1B" } : {}}>
+                    <td style={{ fontWeight: 600 }}>{day}</td>
+                    <td>{activity}</td>
+                    <td style={{ textAlign: "right" }}>{minutes}</td>
+                    <td style={{ textAlign: "right" }}>{cooler}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-        <div className="mt-6 text-xs text-stone-500 leading-relaxed">
-          <strong>EVENT LOCKOUT RULE:</strong> When an event is on Saturday, the system auto-blocks Friday + Saturday + Sunday (Option A). No other orders can be scheduled on those days. Procurement for the event happens on the preceding Tuesday.
-          <br />
-          <strong className="mt-2 inline-block">v1.8.1 ADDITION:</strong> SeasonMarkers are informational only. They never block quotes, never trigger hard warnings. They only tint calendar day cells and optionally surface yellow hint banners in the Shopping List when a HIGH-intensity HOLIDAY overlaps the procurement window.
+        <div className="fmd-note" style={{ marginTop: "8px" }}>
+          <strong>EVENT LOCKOUT RULE:</strong> When an event is on Saturday, the system auto-blocks Friday + Saturday + Sunday (Option A). No other orders can be scheduled on those days. Procurement for the event happens on the preceding Tuesday.<br />
+          <strong style={{ marginTop: "4px", display: "inline-block" }}>v1.8.1 ADDITION:</strong> SeasonMarkers are informational only. They never block quotes, never trigger hard warnings. They only tint calendar day cells and optionally surface yellow hint banners in the Shopping List when a HIGH-intensity HOLIDAY overlaps the procurement window.
         </div>
-    </div>
-  )
-}
-
-// ─── KPI Cell (horizontal summary bar segment) ─────────────────────────
-function KpiCell({
-  value,
-  unit,
-  label,
-  color = "default",
-}: {
-  value: string
-  unit: string
-  label: string
-  color?: "default" | "green" | "amber" | "purple"
-}) {
-  const colorMap = {
-    default: "text-stone-900",
-    green: "text-emerald-700",
-    amber: "text-amber-700",
-    purple: "text-violet-700",
-  }
-  return (
-    <div className="p-3 border-r border-stone-200 last:border-r-0 min-w-[120px]">
-      <div className={`text-xl font-bold ${colorMap[color]}`}>
-        {value} <span className="text-xs font-medium text-stone-400">{unit}</span>
-      </div>
-      <div className="text-xs text-stone-500 mt-0.5">{label}</div>
     </div>
   )
 }
