@@ -28,6 +28,7 @@ const PUBLIC_PATHS = new Set<string>([
   "/login",
   "/api/auth/login",
   "/api/auth/logout",
+  "/",
 ])
 
 // Path prefixes that should NOT require authentication.
@@ -38,6 +39,7 @@ const PUBLIC_PREFIXES = [
   "/logo.svg",
   "/robots.txt",
   "/flor-wireframe.html",
+  "/download",
   "/demo-cloudinary",
   "/calendar",
   "/quotes",
