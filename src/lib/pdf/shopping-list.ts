@@ -23,10 +23,8 @@ const COLOR_BG_LIGHT = "#FAFAF9"
 const COLOR_INDIGO = "#4338CA"
 
 const LOGO_MARK = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
-  <rect x="1.5" y="1.5" width="27" height="27" rx="4" fill="#2D2D2D"/>
-  <path fill="#FFFFFF" d="M15.47 7.1l-1.3 1.85c-.2.29-.54.47-.9.47h-7.1V7.09c0 .01 9.3.01 9.3.01z"/>
-  <path fill="#FFFFFF" d="M24.3 7.1L13.14 22.91H5.7L16.86 7.1z"/>
-  <path fill="#FFFFFF" d="M14.53 22.91l1.31-1.86c.2-.29.54-.47.9-.47h7.09v2.33H14.53z"/>
+  <rect x="1.5" y="1.5" width="27" height="27" rx="6" fill="#BE185D"/>
+  <text x="15" y="22" text-anchor="middle" font-family="Georgia, serif" font-size="18" fill="#FFFFFF">✿</text>
 </svg>`
 
 const fonts = {
