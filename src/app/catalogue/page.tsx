@@ -108,9 +108,16 @@ export default async function CataloguePage() {
                               ${product.actualPriceWithIva.toLocaleString("es-MX", { maximumFractionDigits: 0 })} MXN
                             </div>
                           </div>
-                          <button className="px-3 py-1.5 text-xs font-medium bg-rose-600 text-white rounded-md hover:bg-rose-700 transition">
+                          <a
+                            href={`https://wa.me/528112345678?text=${encodeURIComponent(
+                              `Hola! Me gustaría ordenar: ${product.name}${product.size ? ` (${product.size})` : ""} — $${product.actualPriceWithIva.toLocaleString("es-MX", { maximumFractionDigits: 0 })} MXN`
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 text-xs font-medium bg-rose-600 text-white rounded-md hover:bg-rose-700 transition inline-block"
+                          >
                             Order
-                          </button>
+                          </a>
                         </div>
                       </div>
                     </div>

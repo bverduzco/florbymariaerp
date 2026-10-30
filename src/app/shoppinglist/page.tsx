@@ -7,6 +7,7 @@
 import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { GeneratePdfButton } from "./generate-pdf-button"
 
 async function getShoppingListData() {
   // Get all active orders with their line items
@@ -143,9 +144,7 @@ export default async function ShoppingListPage() {
               Aggregated materials needed across all active orders. Compares to stock on hand and computes what to buy per supplier.
             </p>
           </div>
-          <button className="px-4 py-2 text-sm font-medium bg-stone-900 text-white rounded-md hover:bg-stone-800 transition">
-            📄 Generate PDF
-          </button>
+          <GeneratePdfButton activeOrders={activeOrders} />
         </header>
 
         {/* KPI bar */}

@@ -5,6 +5,7 @@
 import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { AddIngredientDialog } from "./add-ingredient-dialog"
 
 async function getRecipes() {
   const products = await prisma.product.findMany({
@@ -21,6 +22,14 @@ async function getRecipes() {
     orderBy: [{ sku: "asc" }],
   })
   return products
+}
+
+async function getMaterials() {
+  return prisma.material.findMany({
+    where: { unitCost: { gt: 0 } },
+    select: { id: true, sku: true, name: true, unitCost: true },
+    orderBy: { name: "asc" },
+  })
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -40,7 +49,7 @@ const CHECK_COLORS: Record<string, string> = {
 }
 
 export default async function RecipesPage() {
-  const products = await getRecipes()
+  const [products, materials] = await Promise.all([getRecipes(), getMaterials()])
 
   // KPIs
   const totalProducts = products.length
@@ -111,6 +120,9 @@ export default async function RecipesPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
+                  <div className="mb-3">
+                    <AddIngredientDialog productId={product.id} materials={materials} />
+                  </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
