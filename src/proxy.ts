@@ -55,6 +55,11 @@ const PUBLIC_PREFIXES = [
   "/losses",
   "/execution",
   "/settings",
+  "/recipes",
+  "/shoppinglist",
+  "/catalogue",
+  "/legal",
+  "/custom",
 ]
 
 // In Next.js 16, this must be named `proxy` (or be a default export).

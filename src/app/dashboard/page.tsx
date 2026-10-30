@@ -136,17 +136,22 @@ export default async function DashboardPage() {
           <QuickLink href="/calendar" label="Calendar" desc="Capacity + blocked dates + season markers" emoji="📅" />
           <QuickLink href="/quotes" label="Quotes" desc="Sales pipeline: draft → accepted → declined" emoji="📝" />
           <QuickLink href="/products" label="Products" desc="Catalogue with Cloudinary photos" emoji="💐" />
+          <QuickLink href="/recipes" label="Recipes" desc="Bill of materials per product" emoji="🥣" />
           <QuickLink href="/customers" label="Customers" desc="Contact list + order history" emoji="👥" />
           <QuickLink href="/orders" label="Orders" desc="Active orders with payment status" emoji="📦" />
           <QuickLink href="/events" label="Events" desc="Weddings, corporate jobs, demos" emoji="💒" />
           <QuickLink href="/suppliers" label="Suppliers" desc="Vendor directory + contact info" emoji="🏭" />
           <QuickLink href="/materials" label="Materials" desc="Inventory grid + reorder status" emoji="🌿" />
           <QuickLink href="/procurement" label="Purchase Orders" desc="Formal procurement from suppliers" emoji="🛒" />
+          <QuickLink href="/shoppinglist" label="Shopping List" desc="Procurement plan for active orders" emoji="📋" />
           <QuickLink href="/payments" label="Payments" desc="Unified money ledger" emoji="💵" />
           <QuickLink href="/expenses" label="Expenses" desc="Operating costs (gas, software, etc.)" emoji="💸" />
           <QuickLink href="/losses" label="Losses" desc="Damaged, spoiled & lost inventory" emoji="🥀" />
           <QuickLink href="/execution" label="Execution Logs" desc="What was actually used per job" emoji="📋" />
           <QuickLink href="/staff" label="Staff" desc="Team members + skills" emoji="👤" />
+          <QuickLink href="/custom" label="Custom Bouquet" desc="Build-a-bouquet with custom materials" emoji="🎨" />
+          <QuickLink href="/catalogue" label="Public Catalogue" desc="Customer-facing menu + prices" emoji="📖" />
+          <QuickLink href="/legal" label="Legal Templates" desc="Privacy notices + terms of service" emoji="⚖️" />
           <QuickLink href="/settings" label="Settings" desc="Workbook configuration + system info" emoji="⚙️" />
           <QuickLink href="/demo-cloudinary" label="Cloudinary Demo" desc="How product photos wire in" emoji="🖼" />
         </div>
