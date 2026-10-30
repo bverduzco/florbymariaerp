@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { AddIngredientDialog } from "./add-ingredient-dialog"
+import { EditRecipeDialog } from "./edit-recipe-dialog"
 
 type RecipeLine = {
   id: string
@@ -139,8 +140,15 @@ export function RecipeFilter({
                 </div>
               </div>
 
-              <div style={{ marginBottom: "8px" }}>
+              <div style={{ marginBottom: "8px", display: "flex", gap: "8px", alignItems: "center" }}>
                 <AddIngredientDialog productId={product.id} materials={materials} />
+                <EditRecipeDialog
+                  productId={product.id}
+                  productSku={product.sku}
+                  productName={product.name + (product.size ? ` (${product.size})` : "")}
+                  lines={product.recipeLines}
+                  currentVersion={versions.length > 0 ? versions[versions.length - 1].version : "v1"}
+                />
               </div>
 
               <div style={{ overflowX: "auto" }}>
