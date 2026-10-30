@@ -74,9 +74,9 @@ export function Sidebar() {
         />
       )}
 
-      {/* Sidebar — matches wireframe: 240px, white, border-right */}
+      {/* Sidebar — always visible on desktop (flex child), slide-in on mobile */}
       <aside
-        className={`fixed lg:static left-0 top-0 bottom-0 w-60 bg-white border-r border-[#D6D3D1] z-40 overflow-y-auto transition-transform duration-200 flex-shrink-0 ${
+        className={`fixed lg:sticky left-0 top-0 bottom-0 w-60 h-screen bg-white border-r border-[#D6D3D1] z-40 overflow-y-auto transition-transform duration-200 flex-shrink-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
