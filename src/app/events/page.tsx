@@ -7,6 +7,7 @@ import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { NewEventDialog } from "./new-event-dialog"
+import { StatusDropdown } from "@/components/status-dropdown"
 
 async function getEvents() {
   return prisma.event.findMany({
@@ -98,12 +99,18 @@ export default async function EventsPage() {
                     <div className="flex-1 min-w-[280px]">
                       <div className="flex items-center gap-3 mb-1">
                         <span className="font-mono text-xs text-stone-500">{event.eventNumber}</span>
-                        <Badge
-                          variant="outline"
-                          className={`text-xs ${STATUS_COLORS[event.status] ?? STATUS_COLORS.quote}`}
-                        >
-                          {event.status.replace(/_/g, " ")}
-                        </Badge>
+                        <StatusDropdown
+                          entityId={event.id}
+                          currentStatus={event.status}
+                          statuses={[
+                            { value: "quote", label: "Quote" },
+                            { value: "confirmed", label: "Confirmed" },
+                            { value: "in_progress", label: "In progress" },
+                            { value: "completed", label: "Completed" },
+                            { value: "cancelled", label: "Cancelled" },
+                          ]}
+                          apiPath="/api/events/{id}/status"
+                        />
                         {isUpcoming && daysUntil !== null && (
                           <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-300">
                             in {daysUntil} days

@@ -12,6 +12,8 @@ import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { NewQuoteDialog } from "./new-quote-dialog"
+import { StatusDropdown } from "@/components/status-dropdown"
+import Link from "next/link"
 
 async function getQuotes() {
   return prisma.quote.findMany({
@@ -120,7 +122,11 @@ export default async function QuotesPage() {
                       const isLost = q.status === "declined" || q.status === "expired"
                       return (
                         <tr key={q.id} className="border-b border-stone-100 hover:bg-stone-50">
-                          <td className="py-3 px-3 font-mono text-xs">{q.quoteNumber}</td>
+                          <td className="py-3 px-3 font-mono text-xs">
+                            <Link href={`/quotes/${q.id}`} className="text-stone-900 hover:text-blue-700 hover:underline">
+                              {q.quoteNumber}
+                            </Link>
+                          </td>
                           <td className="py-3 px-3">
                             <div className="font-medium text-stone-900">{q.customerName ?? "—"}</div>
                             <div className="text-xs text-stone-500">{q.customer?.phone}</div>
@@ -132,12 +138,20 @@ export default async function QuotesPage() {
                               : "—"}
                           </td>
                           <td className="py-3 px-3">
-                            <Badge
-                              variant="outline"
-                              className={`text-xs ${STATUS_COLORS[q.status] ?? STATUS_COLORS.draft}`}
-                            >
-                              {q.status}
-                            </Badge>
+                            <StatusDropdown
+                              entityId={q.id}
+                              currentStatus={q.status}
+                              statuses={[
+                                { value: "draft", label: "Draft" },
+                                { value: "sent", label: "Sent" },
+                                { value: "viewed", label: "Viewed" },
+                                { value: "negotiating", label: "Negotiating" },
+                                { value: "accepted", label: "Accepted" },
+                                { value: "declined", label: "Declined" },
+                                { value: "expired", label: "Expired" },
+                              ]}
+                              apiPath="/api/quotes/{id}"
+                            />
                           </td>
                           <td className="py-3 px-3 text-right text-stone-600">{itemCount}</td>
                           <td className="py-3 px-3 text-right font-medium">

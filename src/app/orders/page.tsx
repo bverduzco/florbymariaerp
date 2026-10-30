@@ -7,6 +7,7 @@ import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { NewOrderDialog } from "./new-order-dialog"
+import { StatusDropdown } from "@/components/status-dropdown"
 
 async function getOrders() {
   return prisma.order.findMany({
@@ -157,12 +158,22 @@ export default async function OrdersPage() {
                               : <span className="text-stone-400 text-xs">—</span>}
                           </td>
                           <td className="py-3 px-3">
-                            <Badge
-                              variant="outline"
-                              className={`text-xs ${STATUS_COLORS[o.status] ?? STATUS_COLORS.draft}`}
-                            >
-                              {o.status.replace(/_/g, " ")}
-                            </Badge>
+                            <StatusDropdown
+                              entityId={o.id}
+                              currentStatus={o.status}
+                              statuses={[
+                                { value: "draft", label: "Draft" },
+                                { value: "quote_sent", label: "Quote sent" },
+                                { value: "awaiting_payment", label: "Awaiting payment" },
+                                { value: "payment_confirmed", label: "Payment confirmed" },
+                                { value: "procuring", label: "Procuring" },
+                                { value: "producing", label: "Producing" },
+                                { value: "delivered", label: "Delivered" },
+                                { value: "fulfilled", label: "Fulfilled" },
+                                { value: "cancelled", label: "Cancelled" },
+                              ]}
+                              apiPath="/api/orders/{id}/status"
+                            />
                           </td>
                           <td className="py-3 px-3">
                             <Badge
