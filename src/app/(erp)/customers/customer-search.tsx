@@ -1,12 +1,7 @@
 "use client"
 
-// src/app/customers/customer-search.tsx
-//
-// Client-side searchable customer list.
-// Filter by name, phone, or email as you type.
-
 import { useState } from "react"
-import { Badge } from "@/components/ui/badge"
+import { StatusDropdown } from "@/components/status-dropdown"
 
 type CustomerLite = {
   id: string
@@ -15,6 +10,7 @@ type CustomerLite = {
   email: string | null
   address: string | null
   notes: string | null
+  status: string
   createdAt: string
   orderCount: number
   eventCount: number
@@ -51,81 +47,60 @@ export function CustomerSearch({ customers }: CustomerSearchProps) {
           className="w-full px-4 py-2 text-sm border border-stone-300 rounded-md focus:outline-none focus:border-stone-900 focus:ring-1 focus:ring-stone-900"
         />
         <div className="text-xs text-stone-500 mt-1">
-          {filtered.length} of {customers.length} customers shown
+          {filtered.length} of {customers.length} contacts shown
         </div>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div style={{ overflowX: "auto" }}>
+        <table className="fmd-table">
           <thead>
-            <tr className="border-b border-stone-200 text-stone-600 text-xs uppercase tracking-wider">
-              <th className="text-left py-2 px-3">Name</th>
-              <th className="text-left py-2 px-3">Contact</th>
-              <th className="text-right py-2 px-3">Orders</th>
-              <th className="text-right py-2 px-3">Events</th>
-              <th className="text-right py-2 px-3">Quotes</th>
-              <th className="text-right py-2 px-3">Lifetime value</th>
-              <th className="text-left py-2 px-3">Added</th>
+            <tr>
+              <th>Name</th>
+              <th>Contact</th>
+              <th>Status</th>
+              <th style={{ textAlign: "right" }}>Orders</th>
+              <th style={{ textAlign: "right" }}>Quotes</th>
+              <th style={{ textAlign: "right" }}>LTV</th>
+              <th>Added</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="py-12 text-center text-stone-400">
-                  No customers match &quot;{query}&quot;
-                </td>
-              </tr>
+              <tr><td colSpan={7} style={{ textAlign: "center", padding: "16px", color: "#9CA3AF" }}>No customers match &quot;{query}&quot;</td></tr>
             ) : (
               filtered.map((c) => (
-                <tr
-                  key={c.id}
-                  className="border-b border-stone-100 hover:bg-stone-50 cursor-pointer"
-                >
-                  <td className="py-3 px-3">
-                    <div className="font-medium text-stone-900">{c.name}</div>
-                    {c.notes && (
-                      <div className="text-xs text-stone-500 line-clamp-1 mt-0.5">{c.notes}</div>
-                    )}
+                <tr key={c.id}>
+                  <td style={{ fontWeight: 600, color: "#44403C" }}>
+                    {c.name}
+                    {c.notes && <div style={{ fontSize: "10px", color: "#78716C", fontWeight: 400 }}>{c.notes}</div>}
                   </td>
-                  <td className="py-3 px-3">
-                    {c.phone && <div className="text-xs text-stone-700">{c.phone}</div>}
-                    {c.email && <div className="text-xs text-stone-500">{c.email}</div>}
-                    {!c.phone && !c.email && <span className="text-stone-400 text-xs">No contact info</span>}
+                  <td>
+                    {c.phone && <div style={{ fontSize: "11px" }}>{c.phone}</div>}
+                    {c.email && <div style={{ fontSize: "11px", color: "#78716C" }}>{c.email}</div>}
+                    {!c.phone && !c.email && <span style={{ color: "#D6D3D1", fontSize: "11px" }}>No contact info</span>}
                   </td>
-                  <td className="py-3 px-3 text-right">
-                    {c.orderCount > 0 ? (
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-300">
-                        {c.orderCount}
-                      </Badge>
-                    ) : (
-                      <span className="text-stone-400 text-xs">0</span>
-                    )}
+                  <td>
+                    <StatusDropdown
+                      entityId={c.id}
+                      currentStatus={c.status}
+                      statuses={[
+                        { value: "lead", label: "Lead" },
+                        { value: "prospect", label: "Prospect" },
+                        { value: "customer", label: "Customer" },
+                        { value: "inactive", label: "Inactive" },
+                      ]}
+                      apiPath="/api/customers/{id}/status"
+                    />
                   </td>
-                  <td className="py-3 px-3 text-right">
-                    {c.eventCount > 0 ? (
-                      <Badge variant="outline" className="bg-violet-50 text-violet-700 border-violet-300">
-                        {c.eventCount}
-                      </Badge>
-                    ) : (
-                      <span className="text-stone-400 text-xs">0</span>
-                    )}
+                  <td style={{ textAlign: "right" }}>
+                    {c.orderCount > 0 ? <span className="fmd-status" style={{ background: "#EFF6FF", color: "#1E40AF" }}>{c.orderCount}</span> : <span style={{ color: "#D6D3D1" }}>0</span>}
                   </td>
-                  <td className="py-3 px-3 text-right text-stone-600">
-                    {c.quoteCount > 0 ? c.quoteCount : <span className="text-stone-400">0</span>}
+                  <td style={{ textAlign: "right" }}>{c.quoteCount > 0 ? c.quoteCount : <span style={{ color: "#D6D3D1" }}>0</span>}</td>
+                  <td style={{ textAlign: "right", fontWeight: 600, color: c.lifetimeValue > 0 ? "#047857" : "#D6D3D1" }}>
+                    {c.lifetimeValue > 0 ? `$${c.lifetimeValue.toLocaleString("es-MX", { maximumFractionDigits: 0 })}` : "—"}
                   </td>
-                  <td className="py-3 px-3 text-right font-medium text-emerald-700">
-                    {c.lifetimeValue > 0
-                      ? `$${c.lifetimeValue.toLocaleString("es-MX", { maximumFractionDigits: 0 })}`
-                      : <span className="text-stone-400">—</span>}
-                  </td>
-                  <td className="py-3 px-3 text-xs text-stone-500">
-                    {new Date(c.createdAt).toLocaleDateString("es-MX", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </td>
+                  <td style={{ fontSize: "11px" }}>{new Date(c.createdAt).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}</td>
                 </tr>
               ))
             )}

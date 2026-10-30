@@ -127,6 +127,8 @@ model Customer {
   email     String?
   address   String?
   notes     String?
+  // v1.9: lifecycle status (lead → prospect → customer → inactive)
+  status    String   @default("lead")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   orders    Order[]
