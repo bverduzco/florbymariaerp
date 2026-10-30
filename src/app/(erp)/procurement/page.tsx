@@ -2,46 +2,183 @@ import { db as prisma } from "@/lib/db"
 import { NewPoDialog } from "./new-po-dialog"
 
 async function getPurchaseOrders() {
-  return prisma.purchaseOrder.findMany({ include: { _count: { select: { lines: true } }, lines: { select: { materialSku: true, materialName: true, qtyPacks: true, costPerPack: true, lineTotal: true }, orderBy: { materialName: "asc" } } }, orderBy: { poNumber: "asc" } })
+  return prisma.purchaseOrder.findMany({
+    include: { _count: { select: { lines: true } }, lines: { select: { materialSku: true, materialName: true, qtyPacks: true, costPerPack: true, lineTotal: true }, orderBy: { materialName: "asc" } } },
+    orderBy: { poNumber: "asc" },
+  })
 }
 async function getSuppliers() { return prisma.supplier.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }) }
+async function getAdHocPurchases() {
+  return prisma.adHocPurchase.findMany({ orderBy: { date: "desc" }, take: 10 })
+}
+async function getSupplierComparison() {
+  // Get all supplier prices where isLatest = true, grouped by materialSku
+  const prices = await prisma.supplierPrice.findMany({
+    where: { isLatest: true },
+    select: { materialSku: true, supplierName: true, packPrice: true },
+    orderBy: { materialSku: "asc" },
+  })
+  // Group by materialSku
+  const byMaterial = new Map<string, Array<{ supplier: string; price: number }>>()
+  for (const p of prices) {
+    if (!byMaterial.has(p.materialSku)) byMaterial.set(p.materialSku, [])
+    byMaterial.get(p.materialSku)!.push({ supplier: p.supplierName, price: p.packPrice })
+  }
+  // Only include materials with 2+ suppliers
+  const comparison = Array.from(byMaterial.entries())
+    .filter(([_, suppliers]) => suppliers.length >= 2)
+    .map(([sku, suppliers]) => {
+      const laFinca = suppliers.find((s) => s.supplier === "LA FINCA")
+      const lfPrice = laFinca?.price ?? null
+      const cheapest = suppliers.reduce((min, s) => s.price < min.price ? s : min, suppliers[0])
+      return { sku, suppliers, lfPrice, cheapest }
+    })
+  return comparison
+}
 
 export default async function ProcurementPage() {
-  const [pos, suppliers] = await Promise.all([getPurchaseOrders(), getSuppliers()])
+  const [pos, suppliers, adHocs, comparison] = await Promise.all([getPurchaseOrders(), getSuppliers(), getAdHocPurchases(), getSupplierComparison()])
   const received = pos.filter((p) => p.status === "received").length
   const totalCost = pos.reduce((s, p) => s + p.totalCost, 0)
+  const adHocTotal = adHocs.reduce((s, a) => s + a.total, 0)
 
   return (
     <div>
       <div className="fmd-screen-header">
-        <div><h1>Purchase Orders</h1><div className="fmd-subtitle">Formal procurement · all suppliers COD</div></div>
-        <NewPoDialog suppliers={suppliers.map((s) => s.name)} />
+        <div><h1>Procurement</h1><div className="fmd-subtitle">Buying materials — formal POs + ad-hoc purchases + supplier comparison</div></div>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <NewPoDialog suppliers={suppliers.map((s) => s.name)} />
+          <button className="fmd-btn outline">+ Log Ad-hoc</button>
+        </div>
       </div>
+
       <div className="fmd-kpi-bar">
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#44403C" }}>{pos.length}</div><div className="fmd-kpi-label">Total POs</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#047857" }}>{received}</div><div className="fmd-kpi-label">Received</div></div>
-        <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#BE185D" }}>${totalCost.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</div><div className="fmd-kpi-label">Total spent</div></div>
+        <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#BE185D" }}>${totalCost.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</div><div className="fmd-kpi-label">PO total spent</div></div>
+        <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#D97706" }}>${adHocTotal.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</div><div className="fmd-kpi-label">Ad-hoc total</div></div>
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-        {pos.map((po) => (
-          <div key={po.id} className="fmd-box" style={{ marginBottom: 0 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", paddingBottom: "8px", borderBottom: "1px solid #D6D3D1" }}>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontFamily: "monospace", fontSize: "12px", fontWeight: 700, color: "#44403C" }}>{po.poNumber}</span>
-                  <span className={`fmd-status ${po.status === "received" ? "accepted" : po.status === "cancelled" ? "cancelled" : "sent"}`}>{po.status}</span>
-                </div>
-                <div style={{ fontSize: "11px", color: "#6B7280", marginTop: "2px" }}>🏭 {po.supplier} · {po._count.lines} items</div>
-              </div>
-              <div style={{ fontSize: "20px", fontWeight: 700, color: "#44403C" }}>${po.totalCost.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</div>
-            </div>
+
+      {/* Two-column: POs + Ad-hoc Purchases */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "16px", marginBottom: "16px" }}>
+        {/* Purchase Orders (formal) */}
+        <div className="fmd-box" style={{ marginBottom: 0 }}>
+          <div className="fmd-box-label">Purchase Orders (formal) — {pos.length}</div>
+          <div style={{ overflowX: "auto" }}>
             <table className="fmd-table">
-              <thead><tr><th>SKU</th><th>Material</th><th style={{ textAlign: "right" }}>Qty</th><th style={{ textAlign: "right" }}>$ /pack</th><th style={{ textAlign: "right" }}>Total</th></tr></thead>
-              <tbody>{po.lines.map((l) => (<tr key={l.materialSku}><td style={{ fontFamily: "monospace", fontSize: "10px" }}>{l.materialSku}</td><td style={{ color: "#44403C" }}>{l.materialName}</td><td style={{ textAlign: "right" }}>{l.qtyPacks}</td><td style={{ textAlign: "right" }}>${l.costPerPack.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</td><td style={{ textAlign: "right", fontWeight: 600, color: "#44403C" }}>${l.lineTotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</td></tr>))}</tbody>
+              <thead><tr><th>PO #</th><th>Date</th><th>Supplier</th><th>Items</th><th style={{ textAlign: "right" }}>Total</th><th>Status</th></tr></thead>
+              <tbody>
+                {pos.length === 0 ? (
+                  <tr><td colSpan={6} style={{ textAlign: "center", padding: "16px", color: "#9CA3AF" }}>No purchase orders yet.</td></tr>
+                ) : (
+                  pos.map((po) => (
+                    <tr key={po.id}>
+                      <td style={{ fontFamily: "monospace", fontSize: "11px", fontWeight: 700, color: "#44403C" }}>{po.poNumber}</td>
+                      <td>{po.createdAt.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</td>
+                      <td style={{ color: "#44403C" }}>{po.supplier}</td>
+                      <td>{po._count.lines} items</td>
+                      <td style={{ textAlign: "right", fontWeight: 600, color: "#44403C" }}>${po.totalCost.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</td>
+                      <td><span className={`fmd-status ${po.status === "received" ? "accepted" : po.status === "cancelled" ? "cancelled" : "pending"}`}>{po.status}</span></td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
             </table>
-            {po.notes && <div style={{ fontSize: "11px", color: "#6B7280", marginTop: "6px", paddingTop: "6px", borderTop: "1px solid #D6D3D1" }}>📝 {po.notes}</div>}
           </div>
-        ))}
+        </div>
+
+        {/* Ad-hoc Purchases (whim / market runs) */}
+        <div className="fmd-box" style={{ marginBottom: 0 }}>
+          <div className="fmd-box-label">Ad-hoc Purchases (whim / market runs) — {adHocs.length}</div>
+          {adHocs.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "16px", color: "#9CA3AF", fontSize: "12px" }}>No ad-hoc purchases logged.</div>
+          ) : (
+            <>
+              <div style={{ overflowX: "auto" }}>
+                <table className="fmd-table">
+                  <thead><tr><th>ID</th><th>Date</th><th>Vendor</th><th>Item</th><th style={{ textAlign: "right" }}>Qty</th><th style={{ textAlign: "right" }}>Cost</th></tr></thead>
+                  <tbody>
+                    {adHocs.map((a) => (
+                      <tr key={a.id}>
+                        <td style={{ fontFamily: "monospace", fontSize: "10px" }}>{a.adhocNumber}</td>
+                        <td>{a.date.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</td>
+                        <td style={{ color: "#44403C" }}>{a.vendor}</td>
+                        <td>{a.materialSku}</td>
+                        <td style={{ textAlign: "right" }}>{a.qtyPacks}</td>
+                        <td style={{ textAlign: "right", fontWeight: 600, color: "#44403C" }}>${a.total.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div style={{ fontSize: "13px", fontWeight: 600, color: "#44403C", marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #D6D3D1" }}>
+                Total ad-hoc: ${adHocTotal.toLocaleString("es-MX", { maximumFractionDigits: 0 })} ({adHocs.length} items)
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Supplier Comparison */}
+      <div className="fmd-box">
+        <div className="fmd-box-label">Supplier Comparison (side-by-side prices)</div>
+        {comparison.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "16px", color: "#9CA3AF", fontSize: "12px" }}>No materials with multiple supplier prices yet. Log prices from different suppliers to see comparisons.</div>
+        ) : (
+          <>
+            <div style={{ overflowX: "auto" }}>
+              <table className="fmd-table">
+                <thead>
+                  <tr>
+                    <th>SKU</th>
+                    {["LA FINCA", "Florería García", "BDF", "PRO Flor", "OASIS"].map((s) => (
+                      <th key={s} style={{ textAlign: "right" }}>{s.replace("Florería García", "García").replace("BDF Palacio Floral SA de CV", "BDF")}</th>
+                    ))}
+                    <th>Cheapest</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparison.slice(0, 20).map((c) => {
+                    const suppliers = ["LA FINCA", "Florería García", "BDF Palacio Floral SA de CV", "PRO Flor", "OASIS"]
+                    return (
+                      <tr key={c.sku}>
+                        <td style={{ fontFamily: "monospace", fontSize: "10px" }}>{c.sku}</td>
+                        {suppliers.map((supName) => {
+                          const found = c.suppliers.find((s) => s.supplier === supName)
+                          if (!found) return <td key={supName} style={{ textAlign: "right", color: "#D6D3D1" }}>—</td>
+                          const isCheapest = found.supplier === c.cheapest.supplier && found.price === c.cheapest.price
+                          const diff = c.lfPrice ? ((found.price - c.lfPrice) / c.lfPrice * 100) : 0
+                          const diffColor = diff < 0 ? "#047857" : diff > 0 ? "#D97706" : "#78716C"
+                          return (
+                            <td key={supName} style={{ textAlign: "right" }}>
+                              <span style={{ fontWeight: isCheapest ? 700 : 400, color: isCheapest ? "#047857" : "#44403C" }}>${found.price}</span>
+                              {c.lfPrice && found.supplier !== "LA FINCA" && (
+                                <span style={{ fontSize: "9px", color: diffColor, marginLeft: "2px" }}>
+                                  {diff > 0 ? "+" : ""}{diff.toFixed(0)}%
+                                </span>
+                              )}
+                            </td>
+                          )
+                        })}
+                        <td style={{ fontWeight: 600, color: "#047857" }}>
+                          {c.cheapest.supplier.replace("Florería García", "García").replace("BDF Palacio Floral SA de CV", "BDF")} ${c.cheapest.price}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {comparison.length > 20 && (
+              <div style={{ textAlign: "center", padding: "8px", color: "#78716C", fontSize: "11px" }}>
+                ... {comparison.length - 20} more materials with multi-supplier pricing
+              </div>
+            )}
+            <div className="fmd-note" style={{ marginTop: "8px" }}>
+              Green = cheaper than LA FINCA. To switch a material's price, change Preferred Supplier on Materials sheet.
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
