@@ -15,6 +15,7 @@ async function getQuote(id: string) {
     where: { id },
     include: {
       customer: { select: { id: true, name: true, phone: true, email: true, address: true } },
+      order: { select: { id: true, orderNumber: true, status: true } }, // v1.9: proper FK relation
       lines: {
         orderBy: { lineNumber: "asc" },
         include: {
@@ -184,8 +185,35 @@ export default async function QuoteDetailPage({
             <CardContent className="pt-5">
               <div className="text-xs uppercase tracking-wider text-stone-500">Linked order</div>
               <div className="text-lg font-bold text-stone-900 mt-1">
-                {quote.linkedOrderId ?? <span className="text-stone-400">None yet</span>}
+                {quote.order ? (
+                  <Link
+                    href={`/orders?highlight=${quote.order.id}`}
+                    className="font-mono hover:text-rose-700 hover:underline transition"
+                    title={`View ${quote.order.orderNumber} on Orders tab (status: ${quote.order.status})`}
+                  >
+                    {quote.order.orderNumber}
+                  </Link>
+                ) : quote.linkedOrderId ? (
+                  <span
+                    className="text-amber-700 font-semibold"
+                    title={`Legacy ref: ${quote.linkedOrderId} (no matching Order — possibly deleted)`}
+                  >
+                    ⚠ {quote.linkedOrderId}
+                    <span className="block text-xs font-normal text-amber-600 mt-1">
+                      (orphan — order not found)
+                    </span>
+                  </span>
+                ) : (
+                  <span className="text-stone-400">None yet</span>
+                )}
               </div>
+              {quote.order && (
+                <div className="mt-1">
+                  <Badge variant="outline" className="text-xs">
+                    {quote.order.status.replace(/_/g, " ")}
+                  </Badge>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

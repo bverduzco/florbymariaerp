@@ -46,11 +46,13 @@ async function getOrders() {
   })
 }
 
-async function getLinkedQuotesMap(orderNumbers: string[]) {
-  if (orderNumbers.length === 0) return new Map<string, OrderDetailQuote>()
-  // Quote.linkedOrderId is a loose string ref storing Order.orderNumber
+async function getLinkedQuotesMap(orderIds: string[]) {
+  if (orderIds.length === 0) return new Map<string, OrderDetailQuote>()
+  // v1.9: proper FK. Quote.orderId references Order.id.
+  // (Previously used Quote.linkedOrderId as a loose string storing Order.orderNumber —
+  //  that field is deprecated; backfilled values into Quote.orderId on 2026-10-31.)
   const quotes = await prisma.quote.findMany({
-    where: { linkedOrderId: { in: orderNumbers } },
+    where: { orderId: { in: orderIds } },
     include: {
       lines: {
         select: {
@@ -66,7 +68,7 @@ async function getLinkedQuotesMap(orderNumbers: string[]) {
   })
   const map = new Map<string, OrderDetailQuote>()
   for (const q of quotes) {
-    map.set(q.linkedOrderId!, {
+    map.set(q.orderId!, {
       id: q.id,
       quoteNumber: q.quoteNumber,
       quoteDate: q.quoteDate,
@@ -99,8 +101,8 @@ export default async function OrdersPage() {
     }),
   ])
 
-  // Fetch all linked quotes in one query (by orderNumber)
-  const quotesByOrderNumber = await getLinkedQuotesMap(orders.map((o) => o.orderNumber))
+  // Fetch all linked quotes in one query (by Order.id, via the proper FK)
+  const quotesByOrderId = await getLinkedQuotesMap(orders.map((o) => o.id))
 
   const total = orders.length
   const fulfilled = orders.filter((o) => o.status === "fulfilled" || o.status === "delivered").length
@@ -146,7 +148,7 @@ export default async function OrdersPage() {
               {orders.map((o) => {
                 const itemsTotal = o.lineItems.reduce((s, l) => s + l.unitPrice * l.qty, 0) + o.deliveryFee
                 const itemCount = o.lineItems.reduce((s, l) => s + l.qty, 0)
-                const quote = quotesByOrderNumber.get(o.orderNumber) ?? null
+                const quote = quotesByOrderId.get(o.id) ?? null
 
                 // Shape for the dialog
                 const detailOrder = serializeOrderForDetail(o)

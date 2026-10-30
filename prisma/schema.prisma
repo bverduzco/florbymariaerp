@@ -177,6 +177,7 @@ model Order {
 
   lineItems       OrderLineItem[]
   executionLogs   ExecutionLog[]
+  quotes          Quote[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -391,7 +392,11 @@ model Quote {
   iva             Float    @default(0)
   total           Float    @default(0)
   depositRequired Float    @default(0)
-  linkedOrderId   String?  // FK to Order.orderNumber when converted (loose ref)
+  // v1.9: proper FK linking Quote → Order (replaces the loose string linkedOrderId).
+  // Backfilled from linkedOrderId on 2026-10-31; new code should always set orderId.
+  orderId         String?
+  order           Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  linkedOrderId   String?  // DEPRECATED — kept for backward compat during migration. Was a loose ref to Order.orderNumber (not id). New code must use orderId instead.
   lostReason      String?  // too_expensive | went_elsewhere | postponed | unresponsive | other
   leadSource      String?  // instagram | referral | walk_in | wedding_planner | google | other
   notes           String?
@@ -401,6 +406,7 @@ model Quote {
   updatedAt       DateTime @updatedAt
 
   @@index([customerId])
+  @@index([orderId])
   @@index([status])
   @@index([quoteDate])
 }
