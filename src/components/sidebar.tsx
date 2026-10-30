@@ -82,7 +82,7 @@ export function Sidebar() {
       >
         {/* Header — matches wireframe: logo (rose bg, 8px radius) + title + version */}
         <div className="flex items-center gap-2 px-4 py-4 border-b border-[#D6D3D1]">
-          <Link href="/dashboard" className="flex items-center gap-2 group">
+          <Link href="/" className="flex items-center gap-2 group">
             <div
               className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-base group-hover:opacity-90 transition"
               style={{ backgroundColor: "#BE185D" }}
