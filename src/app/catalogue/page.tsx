@@ -1,24 +1,34 @@
 // src/app/catalogue/page.tsx
 //
-// Customer-facing price list. Mirrors Products but only shows the info a customer
-// would see: name, description, price. No costs, no margins, no internal notes.
+// Internal product catalogue — reference view for Maria.
+// Shows products with prices, margins, and Cloudinary photos.
+// "Add to Quote" button adds the product as a Quote Line to an existing or new quote.
 
 import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { AssetImage } from "@/components/asset-image"
+import { AddToQuoteDialog } from "./add-to-quote-dialog"
 
-async function getCatalogue() {
+async function getProducts() {
   return prisma.product.findMany({
     where: { actualPriceBeforeIva: { gt: 0 } },
     orderBy: [{ category: "asc" }, { actualPriceBeforeIva: "asc" }],
   })
 }
 
-export default async function CataloguePage() {
-  const products = await getCatalogue()
+async function getActiveQuotes() {
+  return prisma.quote.findMany({
+    where: { status: { in: ["draft", "sent", "viewed", "negotiating"] } },
+    orderBy: { quoteDate: "desc" },
+    select: { id: true, quoteNumber: true, customerName: true, status: true },
+  })
+}
 
-  // Group by category for the menu
+export default async function CataloguePage() {
+  const [products, activeQuotes] = await Promise.all([getProducts(), getActiveQuotes()])
+
+  // Group by category
   const byCategory = products.reduce((acc, p) => {
     if (!acc[p.category]) acc[p.category] = []
     acc[p.category].push(p)
@@ -31,48 +41,55 @@ export default async function CataloguePage() {
     Centerpiece: "🏺",
   }
 
+  // KPIs
+  const total = products.length
+  const withPhoto = products.filter((p) => p.cloudinaryPublicId).length
+  const avgPrice = total > 0
+    ? products.reduce((s, p) => s + p.actualPriceWithIva, 0) / total
+    : 0
+
   return (
-    <main className="min-h-screen bg-gradient-to-b from-rose-50 to-stone-50 px-6 py-10">
-      <div className="mx-auto max-w-5xl">
-        {/* ─── Florist header (customer-facing) ─── */}
-        <header className="text-center mb-10">
-          <div className="text-5xl mb-2">✿</div>
-          <h1 className="text-4xl font-bold text-stone-900" style={{ fontFamily: "Georgia, serif" }}>
-            Flor by Maria
-          </h1>
-          <p className="mt-2 text-sm text-stone-600 italic">
-            Bouquets, arrangements &amp; event flowers · Monterrey, NL
+    <main className="min-h-screen bg-stone-50 px-6 py-10">
+      <div className="mx-auto max-w-6xl">
+        <header className="mb-6">
+          <div className="text-xs uppercase tracking-wider text-stone-500">
+            Internal product catalogue · v1.9
+          </div>
+          <h1 className="mt-1 text-3xl font-bold text-stone-900">Catalogue</h1>
+          <p className="mt-1 text-sm text-stone-600">
+            Reference view for building quotes. Click &quot;Add to Quote&quot; on any product to add it to an existing quote or create a new one.
           </p>
         </header>
 
-        {/* ─── Intro blurb ─── */}
-        <Card className="mb-8 border-rose-200 bg-white/70">
-          <CardContent className="pt-6 text-center text-sm text-stone-700 italic">
-            &ldquo;Cada flor, cada arreglo, cada detalle — hecho con cariño para tus momentos especiales.&rdquo;
-            <br />
-            <span className="text-xs text-stone-500 mt-2 inline-block">
-              Prices in MXN. IVA included. Delivery is extra (case by case). WhatsApp us to order: 81 1234 5678
-            </span>
-          </CardContent>
-        </Card>
+        {/* KPI bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 mb-6 border border-stone-200 rounded-lg overflow-hidden bg-white">
+          <KpiCell value={`${total}`} label="Total products" />
+          <KpiCell value={`${withPhoto}`} label="With photo" color="green" />
+          <KpiCell value={`${activeQuotes.length}`} label="Active quotes" color="amber" />
+          <KpiCell
+            value={`$${avgPrice.toLocaleString("es-MX", { maximumFractionDigits: 0 })}`}
+            label="Avg price (w/ IVA)"
+            color="purple"
+          />
+        </div>
 
-        {/* ─── Menu sections by category ─── */}
+        {/* Menu sections by category */}
         {Object.entries(byCategory).map(([category, items]) => (
           <section key={category} className="mb-10">
-            <h2 className="text-2xl font-bold text-stone-900 mb-4 flex items-center gap-2" style={{ fontFamily: "Georgia, serif" }}>
-              <span className="text-3xl">{categoryEmojis[category] ?? "🌸"}</span>
+            <h2 className="text-xl font-bold text-stone-900 mb-4 flex items-center gap-2">
+              <span className="text-2xl">{categoryEmojis[category] ?? "🌸"}</span>
               {category}s
+              <Badge variant="outline" className="text-xs bg-stone-100 text-stone-600 border-stone-300">
+                {items.length}
+              </Badge>
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {items.map((product) => {
                 const hasPhoto = Boolean(product.cloudinaryPublicId)
                 return (
-                  <Card
-                    key={product.id}
-                    className="overflow-hidden border-rose-100 bg-white hover:shadow-md transition"
-                  >
+                  <Card key={product.id} className="overflow-hidden border-stone-200 hover:shadow-sm transition">
                     <div className="grid grid-cols-3 gap-0">
-                      {/* Photo or placeholder (1/3 width on desktop) */}
+                      {/* Photo or placeholder (1/3 width) */}
                       <div className="aspect-square bg-stone-100">
                         {hasPhoto ? (
                           <AssetImage
@@ -85,7 +102,7 @@ export default async function CataloguePage() {
                           <div className="flex h-full items-center justify-center text-stone-300 text-xs p-2 text-center">
                             <div>
                               <div className="text-3xl mb-1">💐</div>
-                              <div className="text-[10px]">Photo soon</div>
+                              <div className="text-[10px]">No photo</div>
                             </div>
                           </div>
                         )}
@@ -96,28 +113,20 @@ export default async function CataloguePage() {
                           <h3 className="font-bold text-stone-900">{product.name}</h3>
                           {product.size && <Badge variant="outline" className="text-xs">{product.size}</Badge>}
                         </div>
+                        <div className="text-xs text-stone-500 font-mono mb-2">{product.sku}</div>
                         {product.description && (
-                          <p className="text-xs text-stone-600 line-clamp-3 mb-3 italic">
+                          <p className="text-xs text-stone-600 line-clamp-2 mb-3">
                             {product.description}
                           </p>
                         )}
                         <div className="flex items-baseline justify-between mt-2 pt-2 border-t border-stone-100">
                           <div>
-                            <div className="text-xs text-stone-500">Price (IVA included)</div>
-                            <div className="text-lg font-bold text-rose-700">
+                            <div className="text-xs text-stone-500">Price (w/ IVA)</div>
+                            <div className="text-lg font-bold text-stone-900">
                               ${product.actualPriceWithIva.toLocaleString("es-MX", { maximumFractionDigits: 0 })} MXN
                             </div>
                           </div>
-                          <a
-                            href={`https://wa.me/528112345678?text=${encodeURIComponent(
-                              `Hola! Me gustaría ordenar: ${product.name}${product.size ? ` (${product.size})` : ""} — $${product.actualPriceWithIva.toLocaleString("es-MX", { maximumFractionDigits: 0 })} MXN`
-                            )}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-3 py-1.5 text-xs font-medium bg-rose-600 text-white rounded-md hover:bg-rose-700 transition inline-block"
-                          >
-                            Order
-                          </a>
+                          <AddToQuoteDialog product={product} existingQuotes={activeQuotes} />
                         </div>
                       </div>
                     </div>
@@ -127,23 +136,30 @@ export default async function CataloguePage() {
             </div>
           </section>
         ))}
-
-        {/* ─── Footer / contact ─── */}
-        <Card className="mt-12 border-rose-200 bg-white/70">
-          <CardContent className="pt-6 text-center text-sm text-stone-700 space-y-2">
-            <div className="font-bold text-stone-900 text-lg" style={{ fontFamily: "Georgia, serif" }}>
-              ✿ Flor by Maria
-            </div>
-            <div>Monterrey, Nuevo León, México</div>
-            <div className="text-xs text-stone-500">
-              📱 WhatsApp: 81 1234 5678 · ✉️ hola@florbymaria.com
-            </div>
-            <div className="text-xs text-stone-400 mt-4">
-              Prices valid for 15 days. Flowers may vary by season — we&apos;ll substitute with equal or greater value, respecting your color palette.
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </main>
+  )
+}
+
+function KpiCell({
+  value,
+  label,
+  color = "default",
+}: {
+  value: string
+  label: string
+  color?: "default" | "green" | "amber" | "purple"
+}) {
+  const colorMap = {
+    default: "text-stone-900",
+    green: "text-emerald-700",
+    amber: "text-amber-700",
+    purple: "text-violet-700",
+  }
+  return (
+    <div className="p-3 border-r border-stone-200 last:border-r-0 min-w-[120px]">
+      <div className={`text-xl font-bold ${colorMap[color]}`}>{value}</div>
+      <div className="text-xs text-stone-500 mt-0.5">{label}</div>
+    </div>
   )
 }
