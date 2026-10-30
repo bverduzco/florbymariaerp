@@ -1,6 +1,7 @@
 import { db as prisma } from "@/lib/db"
 import { AddMaterialDialog } from "./add-material-dialog"
 import { MaterialSearch } from "./material-search"
+import { ResetPerishableButton } from "./reset-perishable-button"
 
 async function getMaterials() {
   return prisma.material.findMany({
@@ -17,11 +18,19 @@ export default async function MaterialsPage() {
   const needsReorder = materials.filter((m) => m.reorderLevelPacks && (m.currentStockPacks ?? 0) <= m.reorderLevelPacks).length
   const invValue = materials.reduce((s, m) => s + (m.currentStockPacks ?? 0) * (m.packPrice ?? 0), 0)
 
+  // Find perishables with stock > 0 for the reset button
+  const perishables = materials
+    .filter((m) => ["flower", "foliage"].includes(m.category) && (m.currentStockPacks ?? 0) > 0)
+    .map((m) => ({ sku: m.sku, name: m.name, currentStock: m.currentStockPacks ?? 0, packPrice: m.packPrice }))
+
   return (
     <div>
       <div className="fmd-screen-header">
         <div><h1>Materials</h1><div className="fmd-subtitle">Flowers, foliage & packaging · stock in packs</div></div>
-        <AddMaterialDialog suppliers={suppliers} />
+        <div style={{ display: "flex", gap: "8px" }}>
+          <ResetPerishableButton perishables={perishables} />
+          <AddMaterialDialog suppliers={suppliers} />
+        </div>
       </div>
       <div className="fmd-kpi-bar">
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#44403C" }}>{total}</div><div className="fmd-kpi-label">Total materials</div></div>

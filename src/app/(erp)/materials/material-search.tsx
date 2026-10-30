@@ -38,17 +38,31 @@ const CATEGORY_COLORS: Record<string, string> = {
 export function MaterialSearch({ materials }: MaterialSearchProps) {
   const [query, setQuery] = useState("")
   const [categoryFilter, setCategoryFilter] = useState<string>("all")
+  const [sortBy, setSortBy] = useState<string>("name")
 
-  const filtered = materials.filter((m) => {
-    if (categoryFilter !== "all" && m.category !== categoryFilter) return false
-    if (!query) return true
-    const q = query.toLowerCase()
-    return (
-      m.name.toLowerCase().includes(q) ||
-      m.sku.toLowerCase().includes(q) ||
-      (m.colors?.toLowerCase().includes(q) ?? false)
-    )
-  })
+  const filtered = materials
+    .filter((m) => {
+      if (categoryFilter !== "all" && m.category !== categoryFilter) return false
+      if (!query) return true
+      const q = query.toLowerCase()
+      return (
+        m.name.toLowerCase().includes(q) ||
+        m.sku.toLowerCase().includes(q) ||
+        (m.colors?.toLowerCase().includes(q) ?? false)
+      )
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "price":
+          return (b.packPrice ?? 0) - (a.packPrice ?? 0)
+        case "stock":
+          return (b.currentStockPacks ?? 0) - (a.currentStockPacks ?? 0)
+        case "category":
+          return a.category.localeCompare(b.category) || a.name.localeCompare(b.name)
+        default:
+          return a.name.localeCompare(b.name)
+      }
+    })
 
   const categories = Array.from(new Set(materials.map((m) => m.category)))
 
@@ -67,7 +81,7 @@ export function MaterialSearch({ materials }: MaterialSearchProps) {
 
   return (
     <div>
-      {/* Search + filter row */}
+      {/* Search + filter + sort row */}
       <div className="flex flex-wrap gap-3 mb-4">
         <input
           type="text"
@@ -87,6 +101,16 @@ export function MaterialSearch({ materials }: MaterialSearchProps) {
               {cat} ({materials.filter((m) => m.category === cat).length})
             </option>
           ))}
+        </select>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="px-3 py-2 text-sm border border-stone-300 rounded-md focus:outline-none focus:border-stone-900"
+        >
+          <option value="name">Sort: Name</option>
+          <option value="price">Sort: Price (high→low)</option>
+          <option value="stock">Sort: Stock (high→low)</option>
+          <option value="category">Sort: Category</option>
         </select>
       </div>
       <div className="text-xs text-stone-500 mb-3">
