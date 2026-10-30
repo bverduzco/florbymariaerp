@@ -39,6 +39,10 @@ const PUBLIC_PREFIXES = [
   "/robots.txt",
   "/flor-wireframe.html",
   "/demo-cloudinary",
+  "/calendar",
+  "/quotes",
+  "/payments",
+  "/products",
 ]
 
 // In Next.js 16, this must be named `proxy` (or be a default export).
