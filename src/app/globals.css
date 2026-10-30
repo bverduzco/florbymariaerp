@@ -118,5 +118,29 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-size: 14px;
   }
+}
+
+/* === Flor by Maria ERP design system — matches wireframe === */
+:root {
+  --fmd-rose: #BE185D;
+  --fmd-rose-light: #FCE7F3;
+  --fmd-stone: #44403C;
+  --fmd-stone-light: #78716C;
+  --fmd-bg: #FAFAF9;
+  --fmd-border: #D6D3D1;
+  --fmd-green: #047857;
+  --fmd-amber: #D97706;
+  --fmd-blue: #2563EB;
+  --fmd-gray: #6B7280;
+}
+
+/* Override shadcn primary to match wireframe's rose */
+:root {
+  --primary: #BE185D;
+  --primary-foreground: #ffffff;
+  --border: #D6D3D1;
+  --background: #FAFAF9;
+  --card: #ffffff;
 }

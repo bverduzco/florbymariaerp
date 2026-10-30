@@ -1,8 +1,13 @@
 import { Sidebar } from "@/components/sidebar"
+import { TopBar } from "@/components/top-bar"
 
-// Route group layout — wraps all ERP pages with the shared sidebar.
-// URL paths are NOT affected: /quotes stays /quotes, /dashboard stays /dashboard.
-// The (erp) folder name is a Next.js convention for grouping without URL impact.
+// Route group layout — wraps all ERP pages with the shared sidebar + top bar.
+// Matches the wireframe's design system:
+//   - Background: #FAFAF9 (stone-50)
+//   - Sidebar: 240px, white, border-right
+//   - Top bar: 48px, white, border-bottom, logout button
+//   - Main content: 24px padding
+//   - Primary accent: rose (#BE185D)
 
 export default function ErpLayout({
   children,
@@ -10,15 +15,13 @@ export default function ErpLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="flex h-screen overflow-hidden bg-[#FAFAF9]">
       <Sidebar />
-      {/* Main content area — offset by sidebar width on desktop */}
-      <div className="lg:pl-60">
-        {/* Top bar (mobile hamburger lives in Sidebar component) */}
-        <div className="hidden lg:block sticky top-0 z-30 bg-white/80 backdrop-blur-sm border-b border-stone-200 h-12" />
-        <div className="p-6 lg:p-8 pt-16 lg:pt-8">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <TopBar />
+        <main className="flex-1 overflow-y-auto p-6">
           {children}
-        </div>
+        </main>
       </div>
     </div>
   )
