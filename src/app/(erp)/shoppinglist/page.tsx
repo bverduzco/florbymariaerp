@@ -1,5 +1,6 @@
 import { db as prisma } from "@/lib/db"
 import { GeneratePdfButton } from "./generate-pdf-button"
+import { CreatePosButton } from "./create-pos-button"
 
 async function getShoppingListData() {
   const activeOrders = await prisma.order.findMany({
@@ -27,7 +28,14 @@ export default async function ShoppingListPage() {
     <div>
       <div className="fmd-screen-header">
         <div><h1>Shopping List</h1><div className="fmd-subtitle">Procurement plan for active orders</div></div>
-        <GeneratePdfButton activeOrders={activeOrders} />
+        <div style={{ display: "flex", gap: "8px" }}>
+          <GeneratePdfButton activeOrders={activeOrders} />
+          <CreatePosButton supplierGroups={Object.entries(bySupplier).map(([supplier, data]) => ({
+            supplier,
+            materials: data.materials.map((m) => ({ sku: m.sku, name: m.name, packsToBuy: m.packsToBuy, estimatedCost: m.estimatedCost, packPrice: m.packPrice })),
+            totalCost: data.totalCost,
+          }))} />
+        </div>
       </div>
       <div className="fmd-kpi-bar">
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#44403C" }}>{activeOrders.length}</div><div className="fmd-kpi-label">Active orders</div></div>
