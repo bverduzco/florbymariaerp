@@ -6,6 +6,7 @@
 import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { AddExpenseDialog } from "./add-expense-dialog"
 
 async function getExpenses() {
   return prisma.expense.findMany({
@@ -57,9 +58,7 @@ export default async function ExpensesPage() {
               Operating expenses: gas, parking, software, utilities, etc. For inventory purchases, use Purchase Orders or Ad-hoc Purchases.
             </p>
           </div>
-          <button className="px-4 py-2 text-sm font-medium bg-stone-900 text-white rounded-md hover:bg-stone-800 transition">
-            + Add Expense
-          </button>
+          <AddExpenseDialog />
         </header>
 
         {/* KPI bar */}

@@ -11,6 +11,7 @@
 import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { NewQuoteDialog } from "./new-quote-dialog"
 
 async function getQuotes() {
   return prisma.quote.findMany({
@@ -69,9 +70,7 @@ export default async function QuotesPage() {
               Formal proposals sent to customers. Lifecycle: draft → sent → viewed → negotiating → accepted → declined → expired.
             </p>
           </div>
-          <button className="px-4 py-2 text-sm font-medium bg-stone-900 text-white rounded-md hover:bg-stone-800 transition">
-            + New Quote
-          </button>
+          <NewQuoteDialog />
         </header>
 
         {/* ─── Pipeline KPI bar ─── */}

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { CustomerSearch } from "./customer-search"
+import { AddCustomerDialog } from "./add-customer-dialog"
 
 async function getCustomers() {
   const customers = await prisma.customer.findMany({
@@ -65,9 +66,7 @@ export default async function CustomersPage() {
               All contacts in the system. Click a customer to view their full order/event history.
             </p>
           </div>
-          <button className="px-4 py-2 text-sm font-medium bg-stone-900 text-white rounded-md hover:bg-stone-800 transition">
-            + Add Customer
-          </button>
+          <AddCustomerDialog />
         </header>
 
         {/* KPI bar */}

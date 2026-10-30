@@ -13,6 +13,7 @@ import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { PaymentsFilters } from "./payments-filters"
+import { LogPaymentDialog } from "./log-payment-dialog"
 
 async function getPayments() {
   return prisma.payment.findMany({
@@ -76,14 +77,17 @@ export default async function PaymentsPage() {
     <main className="min-h-screen bg-stone-50 px-6 py-10">
       <div className="mx-auto max-w-6xl">
         {/* ─── Screen header ─── */}
-        <header className="mb-6">
-          <div className="text-xs uppercase tracking-wider text-stone-500">
-            Unified money ledger · v1.7 + v1.9
+        <header className="mb-6 flex flex-wrap justify-between items-start gap-4">
+          <div>
+            <div className="text-xs uppercase tracking-wider text-stone-500">
+              Unified money ledger · v1.7 + v1.9
+            </div>
+            <h1 className="mt-1 text-3xl font-bold text-stone-900">Payments</h1>
+            <p className="mt-1 text-sm text-stone-600">
+              All money flowing in (customers → Maria) and out (Maria → suppliers). One row per payment event.
+            </p>
           </div>
-          <h1 className="mt-1 text-3xl font-bold text-stone-900">Payments</h1>
-          <p className="mt-1 text-sm text-stone-600">
-            All money flowing in (customers → Maria) and out (Maria → suppliers). One row per payment event.
-          </p>
+          <LogPaymentDialog />
         </header>
 
         {/* ─── Money flow KPI bar ─── */}

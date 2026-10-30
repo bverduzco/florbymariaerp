@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { CalendarGrid } from "./calendar-grid"
 import { MarkersToggle } from "./markers-toggle"
+import { BlockDateDialog } from "./block-date-dialog"
 
 // Server-side data fetch — runs once per page load
 async function getCalendarData() {
@@ -148,9 +149,7 @@ export default async function CalendarPage() {
             November 2026 ▾
           </button>
           <MarkersToggle markers={seasonMarkers} />
-          <button className="px-4 py-1.5 text-sm font-medium bg-amber-500 text-white border border-amber-600 rounded-md hover:bg-amber-600 transition">
-            🚫 Block Date
-          </button>
+          <BlockDateDialog />
         </div>
 
         {/* ─── Month grid ─── */}
