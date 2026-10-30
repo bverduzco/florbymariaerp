@@ -27,6 +27,7 @@ import {
   ClipboardCheck,
 } from "lucide-react"
 import { usePlanStore } from "@/lib/plan-store"
+import { downloadResponse } from "@/lib/download-response"
 import { toast } from "sonner"
 
 interface UsedBy {
@@ -254,19 +255,12 @@ export function ShoppingListPanel({
         const err = await res.json().catch(() => ({}))
         throw new Error(err.error || `HTTP ${res.status}`)
       }
-      const result = await res.json()
+      const slNumber = res.headers.get("X-SL-Number")
+      const fileName = await downloadResponse(res, "shopping-list.pdf")
       toast.success("Shopping list PDF generated", {
-        description: result.fileName,
+        description: [slNumber, fileName].filter(Boolean).join(" · "),
         duration: 5000,
       })
-      // Trigger browser download
-      const link = document.createElement("a")
-      link.href = `/download/${encodeURIComponent(result.fileName)}`
-      link.download = result.fileName
-      link.target = "_blank"
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
     } catch (e) {
       toast.error("Failed to generate PDF", {
         description: e instanceof Error ? e.message : String(e),

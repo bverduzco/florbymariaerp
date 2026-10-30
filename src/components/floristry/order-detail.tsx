@@ -37,6 +37,7 @@ import {
   Check,
 } from "lucide-react"
 import { toast } from "sonner"
+import { downloadResponse } from "@/lib/download-response"
 import {
   Dialog,
   DialogContent,
@@ -404,20 +405,11 @@ export function OrderDetail({
         const err = await res.json().catch(() => ({}))
         throw new Error(err.error || `HTTP ${res.status}`)
       }
-      const data = await res.json()
-      toast.success(`Recibo ${data.orderNumber} generado`, {
-        description: `File: ${data.fileName} — saved in /download folder`,
+      const fileName = await downloadResponse(res, `Recibo ${order.orderNumber}.pdf`)
+      toast.success(`Recibo ${order.orderNumber} generado`, {
+        description: `File: ${fileName}`,
         duration: 5000,
       })
-      // Trigger browser download by opening the file URL in a new tab
-      // (works for files served from /download via the static file server)
-      const link = document.createElement("a")
-      link.href = `/download/${encodeURIComponent(data.fileName)}`
-      link.download = data.fileName
-      link.target = "_blank"
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
     } catch (e) {
       toast.error("Failed to generate PDF", {
         description: e instanceof Error ? e.message : String(e),

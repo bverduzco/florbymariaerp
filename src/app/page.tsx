@@ -260,7 +260,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="mt-auto border-t border-stone-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3 text-xs text-stone-500 flex flex-col sm:flex-row justify-between gap-1">
-          <span>Flor by Maria · v1.8 · Currency: MXN</span>
+          <span>Flor by Maria · v1.9 · Currency: MXN</span>
           <span>Source: ERP Excel workbook · {productCount} products loaded</span>
         </div>
       </footer>

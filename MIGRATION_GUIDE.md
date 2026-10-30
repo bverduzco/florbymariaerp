@@ -141,6 +141,40 @@ The seed script loads `.env.local` relative to its own location, so it can be
 run from the project root or another working directory. It preserves an
 already-set `DATABASE_URL` from the environment.
 
+### Expanding an existing v1.8 Turso database
+
+The ERP schema has been extended additively to cover the workbook's operational
+history and future flower-planning data. Do **not** apply `turso-init.sql` to an
+existing database: it is only for an empty database.
+
+After deploying this code, apply the checked-in additive migration and then
+import the workbook rows:
+
+```bash
+npm run db:turso:expand-schema
+npm run db:import:erp-workbook
+```
+
+Both scripts load `.env` and then `.env.local` relative to the project (with
+`.env.local` taking precedence) and use `DATABASE_URL`; an inherited process
+environment variable takes precedence over both files. Set the Turso URL in
+`.env.local` for these commands so a local `file:` database is not selected.
+The schema command applies only the reviewed expansion SQL and records its
+migration name in `__turso_migrations`; it can be safely rerun after completion
+or an interrupted additive migration. The workbook import is repeatable: it
+uses stable sheet/row identifiers for history, avoids duplicating existing
+records, and fills newly added catalog fields only when those fields are empty.
+It does not replace the current seed script, which remains for initial catalog
+setup.
+
+The expanded schema stores supplier price history, stock movements, event line
+items, recipe versions, tools/equipment, menu entries, assumptions, and
+workbook version history. Materials also support estimated lifetime, dated
+availability windows, and explicit accepted substitutions; the existing
+free-text `substitutes` field remains for compatibility. Dashboard and invoice
+presentation cells are intentionally left as workbook/UI calculations rather
+than copied into database rows.
+
 ### 3.7 — Migrate existing data from local SQLite
 
 If you have orders/customers/inventory in your local `db/custom.db` that you want to preserve, write a one-off migration script:

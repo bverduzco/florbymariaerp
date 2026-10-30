@@ -9,6 +9,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["pdfmake"],
+
   // No `output: "standalone"` — Vercel handles this natively.
   // If you ever need to deploy to Fly.io or Render again, set:
   //   output: "standalone"
