@@ -141,9 +141,13 @@ export default async function DashboardPage() {
           <QuickLink href="/events" label="Events" desc="Weddings, corporate jobs, demos" emoji="💒" />
           <QuickLink href="/suppliers" label="Suppliers" desc="Vendor directory + contact info" emoji="🏭" />
           <QuickLink href="/materials" label="Materials" desc="Inventory grid + reorder status" emoji="🌿" />
+          <QuickLink href="/procurement" label="Purchase Orders" desc="Formal procurement from suppliers" emoji="🛒" />
           <QuickLink href="/payments" label="Payments" desc="Unified money ledger" emoji="💵" />
           <QuickLink href="/expenses" label="Expenses" desc="Operating costs (gas, software, etc.)" emoji="💸" />
+          <QuickLink href="/losses" label="Losses" desc="Damaged, spoiled & lost inventory" emoji="🥀" />
+          <QuickLink href="/execution" label="Execution Logs" desc="What was actually used per job" emoji="📋" />
           <QuickLink href="/staff" label="Staff" desc="Team members + skills" emoji="👤" />
+          <QuickLink href="/settings" label="Settings" desc="Workbook configuration + system info" emoji="⚙️" />
           <QuickLink href="/demo-cloudinary" label="Cloudinary Demo" desc="How product photos wire in" emoji="🖼" />
         </div>
 
