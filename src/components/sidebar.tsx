@@ -83,12 +83,7 @@ export function Sidebar() {
         {/* Header — matches wireframe: logo (rose bg, 8px radius) + title + version */}
         <div className="flex items-center gap-2 px-4 py-4 border-b border-[#D6D3D1]">
           <Link href="/" className="flex items-center gap-2 group">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-base group-hover:opacity-90 transition"
-              style={{ backgroundColor: "#BE185D" }}
-            >
-              ✿
-            </div>
+            <img src="/flower-logo.svg" alt="Flor by Maria" width={32} height={32} className="rounded-lg group-hover:opacity-90 transition" />
             <div>
               <div className="text-sm font-bold text-[#44403C] leading-tight">Flor by Maria</div>
               <div className="text-[10px] text-[#78716C]">ERP v1.9</div>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <!-- Background -->
+  <rect width="32" height="32" fill="rgb(190, 24, 93)"/>
+  <!-- Flower: 5 petals around a center, centered at (16,16) -->
+  <g transform="translate(16,16)">
+    <!-- Petals (rotated 5x around center) -->
+    <g fill="#FFFFFF">
+      <ellipse cx="0" cy="-7" rx="3.2" ry="5.5"/>
+      <ellipse cx="0" cy="-7" rx="3.2" ry="5.5" transform="rotate(72)"/>
+      <ellipse cx="0" cy="-7" rx="3.2" ry="5.5" transform="rotate(144)"/>
+      <ellipse cx="0" cy="-7" rx="3.2" ry="5.5" transform="rotate(216)"/>
+      <ellipse cx="0" cy="-7" rx="3.2" ry="5.5" transform="rotate(288)"/>
+    </g>
+    <!-- Flower center -->
+    <circle r="2.6" fill="#FFD23F"/>
+    <!-- Subtle inner detail on center -->
+    <circle r="1" fill="rgb(190, 24, 93)" opacity="0.35"/>
+  </g>
+</svg>
