@@ -1,11 +1,46 @@
 import { db as prisma } from "@/lib/db"
 import { GeneratePdfButton } from "./generate-pdf-button"
 import { CreatePosButton } from "./create-pos-button"
+import { OrderDetailDialog } from "@/components/order-detail-dialog"
+import { serializeOrderForDetail } from "@/lib/order-detail-serializer"
 
 async function getShoppingListData() {
   const activeOrders = await prisma.order.findMany({
     where: { status: { in: ["payment_confirmed", "procuring", "producing"] } },
-    include: { customer: { select: { name: true } }, lineItems: true },
+    include: {
+      customer: { select: { name: true, phone: true, email: true, address: true } },
+      event: { select: { eventNumber: true, name: true, eventDate: true } },
+      lineItems: {
+        select: {
+          id: true,
+          productSku: true,
+          productName: true,
+          productSize: true,
+          qty: true,
+          unitPrice: true,
+        },
+      },
+      executionLogs: {
+        select: {
+          id: true,
+          executionNumber: true,
+          status: true,
+          executedAt: true,
+          actualCost: true,
+          lines: {
+            select: {
+              materialName: true,
+              qtyUsed: true,
+              unit: true,
+              lineCost: true,
+              type: true,
+            },
+          },
+        },
+        orderBy: { executedAt: "desc" },
+        take: 5, // only need a few for the detail dialog preview
+      },
+    },
     orderBy: { deliveryDate: "asc" },
   })
   const allProductSkus = new Set<string>()
@@ -45,9 +80,23 @@ export default async function ShoppingListPage() {
       </div>
       {activeOrders.length > 0 && (
         <div className="fmd-box">
-          <div className="fmd-box-label">Active Orders Feeding This List</div>
+          <div className="fmd-box-label">Active Orders Feeding This List · click any order for full details</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-            {activeOrders.map((o) => (<span key={o.id} className="fmd-flow-step" style={{ background: "#EFF6FF", borderColor: "#BFDBFE", color: "#1E40AF" }}>{o.orderNumber} · {o.customer.name}</span>))}
+            {activeOrders.map((o) => (
+              <OrderDetailDialog
+                key={o.id}
+                order={serializeOrderForDetail(o)}
+                trigger={
+                  <button
+                    className="fmd-flow-step hover:shadow-sm transition"
+                    style={{ background: "#EFF6FF", borderColor: "#BFDBFE", color: "#1E40AF", cursor: "pointer" }}
+                    title={`View details for ${o.orderNumber}`}
+                  >
+                    {o.orderNumber} · {o.customer?.name ?? "—"}
+                  </button>
+                }
+              />
+            ))}
           </div>
         </div>
       )}

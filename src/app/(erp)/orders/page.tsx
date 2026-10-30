@@ -3,15 +3,89 @@
 import { db as prisma } from "@/lib/db"
 import { NewOrderDialog } from "./new-order-dialog"
 import { StatusDropdown } from "@/components/status-dropdown"
+import { OrderDetailDialog, type OrderDetailQuote } from "@/components/order-detail-dialog"
+import { serializeOrderForDetail } from "@/lib/order-detail-serializer"
 
 async function getOrders() {
   return prisma.order.findMany({
     include: {
-      customer: { select: { name: true, phone: true } },
-      lineItems: { select: { productName: true, productSize: true, qty: true, unitPrice: true } },
+      customer: { select: { name: true, phone: true, email: true, address: true } },
+      event: { select: { eventNumber: true, name: true, eventDate: true } },
+      lineItems: {
+        select: {
+          id: true,
+          productSku: true,
+          productName: true,
+          productSize: true,
+          qty: true,
+          unitPrice: true,
+        },
+        orderBy: { createdAt: "asc" },
+      },
+      executionLogs: {
+        select: {
+          id: true,
+          executionNumber: true,
+          status: true,
+          executedAt: true,
+          actualCost: true,
+          lines: {
+            select: {
+              materialName: true,
+              qtyUsed: true,
+              unit: true,
+              lineCost: true,
+              type: true,
+            },
+          },
+        },
+        orderBy: { executedAt: "desc" },
+      },
     },
     orderBy: { createdAt: "desc" },
   })
+}
+
+async function getLinkedQuotesMap(orderNumbers: string[]) {
+  if (orderNumbers.length === 0) return new Map<string, OrderDetailQuote>()
+  // Quote.linkedOrderId is a loose string ref storing Order.orderNumber
+  const quotes = await prisma.quote.findMany({
+    where: { linkedOrderId: { in: orderNumbers } },
+    include: {
+      lines: {
+        select: {
+          id: true,
+          productSku: true,
+          description: true,
+          qty: true,
+          unitPrice: true,
+        },
+        orderBy: { createdAt: "asc" },
+      },
+    },
+  })
+  const map = new Map<string, OrderDetailQuote>()
+  for (const q of quotes) {
+    map.set(q.linkedOrderId!, {
+      id: q.id,
+      quoteNumber: q.quoteNumber,
+      quoteDate: q.quoteDate,
+      validUntil: q.validUntil,
+      status: q.status,
+      eventType: q.eventType,
+      eventDate: q.eventDate,
+      customerName: q.customerName,
+      subtotal: q.subtotal,
+      iva: q.iva,
+      total: q.total,
+      depositRequired: q.depositRequired,
+      leadSource: q.leadSource,
+      lostReason: q.lostReason,
+      notes: q.notes,
+      lines: q.lines,
+    })
+  }
+  return map
 }
 
 export default async function OrdersPage() {
@@ -24,6 +98,9 @@ export default async function OrdersPage() {
       select: { sku: true, name: true, size: true, actualPriceBeforeIva: true },
     }),
   ])
+
+  // Fetch all linked quotes in one query (by orderNumber)
+  const quotesByOrderNumber = await getLinkedQuotesMap(orders.map((o) => o.orderNumber))
 
   const total = orders.length
   const fulfilled = orders.filter((o) => o.status === "fulfilled" || o.status === "delivered").length
@@ -51,7 +128,7 @@ export default async function OrdersPage() {
       </div>
 
       <div className="fmd-box">
-        <div className="fmd-box-label">All Orders</div>
+        <div className="fmd-box-label">All Orders · click any order number to see full details + linked quote</div>
         <div style={{ overflowX: "auto" }}>
           <table className="fmd-table">
             <thead>
@@ -69,10 +146,36 @@ export default async function OrdersPage() {
               {orders.map((o) => {
                 const itemsTotal = o.lineItems.reduce((s, l) => s + l.unitPrice * l.qty, 0) + o.deliveryFee
                 const itemCount = o.lineItems.reduce((s, l) => s + l.qty, 0)
+                const quote = quotesByOrderNumber.get(o.orderNumber) ?? null
+
+                // Shape for the dialog
+                const detailOrder = serializeOrderForDetail(o)
+
                 return (
                   <tr key={o.id}>
-                    <td style={{ fontFamily: "monospace", fontSize: "11px", color: "#44403C" }}>{o.orderNumber}</td>
-                    <td style={{ fontWeight: 600, color: "#44403C" }}>{o.customer.name}</td>
+                    <td style={{ padding: "8px 12px" }}>
+                      <OrderDetailDialog
+                        order={detailOrder}
+                        quote={quote}
+                        trigger={
+                          <button
+                            className="font-mono text-[11px] text-stone-900 hover:text-rose-700 hover:underline font-semibold transition"
+                            title={`View details for ${o.orderNumber}`}
+                          >
+                            {o.orderNumber}
+                            {quote && (
+                              <span
+                                className="ml-1 text-[9px] text-rose-600"
+                                title="Has linked quote"
+                              >
+                                •Q
+                              </span>
+                            )}
+                          </button>
+                        }
+                      />
+                    </td>
+                    <td style={{ fontWeight: 600, color: "#44403C" }}>{o.customer?.name ?? "—"}</td>
                     <td>{o.lineItems.length} products · {itemCount} items</td>
                     <td>{o.deliveryDate ? o.deliveryDate.toLocaleDateString("es-MX", { day: "2-digit", month: "short" }) : "—"}</td>
                     <td>
@@ -103,7 +206,7 @@ export default async function OrdersPage() {
         </div>
       </div>
 
-      <div className="fmd-note">💡 Small orders require 100% payment before procurement. Payment gate blocks Shopping List generation.</div>
+      <div className="fmd-note">💡 Small orders require 100% payment before procurement. Payment gate blocks Shopping List generation. Click any order number to see full details + linked quote.</div>
     </div>
   )
 }

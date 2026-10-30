@@ -1,9 +1,10 @@
 import { db as prisma } from "@/lib/db"
 import { NewPoDialog } from "./new-po-dialog"
+import { PODetailDialog } from "@/components/po-detail-dialog"
 
 async function getPurchaseOrders() {
   return prisma.purchaseOrder.findMany({
-    include: { _count: { select: { lines: true } }, lines: { select: { materialSku: true, materialName: true, qtyPacks: true, costPerPack: true, lineTotal: true }, orderBy: { materialName: "asc" } } },
+    include: { _count: { select: { lines: true } }, lines: { select: { id: true, materialSku: true, materialName: true, qtyPacks: true, costPerPack: true, lineTotal: true }, orderBy: { materialName: "asc" } } },
     orderBy: { poNumber: "asc" },
   })
 }
@@ -73,7 +74,29 @@ export default async function ProcurementPage() {
                 ) : (
                   pos.map((po) => (
                     <tr key={po.id}>
-                      <td style={{ fontFamily: "monospace", fontSize: "11px", fontWeight: 700, color: "#44403C" }}>{po.poNumber}</td>
+                      <td style={{ padding: "8px 12px" }}>
+                        <PODetailDialog
+                          po={{
+                            id: po.id,
+                            poNumber: po.poNumber,
+                            supplier: po.supplier,
+                            status: po.status,
+                            totalCost: po.totalCost,
+                            notes: po.notes,
+                            createdAt: po.createdAt,
+                            updatedAt: po.updatedAt,
+                            lines: po.lines,
+                          }}
+                          trigger={
+                            <button
+                              className="font-mono text-[11px] font-bold text-stone-900 hover:text-rose-700 hover:underline transition"
+                              title={`View details for ${po.poNumber}`}
+                            >
+                              {po.poNumber}
+                            </button>
+                          }
+                        />
+                      </td>
                       <td>{po.createdAt.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</td>
                       <td style={{ color: "#44403C" }}>{po.supplier}</td>
                       <td>{po._count.lines} items</td>

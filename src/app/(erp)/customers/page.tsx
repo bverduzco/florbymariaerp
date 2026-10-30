@@ -1,20 +1,74 @@
 import { db as prisma } from "@/lib/db"
 import { AddCustomerDialog } from "./add-customer-dialog"
 import { CustomerSearch } from "./customer-search"
+import { serializeOrderForDetail } from "@/lib/order-detail-serializer"
 
 async function getCustomers() {
   const customers = await prisma.customer.findMany({
     include: {
       _count: { select: { orders: true, events: true, quotes: true } },
-      orders: { select: { deliveryFee: true, lineItems: { select: { unitPrice: true, qty: true } } } },
+      orders: {
+        include: {
+          customer: { select: { name: true, phone: true, email: true, address: true } },
+          event: { select: { eventNumber: true, name: true, eventDate: true } },
+          lineItems: {
+            select: {
+              id: true,
+              productSku: true,
+              productName: true,
+              productSize: true,
+              qty: true,
+              unitPrice: true,
+            },
+          },
+          executionLogs: {
+            select: {
+              id: true,
+              executionNumber: true,
+              status: true,
+              executedAt: true,
+              actualCost: true,
+              lines: {
+                select: {
+                  materialName: true,
+                  qtyUsed: true,
+                  unit: true,
+                  lineCost: true,
+                  type: true,
+                },
+              },
+            },
+            orderBy: { executedAt: "desc" },
+            take: 5,
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      quotes: {
+        include: {
+          lines: {
+            select: {
+              id: true,
+              productSku: true,
+              description: true,
+              qty: true,
+              unitPrice: true,
+            },
+            orderBy: { createdAt: "asc" },
+          },
+        },
+        orderBy: { quoteDate: "desc" },
+      },
     },
     orderBy: { createdAt: "desc" },
   })
+
   return customers.map((c) => {
     const lifetimeValue = c.orders.reduce((sum, o) => {
       const itemsTotal = o.lineItems.reduce((s, l) => s + l.unitPrice * l.qty, 0)
       return sum + itemsTotal + o.deliveryFee
     }, 0)
+
     return {
       id: c.id,
       name: c.name,
@@ -28,6 +82,33 @@ async function getCustomers() {
       eventCount: c._count.events,
       quoteCount: c._count.quotes,
       lifetimeValue,
+      // Pass full orders (serialized for OrderDetailDialog)
+      orders: c.orders.map((o) => serializeOrderForDetail(o)),
+      // Pass full quotes (already in the right shape from Prisma)
+      quotes: c.quotes.map((q) => ({
+        id: q.id,
+        quoteNumber: q.quoteNumber,
+        quoteDate: q.quoteDate,
+        validUntil: q.validUntil,
+        status: q.status,
+        eventType: q.eventType,
+        eventDate: q.eventDate,
+        customerName: q.customerName,
+        subtotal: q.subtotal,
+        iva: q.iva,
+        total: q.total,
+        depositRequired: q.depositRequired,
+        leadSource: q.leadSource,
+        lostReason: q.lostReason,
+        notes: q.notes,
+        lines: q.lines.map((l) => ({
+          id: l.id,
+          productSku: l.productSku,
+          description: l.description,
+          qty: l.qty,
+          unitPrice: l.unitPrice,
+        })),
+      })),
     }
   })
 }
@@ -41,7 +122,6 @@ export default async function CustomersPage() {
   const activeCustomers = customers.filter((c) => c.status === "customer").length
   const inactive = customers.filter((c) => c.status === "inactive").length
   const totalLtv = customers.reduce((s, c) => s + c.lifetimeValue, 0)
-  const avgLtv = total > 0 ? totalLtv / total : 0
 
   return (
     <div>
@@ -75,7 +155,7 @@ export default async function CustomersPage() {
       </div>
 
       <div className="fmd-box">
-        <div className="fmd-box-label">Contact List ({customers.length})</div>
+        <div className="fmd-box-label">Contact List ({customers.length}) · click any name for full details, quotes, and orders</div>
         <CustomerSearch customers={customers} />
       </div>
     </div>

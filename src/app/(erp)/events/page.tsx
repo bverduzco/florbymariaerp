@@ -1,13 +1,51 @@
 import { db as prisma } from "@/lib/db"
 import { NewEventDialog } from "./new-event-dialog"
 import { StatusDropdown } from "@/components/status-dropdown"
+import { OrderDetailDialog } from "@/components/order-detail-dialog"
+import { serializeOrderForDetail } from "@/lib/order-detail-serializer"
 
 async function getEvents() {
   return prisma.event.findMany({
     include: {
       customer: { select: { name: true, phone: true } },
       _count: { select: { orders: true, lineItems: true } },
-      orders: { select: { deliveryFee: true, lineItems: { select: { unitPrice: true, qty: true } } } },
+      orders: {
+        include: {
+          customer: { select: { name: true, phone: true, email: true, address: true } },
+          event: { select: { eventNumber: true, name: true, eventDate: true } },
+          lineItems: {
+            select: {
+              id: true,
+              productSku: true,
+              productName: true,
+              productSize: true,
+              qty: true,
+              unitPrice: true,
+            },
+          },
+          executionLogs: {
+            select: {
+              id: true,
+              executionNumber: true,
+              status: true,
+              executedAt: true,
+              actualCost: true,
+              lines: {
+                select: {
+                  materialName: true,
+                  qtyUsed: true,
+                  unit: true,
+                  lineCost: true,
+                  type: true,
+                },
+              },
+            },
+            orderBy: { executedAt: "desc" },
+            take: 5,
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      },
     },
     orderBy: { eventDate: "asc" },
   })
@@ -156,7 +194,54 @@ function EventCard({ event, isPaid }: { event: any; isPaid: boolean }) {
           <div style={{ display: "flex", gap: "8px" }}>
             <span style={{ color: "#78716C" }}>Est. revenue:</span>
             <span style={{ color: "#44403C", fontWeight: 600 }}>${estRevenue.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</span>
-            <span style={{ color: "#78716C" }}>· {event._count.orders} orders</span>
+            <span style={{ color: "#78716C" }}>· {event._count.orders} order(s)</span>
+          </div>
+        )}
+
+        {/* Orders sub-section — clickable rows opening OrderDetailDialog */}
+        {event.orders.length > 0 && (
+          <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #D6D3D1" }}>
+            <div style={{ fontSize: "10px", textTransform: "uppercase", letterSpacing: "1px", color: "#78716C", marginBottom: "4px" }}>
+              Orders ({event.orders.length}) — click for details
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+              {event.orders.map((o: any) => {
+                const orderTotal = o.lineItems.reduce((s: number, l: any) => s + l.unitPrice * l.qty, 0) + o.deliveryFee
+                return (
+                  <OrderDetailDialog
+                    key={o.id}
+                    order={serializeOrderForDetail(o)}
+                    trigger={
+                      <button
+                        className="order-row-hover"
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "4px 8px",
+                          fontSize: "11px",
+                          background: "#FAFAF9",
+                          border: "1px solid #D6D3D1",
+                          borderRadius: "4px",
+                          color: "#44403C",
+                          cursor: "pointer",
+                          transition: "background 0.15s, border-color 0.15s",
+                          textAlign: "left",
+                          width: "100%",
+                        }}
+                        title={`View details for ${o.orderNumber}`}
+                      >
+                        <span style={{ fontFamily: "monospace", fontWeight: 600, color: "#44403C" }}>{o.orderNumber}</span>
+                        <span style={{ color: "#78716C" }}>·</span>
+                        <span style={{ fontWeight: 500 }}>{o.customer?.name ?? "—"}</span>
+                        <span style={{ marginLeft: "auto", fontWeight: 600, color: "#BE185D" }}>${orderTotal.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</span>
+                        <span className={`fmd-status ${o.status}`} style={{ fontSize: "9px" }}>{o.status.replace(/_/g, " ")}</span>
+                      </button>
+                    }
+                  />
+                )
+              })}
+            </div>
           </div>
         )}
 

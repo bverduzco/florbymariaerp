@@ -297,6 +297,13 @@
   color: #44403C;
 }
 
+/* Clickable row in event card / customer dialog lists — server-rendered,
+   so we use CSS hover (no event handlers can cross the RSC boundary). */
+.order-row-hover:hover {
+  background: #FCE7F3 !important;
+  border-color: #BE185D !important;
+}
+
 /* KPI bar — horizontal compact strip */
 .fmd-kpi-bar {
   display: flex;

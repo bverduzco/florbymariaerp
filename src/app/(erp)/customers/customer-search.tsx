@@ -2,24 +2,13 @@
 
 import { useState } from "react"
 import { StatusDropdown } from "@/components/status-dropdown"
-
-type CustomerLite = {
-  id: string
-  name: string
-  phone: string | null
-  email: string | null
-  address: string | null
-  notes: string | null
-  status: string
-  createdAt: string
-  orderCount: number
-  eventCount: number
-  quoteCount: number
-  lifetimeValue: number
-}
+import {
+  CustomerDetailDialog,
+  type CustomerDetailCustomer,
+} from "@/components/customer-detail-dialog"
 
 interface CustomerSearchProps {
-  customers: CustomerLite[]
+  customers: CustomerDetailCustomer[]
 }
 
 export function CustomerSearch({ customers }: CustomerSearchProps) {
@@ -63,16 +52,27 @@ export function CustomerSearch({ customers }: CustomerSearchProps) {
               <th style={{ textAlign: "right" }}>Quotes</th>
               <th style={{ textAlign: "right" }}>LTV</th>
               <th>Added</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: "center", padding: "16px", color: "#9CA3AF" }}>No customers match &quot;{query}&quot;</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: "center", padding: "16px", color: "#9CA3AF" }}>No customers match &quot;{query}&quot;</td></tr>
             ) : (
               filtered.map((c) => (
                 <tr key={c.id}>
                   <td style={{ fontWeight: 600, color: "#44403C" }}>
-                    {c.name}
+                    <CustomerDetailDialog
+                      customer={c}
+                      trigger={
+                        <button
+                          className="text-left hover:text-rose-700 hover:underline transition"
+                          title={`View details for ${c.name}`}
+                        >
+                          {c.name}
+                        </button>
+                      }
+                    />
                     {c.notes && <div style={{ fontSize: "10px", color: "#78716C", fontWeight: 400 }}>{c.notes}</div>}
                   </td>
                   <td>
@@ -101,6 +101,19 @@ export function CustomerSearch({ customers }: CustomerSearchProps) {
                     {c.lifetimeValue > 0 ? `$${c.lifetimeValue.toLocaleString("es-MX", { maximumFractionDigits: 0 })}` : "—"}
                   </td>
                   <td style={{ fontSize: "11px" }}>{new Date(c.createdAt).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}</td>
+                  <td style={{ padding: "6px" }}>
+                    <CustomerDetailDialog
+                      customer={c}
+                      trigger={
+                        <button
+                          className="px-2 py-1 text-xs border border-stone-300 rounded hover:bg-rose-50 hover:border-rose-400 hover:text-rose-700 transition"
+                          title={`View details for ${c.name}`}
+                        >
+                          Details →
+                        </button>
+                      }
+                    />
+                  </td>
                 </tr>
               ))
             )}
