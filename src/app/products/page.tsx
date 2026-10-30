@@ -7,6 +7,7 @@ import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { AssetImage } from "@/components/asset-image"
+import { AddProductDialog } from "./add-product-dialog"
 
 async function getProducts() {
   return prisma.product.findMany({
@@ -41,9 +42,7 @@ export default async function ProductsPage() {
               Each row in the catalogue. Products with a Cloudinary public_id render a photo automatically — others show a placeholder.
             </p>
           </div>
-          <button className="px-4 py-2 text-sm font-medium bg-stone-900 text-white rounded-md hover:bg-stone-800 transition">
-            + Add Product
-          </button>
+          <AddProductDialog />
         </header>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-0 mb-6 border border-stone-200 rounded-lg overflow-hidden bg-white">

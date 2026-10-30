@@ -7,6 +7,7 @@ import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { MaterialSearch } from "./material-search"
+import { AddMaterialDialog } from "./add-material-dialog"
 
 async function getMaterials() {
   return prisma.material.findMany({
@@ -29,8 +30,15 @@ async function getMaterials() {
   })
 }
 
+async function getSuppliers() {
+  return prisma.supplier.findMany({
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  })
+}
+
 export default async function MaterialsPage() {
-  const materials = await getMaterials()
+  const [materials, suppliers] = await Promise.all([getMaterials(), getSuppliers()])
 
   // KPIs
   const total = materials.length
@@ -63,9 +71,7 @@ export default async function MaterialsPage() {
               Every item Maria buys. Prices come from suppliers; stock is counted in packs.
             </p>
           </div>
-          <button className="px-4 py-2 text-sm font-medium bg-stone-900 text-white rounded-md hover:bg-stone-800 transition">
-            + Add Material
-          </button>
+          <AddMaterialDialog suppliers={suppliers} />
         </header>
 
         {/* KPI bar */}
