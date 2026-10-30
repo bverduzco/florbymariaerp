@@ -9,8 +9,7 @@ async function getLogs() {
 }
 
 async function getEventsWithLines() {
-  // Only events that are quote/confirmed/etc AND have line items — those are
-  // the ones Maria would actually execute against.
+  // Events with line items — those are the ones Maria would actually execute against.
   const events = await prisma.event.findMany({
     where: {
       lineItems: { some: {} },
@@ -36,6 +35,39 @@ async function getEventsWithLines() {
   return events.map((e) => ({
     ...e,
     eventDate: e.eventDate?.toISOString() ?? null,
+  }))
+}
+
+async function getPendingOrders() {
+  // Orders pending execution = paid (payment_confirmed) OR already procuring.
+  // Excludes draft, quote_sent (not paid yet), delivered, fulfilled, cancelled.
+  const PENDING_STATUSES = ["payment_confirmed", "procuring"]
+  const orders = await prisma.order.findMany({
+    where: {
+      status: { in: PENDING_STATUSES },
+      lineItems: { some: {} },
+    },
+    select: {
+      id: true,
+      orderNumber: true,
+      status: true,
+      deliveryDate: true,
+      customer: { select: { name: true } },
+      lineItems: {
+        select: {
+          id: true,
+          productSku: true,
+          productName: true,
+          qty: true,
+        },
+      },
+    },
+    orderBy: { deliveryDate: "asc" },
+    take: 50,
+  })
+  return orders.map((o) => ({
+    ...o,
+    deliveryDate: o.deliveryDate?.toISOString() ?? null,
   }))
 }
 
@@ -100,9 +132,10 @@ async function getRecipeLinesByProduct() {
 }
 
 export default async function ExecutionPage() {
-  const [logs, events, materials, recipeLinesByProduct] = await Promise.all([
+  const [logs, events, pendingOrders, materials, recipeLinesByProduct] = await Promise.all([
     getLogs(),
     getEventsWithLines(),
+    getPendingOrders(),
     getMaterials(),
     getRecipeLinesByProduct(),
   ])
@@ -121,6 +154,7 @@ export default async function ExecutionPage() {
         </div>
         <LogExecutionDialog
           events={events}
+          pendingOrders={pendingOrders}
           materials={materials}
           recipeLinesByProduct={recipeLinesByProduct}
         />

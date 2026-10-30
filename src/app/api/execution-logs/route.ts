@@ -6,7 +6,8 @@ export const dynamic = "force-dynamic"
 /**
  * POST /api/execution-logs
  * Body: {
- *   eventId?: string,
+ *   eventId?: string,            // optional — links to Event
+ *   orderId?: string,           // optional — links to Order (mutually exclusive with eventId in practice)
  *   executedAt: string (ISO),
  *   executedBy?: string,
  *   status: string,                  // planned | executed | partial | redone | cancelled
@@ -99,6 +100,7 @@ export async function POST(request: Request) {
       data: {
         executionNumber,
         eventId: body.eventId || null,
+        orderId: body.orderId || null,
         executedAt: new Date(body.executedAt),
         executedBy: body.executedBy || "Maria",
         status: body.status,

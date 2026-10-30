@@ -176,6 +176,7 @@ model Order {
   cancelledAt          DateTime?
 
   lineItems       OrderLineItem[]
+  executionLogs   ExecutionLog[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -599,6 +600,8 @@ model ExecutionLog {
   eventId         String?
   event           Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
   eventLineItemKey String?  // EVT-2001|1 (loose ref — points to EventLineItem.lineKey)
+  orderId         String?
+  order           Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
   executedAt      DateTime
   executedBy      String?  // free-text name or STAFF-NNNN (future FK)
   status          String   @default("executed")
@@ -616,6 +619,7 @@ model ExecutionLog {
   updatedAt       DateTime @updatedAt
 
   @@index([eventId])
+  @@index([orderId])
   @@index([executedAt])
 }
 

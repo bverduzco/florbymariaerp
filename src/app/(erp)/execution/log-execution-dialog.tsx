@@ -16,7 +16,9 @@ import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
@@ -41,14 +43,21 @@ type RecipeLine = {
   productSku: string
   componentSku: string
   materialId: string
-  materialSku: string // === componentSku, aliased for clarity
+  materialSku: string
   materialName: string
   componentName: string
-  qty: number // per product unit
+  qty: number
   unit: string
   unitCost: number
   lineCost: number
   color: string | null
+}
+
+type LineItemBase = {
+  id: string
+  productSku: string
+  productName: string
+  qty: number
 }
 
 type EventOption = {
@@ -56,26 +65,29 @@ type EventOption = {
   eventNumber: string
   name: string
   eventDate: string | null
-  lineItems: Array<{
-    id: string
-    productSku: string
-    productName: string
-    qty: number
-    lineKey: string
-  }>
+  lineItems: Array<LineItemBase & { lineKey: string }>
+}
+
+type OrderOption = {
+  id: string
+  orderNumber: string
+  status: string
+  deliveryDate: string | null
+  customer: { name: string } | null
+  lineItems: Array<LineItemBase>
 }
 
 // ───────────────────────────────────────────────────────────────────────────
 // Internal line shape (editable)
 // ───────────────────────────────────────────────────────────────────────────
 type EditLine = {
-  key: string // client-side react key
+  key: string
   materialSku: string
   materialName: string
   qtyUsed: number
   unit: string
   unitCost: number
-  lineCost: number // qtyUsed × unitCost (kept in sync)
+  lineCost: number
   type: "recipe" | "addition" | "substitution" | "removal"
   originalMaterialSku?: string
   originalQty?: number
@@ -97,17 +109,24 @@ const LINE_TYPES = [
   { value: "removal", label: "➖ Removal" },
 ]
 
+// Combined job option format: `order:<id>` or `event:<id>`
+function jobKey(type: "order" | "event", id: string) {
+  return `${type}:${id}`
+}
+
 // ───────────────────────────────────────────────────────────────────────────
 // Dialog
 // ───────────────────────────────────────────────────────────────────────────
 export function LogExecutionDialog({
   events,
+  pendingOrders,
   materials,
   recipeLinesByProduct,
 }: {
   events: EventOption[]
+  pendingOrders: OrderOption[]
   materials: Material[]
-  recipeLinesByProduct: Record<string, RecipeLine[]> // keyed by productSku
+  recipeLinesByProduct: Record<string, RecipeLine[]>
 }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -115,7 +134,7 @@ export function LogExecutionDialog({
 
   const today = new Date().toISOString().slice(0, 10)
 
-  const [eventId, setEventId] = useState<string>("_none")
+  const [jobSelection, setJobSelection] = useState<string>("_none") // _none | order:<id> | event:<id>
   const [executedAt, setExecutedAt] = useState(today)
   const [executedBy, setExecutedBy] = useState("Maria")
   const [status, setStatus] = useState("executed")
@@ -123,32 +142,54 @@ export function LogExecutionDialog({
   const [notes, setNotes] = useState("")
   const [lines, setLines] = useState<EditLine[]>([])
 
-  // Selected event (for context bar)
-  const selectedEvent = useMemo(
-    () => events.find((e) => e.id === eventId),
-    [events, eventId]
-  )
+  // Resolve the selected job to its source object (for context bar)
+  const selectedJob = useMemo(() => {
+    if (jobSelection === "_none") return null
+    const [type, id] = jobSelection.split(":")
+    if (type === "order") {
+      const o = pendingOrders.find((x) => x.id === id)
+      return o
+        ? { kind: "order" as const, label: o.orderNumber, sub: o.customer?.name ?? "—", date: o.deliveryDate, lineItems: o.lineItems, orderStatus: o.status }
+        : null
+    }
+    if (type === "event") {
+      const e = events.find((x) => x.id === id)
+      return e
+        ? { kind: "event" as const, label: e.eventNumber, sub: e.name, date: e.eventDate, lineItems: e.lineItems, orderStatus: null }
+        : null
+    }
+    return null
+  }, [jobSelection, pendingOrders, events])
 
-  // When event changes, prefill lines from each event line item × its recipe
-  function prefillFromEvent(evId: string) {
-    setEventId(evId)
-    if (evId === "_none") {
+  // When job changes, prefill lines from each line item × its recipe
+  function handleJobChange(value: string) {
+    setJobSelection(value)
+    if (value === "_none") {
       setLines([])
       return
     }
-    const ev = events.find((e) => e.id === evId)
-    if (!ev) {
-      setLines([])
-      return
+    const [type, id] = value.split(":")
+    let lineItems: LineItemBase[] = []
+    let prefix = ""
+    if (type === "order") {
+      const o = pendingOrders.find((x) => x.id === id)
+      if (!o) return setLines([])
+      lineItems = o.lineItems
+      prefix = o.orderNumber
+    } else if (type === "event") {
+      const e = events.find((x) => x.id === id)
+      if (!e) return setLines([])
+      lineItems = e.lineItems
+      prefix = e.eventNumber
     }
+
     const newLines: EditLine[] = []
-    ev.lineItems.forEach((li) => {
+    lineItems.forEach((li, idx) => {
       const recipe = recipeLinesByProduct[li.productSku] || []
       recipe.forEach((rl) => {
-        // qty per product × event line qty
         const qtyUsed = Number((rl.qty * li.qty).toFixed(2))
         newLines.push({
-          key: `${li.lineKey}|${rl.materialSku}|${rl.color ?? ""}`,
+          key: `${prefix}|${idx + 1}|${rl.materialSku}|${rl.color ?? ""}`,
           materialSku: rl.materialSku,
           materialName: rl.componentName,
           qtyUsed,
@@ -162,7 +203,6 @@ export function LogExecutionDialog({
     setLines(newLines)
   }
 
-  // Add a blank addition line
   function addLine() {
     setLines((prev) => [
       ...prev,
@@ -188,7 +228,6 @@ export function LogExecutionDialog({
       prev.map((l) => {
         if (l.key !== key) return l
         const next = { ...l, ...patch }
-        // When material changes, fetch its unit/unitCost from catalog
         if (patch.materialSku && patch.materialSku !== l.materialSku) {
           const mat = materials.find((m) => m.sku === patch.materialSku)
           if (mat) {
@@ -197,14 +236,12 @@ export function LogExecutionDialog({
             next.unitCost = mat.unitCost ?? 0
           }
         }
-        // Recompute lineCost when qty/unitCost change
         next.lineCost = Number((next.qtyUsed * next.unitCost).toFixed(2))
         return next
       })
     )
   }
 
-  // Cost summary
   const estimatedCost = lines
     .filter((l) => l.type === "recipe" || l.type === "substitution")
     .reduce((s, l) => s + l.lineCost, 0)
@@ -226,8 +263,17 @@ export function LogExecutionDialog({
     if (!canSubmit) return
     setLoading(true)
     try {
+      // Resolve orderId/eventId from jobSelection
+      let orderId: string | null = null
+      let eventId: string | null = null
+      if (jobSelection !== "_none") {
+        const [type, id] = jobSelection.split(":")
+        if (type === "order") orderId = id
+        else if (type === "event") eventId = id
+      }
       const payload = {
-        eventId: eventId !== "_none" ? eventId : null,
+        eventId,
+        orderId,
         executedAt,
         executedBy,
         status,
@@ -260,8 +306,7 @@ export function LogExecutionDialog({
         description: `${data.log.executionNumber} — ${lines.length} line(s) · actual $${actualCost.toLocaleString("es-MX", { maximumFractionDigits: 2 })}`,
       })
       setOpen(false)
-      // Reset form
-      setEventId("_none")
+      setJobSelection("_none")
       setExecutedAt(today)
       setExecutedBy("Maria")
       setStatus("executed")
@@ -278,6 +323,8 @@ export function LogExecutionDialog({
     }
   }
 
+  const hasPendingJobs = pendingOrders.length > 0 || events.length > 0
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -293,28 +340,54 @@ export function LogExecutionDialog({
           {/* ── Header fields ─────────────────────────────────────── */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Linked event (optional)</Label>
-              <Select value={eventId} onValueChange={prefillFromEvent}>
+              <Label>Linked job (optional)</Label>
+              <Select value={jobSelection} onValueChange={handleJobChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="No event — manual log" />
+                  <SelectValue placeholder="No job — manual log" />
                 </SelectTrigger>
-                <SelectContent className="max-h-[280px]">
-                  <SelectItem value="_none">— No event —</SelectItem>
-                  {events.length === 0 ? (
+                <SelectContent className="max-h-[320px]">
+                  <SelectItem value="_none">— No job — manual log</SelectItem>
+                  {pendingOrders.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel className="text-xs uppercase tracking-wider text-stone-500">
+                        🛒 Orders pending execution ({pendingOrders.length})
+                      </SelectLabel>
+                      {pendingOrders.map((o) => (
+                        <SelectItem key={o.id} value={jobKey("order", o.id)}>
+                          {o.orderNumber} · {o.customer?.name ?? "—"}
+                          {o.deliveryDate &&
+                            ` · ${new Date(o.deliveryDate).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}`}
+                          {" "}({o.lineItems.length} item{o.lineItems.length !== 1 ? "s" : ""})
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                  {events.length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel className="text-xs uppercase tracking-wider text-stone-500">
+                        🎉 Events with line items ({events.length})
+                      </SelectLabel>
+                      {events.map((e) => (
+                        <SelectItem key={e.id} value={jobKey("event", e.id)}>
+                          {e.eventNumber} · {e.name}
+                          {e.eventDate &&
+                            ` · ${new Date(e.eventDate).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}`}
+                          {" "}({e.lineItems.length} item{e.lineItems.length !== 1 ? "s" : ""})
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                  {!hasPendingJobs && (
                     <SelectItem value="_empty" disabled>
-                      No events available
+                      No pending jobs — pick materials manually below
                     </SelectItem>
-                  ) : (
-                    events.map((e) => (
-                      <SelectItem key={e.id} value={e.id}>
-                        {e.eventNumber} · {e.name}
-                        {e.eventDate &&
-                          ` (${new Date(e.eventDate).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })})`}
-                      </SelectItem>
-                    ))
                   )}
                 </SelectContent>
               </Select>
+              <div className="text-[10px] text-stone-500">
+                Pick a paid order or scheduled event to auto-fill material
+                lines from its recipe. Leave blank for one-off demos / samples.
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Executed at *</Label>
@@ -350,14 +423,40 @@ export function LogExecutionDialog({
             </div>
           </div>
 
-          {/* ── Event context bar ────────────────────────────────── */}
-          {selectedEvent && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-md text-xs text-rose-900">
-              <div className="font-semibold">
-                {selectedEvent.eventNumber} · {selectedEvent.name}
+          {/* ── Job context bar ─────────────────────────────────── */}
+          {selectedJob && (
+            <div
+              className={`p-3 border rounded-md text-xs ${
+                selectedJob.kind === "order"
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                  : "bg-rose-50 border-rose-200 text-rose-900"
+              }`}
+            >
+              <div className="flex items-center gap-2 font-semibold">
+                <span>{selectedJob.kind === "order" ? "🛒" : "🎉"}</span>
+                <span>{selectedJob.label}</span>
+                <span className="opacity-60">·</span>
+                <span>{selectedJob.sub}</span>
+                {selectedJob.date && (
+                  <>
+                    <span className="opacity-60">·</span>
+                    <span>
+                      {new Date(selectedJob.date).toLocaleDateString("es-MX", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </>
+                )}
+                {selectedJob.orderStatus && (
+                  <span className="ml-1 px-1.5 py-0.5 bg-white/60 rounded text-[10px] uppercase tracking-wider">
+                    {selectedJob.orderStatus}
+                  </span>
+                )}
               </div>
               <div className="mt-1">
-                {selectedEvent.lineItems.length} product line(s) →{" "}
+                {selectedJob.lineItems.length} product line(s) →{" "}
                 {lines.length} material line(s) prefilled from recipes
               </div>
             </div>
@@ -379,8 +478,23 @@ export function LogExecutionDialog({
 
             {lines.length === 0 ? (
               <div className="p-4 text-center text-xs text-stone-500 border border-dashed border-stone-300 rounded-md">
-                No lines yet. Either pick an event above to prefill from recipes,
-                or click <b>+ Add line</b> to log a one-off material pull.
+                {selectedJob && selectedJob.lineItems.length > 0 ? (
+                  <>
+                    <div className="font-medium text-stone-700 mb-1">
+                      No recipe lines found for this job&apos;s products.
+                    </div>
+                    Click <b>+ Add line</b> to record each material you actually used.
+                  </>
+                ) : hasPendingJobs ? (
+                  <>
+                    Pick a job above to prefill from recipes, or click{" "}
+                    <b>+ Add line</b> for a one-off material pull.
+                  </>
+                ) : (
+                  <>
+                    Click <b>+ Add line</b> to log a one-off material pull.
+                  </>
+                )}
               </div>
             ) : (
               <div className="border border-stone-200 rounded-md overflow-hidden">
