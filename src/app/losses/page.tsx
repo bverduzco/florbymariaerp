@@ -5,10 +5,19 @@
 import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { LogLossDialog } from "./log-loss-dialog"
 
 async function getLosses() {
   return prisma.loss.findMany({
     orderBy: { date: "desc" },
+  })
+}
+
+async function getMaterials() {
+  return prisma.material.findMany({
+    where: { packPrice: { gt: 0 } },
+    select: { sku: true, name: true, packPrice: true },
+    orderBy: { name: "asc" },
   })
 }
 
@@ -23,7 +32,7 @@ const REASON_META: Record<string, { emoji: string; color: string; label: string 
 }
 
 export default async function LossesPage() {
-  const losses = await getLosses()
+  const [losses, materials] = await Promise.all([getLosses(), getMaterials()])
 
   // KPIs
   const total = losses.length
@@ -52,9 +61,7 @@ export default async function LossesPage() {
               Tracks every loss event. Each row auto-creates a negative entry in Stock Movements (reason=&quot;loss&quot;).
             </p>
           </div>
-          <button className="px-4 py-2 text-sm font-medium bg-stone-900 text-white rounded-md hover:bg-stone-800 transition">
-            + Log Loss
-          </button>
+          <LogLossDialog materials={materials} />
         </header>
 
         {/* KPI bar */}

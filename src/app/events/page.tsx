@@ -6,6 +6,7 @@
 import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { NewEventDialog } from "./new-event-dialog"
 
 async function getEvents() {
   return prisma.event.findMany({
@@ -64,9 +65,7 @@ export default async function EventsPage() {
               Larger jobs that bundle multiple products under one occasion. Includes paid customer events AND unpaid demos.
             </p>
           </div>
-          <button className="px-4 py-2 text-sm font-medium bg-stone-900 text-white rounded-md hover:bg-stone-800 transition">
-            + New Event
-          </button>
+          <NewEventDialog />
         </header>
 
         {/* KPI bar */}

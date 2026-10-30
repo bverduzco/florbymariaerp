@@ -6,6 +6,7 @@
 import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { NewPoDialog } from "./new-po-dialog"
 
 async function getPurchaseOrders() {
   return prisma.purchaseOrder.findMany({
@@ -26,6 +27,13 @@ async function getPurchaseOrders() {
   })
 }
 
+async function getSuppliers() {
+  return prisma.supplier.findMany({
+    orderBy: { name: "asc" },
+    select: { id: true, name: true },
+  })
+}
+
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-stone-100 text-stone-700 border-stone-300",
   approved: "bg-blue-50 text-blue-700 border-blue-300",
@@ -36,7 +44,7 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 export default async function ProcurementPage() {
-  const pos = await getPurchaseOrders()
+  const [pos, suppliers] = await Promise.all([getPurchaseOrders(), getSuppliers()])
 
   // KPIs
   const total = pos.length
@@ -57,9 +65,7 @@ export default async function ProcurementPage() {
               Restocking orders sent to suppliers. Quantities and prices are per PACK. All suppliers are COD (full payment upfront).
             </p>
           </div>
-          <button className="px-4 py-2 text-sm font-medium bg-stone-900 text-white rounded-md hover:bg-stone-800 transition">
-            + New PO
-          </button>
+          <NewPoDialog suppliers={suppliers.map((s) => s.name)} />
         </header>
 
         {/* KPI bar */}

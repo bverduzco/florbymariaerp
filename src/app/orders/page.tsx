@@ -6,6 +6,7 @@
 import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { NewOrderDialog } from "./new-order-dialog"
 
 async function getOrders() {
   return prisma.order.findMany({
@@ -45,7 +46,15 @@ const PAYMENT_STATUS_COLORS: Record<string, string> = {
 }
 
 export default async function OrdersPage() {
-  const orders = await getOrders()
+  const [orders, customers, products] = await Promise.all([
+    getOrders(),
+    prisma.customer.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.product.findMany({
+      where: { actualPriceBeforeIva: { gt: 0 } },
+      orderBy: [{ name: "asc" }, { size: "asc" }],
+      select: { sku: true, name: true, size: true, actualPriceBeforeIva: true },
+    }),
+  ])
 
   // Compute KPIs
   const total = orders.length
@@ -75,9 +84,7 @@ export default async function OrdersPage() {
               Everyday sales tracked through the pipeline: draft → quote sent → payment → production → delivery.
             </p>
           </div>
-          <button className="px-4 py-2 text-sm font-medium bg-stone-900 text-white rounded-md hover:bg-stone-800 transition">
-            + New Order
-          </button>
+          <NewOrderDialog customers={customers} products={products} />
         </header>
 
         {/* KPI bar */}

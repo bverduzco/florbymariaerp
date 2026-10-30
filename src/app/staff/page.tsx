@@ -6,6 +6,7 @@
 import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { AddStaffDialog } from "./add-staff-dialog"
 
 async function getStaff() {
   return prisma.staff.findMany({
@@ -35,9 +36,7 @@ export default async function StaffPage() {
               Maria (owner) + future team. Structured with IDs so metrics can be calculated per person (waste rate, on-time delivery, assembly time).
             </p>
           </div>
-          <button className="px-4 py-2 text-sm font-medium bg-stone-900 text-white rounded-md hover:bg-stone-800 transition">
-            + Add Staff
-          </button>
+          <AddStaffDialog />
         </header>
 
         {/* KPI bar */}
