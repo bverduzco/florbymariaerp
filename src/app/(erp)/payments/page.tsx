@@ -1,7 +1,7 @@
 // src/app/(erp)/payments/page.tsx — wireframe-matched styling
 
 import { db as prisma } from "@/lib/db"
-import { LogPaymentDialog } from "./log-payment-dialog"
+import { RecordPaymentDialog } from "./record-payment-dialog"
 import { PaymentsFilters } from "./payments-filters"
 
 async function getPayments() {
@@ -32,7 +32,7 @@ export default async function PaymentsPage() {
           <h1>Payments</h1>
           <div className="fmd-subtitle">Unified money ledger · in (customers) + out (suppliers)</div>
         </div>
-        <LogPaymentDialog />
+        <RecordPaymentDialog />
       </div>
 
       <div className="fmd-kpi-bar">

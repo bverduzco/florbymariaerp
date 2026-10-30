@@ -1,5 +1,5 @@
 import { db as prisma } from "@/lib/db"
-import { AddExpenseDialog } from "./add-expense-dialog"
+import { LogExpenseDialog } from "./log-expense-dialog"
 
 async function getExpenses() { return prisma.expense.findMany({ orderBy: { date: "desc" } }) }
 
@@ -17,7 +17,7 @@ export default async function ExpensesPage() {
     <div>
       <div className="fmd-screen-header">
         <div><h1>Expenses</h1><div className="fmd-subtitle">Operating costs · gas, parking, software, etc.</div></div>
-        <AddExpenseDialog />
+        <LogExpenseDialog />
       </div>
       <div className="fmd-kpi-bar">
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#44403C" }}>{total}</div><div className="fmd-kpi-label">Total expenses</div></div>

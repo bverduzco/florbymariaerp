@@ -35,7 +35,7 @@ const METHODS = [
   { value: "card", label: "Card" },
 ]
 
-export function LogPaymentDialog() {
+export function RecordPaymentDialog() {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
@@ -86,7 +86,7 @@ export function LogPaymentDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <button className="px-4 py-2 text-sm font-medium bg-stone-900 text-white rounded-md hover:bg-stone-800 transition">
-          + Log Payment
+          + Record Payment
         </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[480px]">
@@ -174,7 +174,7 @@ export function LogPaymentDialog() {
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button type="submit" disabled={loading || !form.direction || !form.type || !form.amount}>
-              {loading ? "Logging..." : "✓ Log Payment"}
+              {loading ? "Logging..." : "✓ Record Payment"}
             </Button>
           </DialogFooter>
         </form>

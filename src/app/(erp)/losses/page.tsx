@@ -23,7 +23,7 @@ export default async function LossesPage() {
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#991B1B" }}>${totalCost.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</div><div className="fmd-kpi-label">Cost impact</div></div>
       </div>
       <div className="fmd-box">
-        <div className="fmd-box-label">All Loss Events ({losses.length})</div>
+        <div className="fmd-box-label">Loss Log ({losses.length})</div>
         <div style={{ overflowX: "auto" }}>
           <table className="fmd-table">
             <thead><tr><th>Loss #</th><th>Date</th><th>Material</th><th style={{ textAlign: "right" }}>Qty</th><th>Reason</th><th>By</th><th style={{ textAlign: "right" }}>Cost</th><th>Notes</th></tr></thead>

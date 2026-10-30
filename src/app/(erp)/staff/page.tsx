@@ -20,32 +20,47 @@ export default async function StaffPage() {
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#047857" }}>{active}</div><div className="fmd-kpi-label">Active</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#BE185D" }}>{internal} int / {freelance} free</div><div className="fmd-kpi-label">Type mix</div></div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "8px" }}>
-        {staff.map((s) => {
-          const skills = s.skills?.split(",").map((sk) => sk.trim()).filter(Boolean) ?? []
-          const initials = s.name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase()
-          return (
-            <div key={s.id} className="fmd-box" style={{ marginBottom: 0, opacity: s.active ? 1 : 0.6 }}>
-              <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                <div style={{ width: "40px", height: "40px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: 700, flexShrink: 0, background: s.type === "internal" ? "#FCE7F3" : "#EFF6FF", color: s.type === "internal" ? "#BE185D" : "#2563EB" }}>{initials}</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <div style={{ fontSize: "13px", fontWeight: 600, color: "#44403C" }}>{s.name}</div>
-                    <span className={`fmd-status ${s.active ? "accepted" : "expired"}`}>{s.active ? "● Active" : "○ Inactive"}</span>
-                  </div>
-                  <div style={{ fontSize: "10px", color: "#78716C", fontFamily: "monospace" }}>{s.staffNumber} · {s.type}</div>
-                  {s.phone && <div style={{ fontSize: "11px", color: "#6B7280", marginTop: "4px" }}>📞 {s.phone}</div>}
-                  {skills.length > 0 && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px" }}>
-                      {skills.map((sk) => <span key={sk} className="fmd-status" style={{ background: "#F3F4F6", color: "#44403C" }}>{sk}</span>)}
-                    </div>
-                  )}
-                  {s.payRate && <div style={{ fontSize: "11px", color: "#78716C", marginTop: "4px" }}>${s.payRate}/hr</div>}
-                </div>
-              </div>
-            </div>
-          )
-        })}
+      <div className="fmd-box">
+        <div className="fmd-box-label">Staff Directory</div>
+        <div style={{ overflowX: "auto" }}>
+          <table className="fmd-table">
+            <thead>
+              <tr>
+                <th>Staff ID</th>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Phone</th>
+                <th>Skills</th>
+                <th style={{ textAlign: "right" }}>Pay Rate</th>
+                <th>Status</th>
+                <th>Added</th>
+              </tr>
+            </thead>
+            <tbody>
+              {staff.map((s) => {
+                const skills = s.skills?.split(",").map((sk) => sk.trim()).filter(Boolean) ?? []
+                return (
+                  <tr key={s.id} style={{ opacity: s.active ? 1 : 0.6 }}>
+                    <td style={{ fontFamily: "monospace", fontSize: "11px" }}>{s.staffNumber}</td>
+                    <td style={{ fontWeight: 600, color: "#44403C" }}>{s.name}</td>
+                    <td><span className="fmd-status" style={{ background: s.type === "internal" ? "#FCE7F3" : "#EFF6FF", color: s.type === "internal" ? "#BE185D" : "#2563EB" }}>{s.type}</span></td>
+                    <td>{s.phone ?? "—"}</td>
+                    <td>
+                      {skills.length > 0 ? (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "3px" }}>
+                          {skills.map((sk) => <span key={sk} className="fmd-status" style={{ background: "#F3F4F6", color: "#44403C" }}>{sk}</span>)}
+                        </div>
+                      ) : "—"}
+                    </td>
+                    <td style={{ textAlign: "right" }}>{s.payRate ? `$${s.payRate}/hr` : "—"}</td>
+                    <td><span className={`fmd-status ${s.active ? "accepted" : "expired"}`}>{s.active ? "Active" : "Inactive"}</span></td>
+                    <td style={{ fontSize: "11px" }}>{s.dateAdded.toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

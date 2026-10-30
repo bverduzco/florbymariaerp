@@ -28,7 +28,7 @@ const METHODS = [
   { value: "transfer", label: "Transfer" },
 ]
 
-export function AddExpenseDialog() {
+export function LogExpenseDialog() {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
@@ -68,12 +68,12 @@ export function AddExpenseDialog() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <button className="px-4 py-2 text-sm font-medium bg-stone-900 text-white rounded-md hover:bg-stone-800 transition">
-          + Add Expense
+          + Log Expense
         </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[480px]">
         <DialogHeader>
-          <DialogTitle>Add Expense</DialogTitle>
+          <DialogTitle>Log Expense</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-2">
@@ -140,7 +140,7 @@ export function AddExpenseDialog() {
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button type="submit" disabled={loading || !form.category || !form.description || !form.amount}>
-              {loading ? "Adding..." : "✓ Add Expense"}
+              {loading ? "Adding..." : "✓ Log Expense"}
             </Button>
           </DialogFooter>
         </form>
