@@ -23,6 +23,7 @@ type MaterialOption = {
   sku: string
   name: string
   packPrice: number | null
+  currentStockPacks: number | null
 }
 
 export function LogLossDialog({ materials }: { materials: MaterialOption[] }) {
@@ -84,11 +85,15 @@ export function LogLossDialog({ materials }: { materials: MaterialOption[] }) {
             <Select value={form.materialSku} onValueChange={(v) => setForm({ ...form, materialSku: v })} required>
               <SelectTrigger><SelectValue placeholder="Select material..." /></SelectTrigger>
               <SelectContent className="max-h-[300px]">
-                {materials.map((m) => (
-                  <SelectItem key={m.sku} value={m.sku}>
-                    {m.name} ({m.sku})
-                  </SelectItem>
-                ))}
+                {materials.length === 0 ? (
+                  <SelectItem value="_none" disabled>No materials with stock — nothing to lose</SelectItem>
+                ) : (
+                  materials.map((m) => (
+                    <SelectItem key={m.sku} value={m.sku}>
+                      {m.name} — {m.currentStockPacks ?? 0} packs · ${m.packPrice ?? 0}/pack
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>

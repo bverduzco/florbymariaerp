@@ -2,7 +2,7 @@ import { db as prisma } from "@/lib/db"
 import { LogLossDialog } from "./log-loss-dialog"
 
 async function getLosses() { return prisma.loss.findMany({ orderBy: { date: "desc" } }) }
-async function getMaterials() { return prisma.material.findMany({ where: { packPrice: { gt: 0 } }, select: { id: true, sku: true, name: true, packPrice: true }, orderBy: { name: "asc" } }) }
+async function getMaterials() { return prisma.material.findMany({ where: { currentStockPacks: { gt: 0 } }, select: { id: true, sku: true, name: true, packPrice: true, currentStockPacks: true }, orderBy: { name: "asc" } }) }
 
 const REASON_EMOJI: Record<string, string> = { damaged: "🔧", spoiled: "🥀", broken: "💔", expired: "⏰", lost: "❓", stolen: "🚨", other: "📦" }
 
