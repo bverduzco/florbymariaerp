@@ -836,3 +836,34 @@ model TemplateVariable {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// v1.9: WIKI / PERSONAL BODY OF KNOWLEDGE
+// ────────────────────────────────────────────────────────────────────────────
+// For "soft" knowledge that doesn't belong in the structured DB:
+// flower lifespan data, conditioning tricks, supplier quirks, substitution
+// matrices, etc. Anything that's iffy/contested/still being observed lives
+// here as markdown, edited through the ERP itself.
+//
+// Categories (free-text but conventional): cheat-sheet | flower-care |
+// substitution | supplier-tip | recipe-note | seasonal | demo | other
+//
+// Tags are a comma-separated string (simpler than a join table for a
+// one-person operation; can be promoted to WikiTag later if needed).
+model WikiArticle {
+  id          String   @id @default(cuid())
+  slug        String   @unique  // url-safe, e.g. "vida-en-florero-guia-de-referencia"
+  title       String
+  category    String   @default("general")  // cheat-sheet | flower-care | substitution | supplier-tip | recipe-note | seasonal | demo | other
+  body        String   // markdown source
+  tags        String?  // comma-separated
+  pinned      Boolean  @default(false)  // shows at top of wiki list
+  createdBy   String?  // "Maria" or staff ID (future)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([pinned])
+  @@index([updatedAt])
+}
+

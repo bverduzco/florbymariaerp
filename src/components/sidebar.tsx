@@ -42,6 +42,7 @@ const NAV_SECTIONS = [
   {
     title: "Team",
     items: [
+      { href: "/knowledge", icon: "📚", label: "Wiki" },
       { href: "/staff", icon: "👤", label: "Staff" },
     ],
   },
