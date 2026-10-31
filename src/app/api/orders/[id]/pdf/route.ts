@@ -77,7 +77,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
   // Stream the PDF back as the HTTP response.
   // The browser will download it directly with the given filename.
   const fileName = `Recibo ${order.orderNumber}.pdf`
-  return new Response(pdfBuffer, {
+  return new Response(pdfBuffer as unknown as BodyInit, {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",

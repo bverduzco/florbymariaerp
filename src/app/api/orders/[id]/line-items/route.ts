@@ -69,7 +69,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     await db.orderLineItem.deleteMany({ where: { orderId: id } })
 
     const itemsToCreate = body.lineItems
-      .filter((li) => li.qty > 0)
+      .filter((li): li is { id?: string; productSku?: string; qty: number } =>
+        typeof li.qty === "number" && li.qty > 0
+      )
       .map((li) => {
         // For existing items being updated, find the original (to preserve productSku + unitPrice snapshot)
         const existing = li.id ? order.lineItems.find((x) => x.id === li.id) : null

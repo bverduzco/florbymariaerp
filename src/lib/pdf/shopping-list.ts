@@ -228,7 +228,7 @@ function buildDocDefinition(payload: ShoppingListPayload): TDocumentDefinitions 
       const warningText = li.warning ? `\nWarning: ${li.warning}` : ""
 
       // Checkbox prefix on material name
-      const materialContent: Content = {
+      const materialContent: any = {
         text: [
           { text: "[ ] ", color: COLOR_STONE_LIGHT, fontSize: 9 },
           { text: li.materialName + warningText, color: COLOR_STONE, fontSize: 9 },
@@ -262,8 +262,8 @@ function buildDocDefinition(payload: ShoppingListPayload): TDocumentDefinitions 
             italics: true,
             color: COLOR_INDIGO,
             fontSize: 7,
-            colSpan: 8,
-          },
+            colSpan: 8, // valid at runtime; not in pdfmake type defs
+          } as any,
           "", "", "", "", "", "", "",
         ])
       }

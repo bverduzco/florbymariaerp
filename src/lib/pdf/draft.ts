@@ -111,7 +111,7 @@ const BORDER_THIN: Partial<ExcelJS.Borders> = {
 
 function applyHeaderStyle(cell: ExcelJS.Cell) {
   cell.font = HEADER_FONT
-  cell.fill = HEADER_FILL
+  cell.fill = HEADER_FILL as ExcelJS.Fill
   cell.alignment = { vertical: "middle", horizontal: "left" }
   cell.border = BORDER_THIN
 }
@@ -158,7 +158,7 @@ function buildOrdersSheet(wb: ExcelJS.Workbook, orders: DraftOrder[], generatedA
 
   // Header row
   const headerRow = ws.getRow(4)
-  headerRow.values = ws.columns.map((c) => c.header)
+  headerRow.values = ws.columns.map((c) => c.header) as ExcelJS.CellValue[]
   headerRow.eachCell((cell) => applyHeaderStyle(cell))
   headerRow.height = 22
 
@@ -205,7 +205,7 @@ function buildCustomersSheet(wb: ExcelJS.Workbook, customers: DraftCustomer[], g
   ws.spliceRows(3, 1)
 
   const headerRow = ws.getRow(4)
-  headerRow.values = ws.columns.map((c) => c.header)
+  headerRow.values = ws.columns.map((c) => c.header) as ExcelJS.CellValue[]
   headerRow.eachCell((cell) => applyHeaderStyle(cell))
   headerRow.height = 22
 
@@ -243,7 +243,7 @@ function buildLineItemsSheet(wb: ExcelJS.Workbook, lineItems: DraftLineItem[], g
   ws.spliceRows(3, 1)
 
   const headerRow = ws.getRow(4)
-  headerRow.values = ws.columns.map((c) => c.header)
+  headerRow.values = ws.columns.map((c) => c.header) as ExcelJS.CellValue[]
   headerRow.eachCell((cell) => applyHeaderStyle(cell))
   headerRow.height = 22
 
@@ -270,8 +270,10 @@ export async function generateDraftExcel(payload: DraftPayload): Promise<Buffer>
   wb.creator = "Flor by Maria app"
   wb.created = new Date()
   wb.modified = new Date()
-  wb.properties.title = "ERP Draft"
-  wb.properties.description = `Auto-generated draft export from the app database on ${payload.generatedAt ?? nowGmtMinus6Label()} (GMT-6). Review this file, then promote to be the official ERP version.`
+  // ExcelJS's WorkbookProperties type doesn't expose title/description,
+  // but they exist at runtime. Cast to any to set them.
+  ;(wb.properties as any).title = "ERP Draft"
+  ;(wb.properties as any).description = `Auto-generated draft export from the app database on ${payload.generatedAt ?? nowGmtMinus6Label()} (GMT-6). Review this file, then promote to be the official ERP version.`
 
   const generatedAt = payload.generatedAt || nowGmtMinus6Label()
 
@@ -279,5 +281,5 @@ export async function generateDraftExcel(payload: DraftPayload): Promise<Buffer>
   buildCustomersSheet(wb, payload.customers, generatedAt)
   buildLineItemsSheet(wb, payload.lineItems, generatedAt)
 
-  return await wb.xlsx.writeBuffer() as Buffer
+  return await wb.xlsx.writeBuffer() as unknown as Buffer
 }

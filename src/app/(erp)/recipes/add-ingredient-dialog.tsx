@@ -13,7 +13,7 @@ type MaterialOption = {
   id: string
   sku: string
   name: string
-  unitCost: number
+  unitCost: number | null
 }
 
 export function AddIngredientDialog({
@@ -34,7 +34,7 @@ export function AddIngredientDialog({
   const router = useRouter()
 
   const selected = materials.find((m) => m.id === form.materialId)
-  const lineCost = selected && form.qty ? selected.unitCost * Number(form.qty) : 0
+  const lineCost = selected && form.qty ? (selected.unitCost ?? 0) * Number(form.qty) : 0
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()

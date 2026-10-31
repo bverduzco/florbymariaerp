@@ -31,14 +31,15 @@ type MaterialLite = {
   id: string
   sku: string
   name: string
-  unitCost: number
+  unitCost: number | null
 }
 
 type VersionLite = {
   id: string
   version: string
   status: string
-  effectiveFrom: string
+  effectiveFrom: Date | string
+  productSku?: string
   product: { sku: string; name: string }
 }
 

@@ -170,6 +170,11 @@ export async function POST(request: Request) {
     include: { lines: true },
   })
 
+  // v1.9 fix: marginPct is needed both inside the !isHidden block (for Product create)
+  // and outside it (for the response body). Compute it once at the top so it's in scope
+  // for both. (Previously declared inside the if-block, which 500'd on hidden recipes.)
+  const marginPct = actualPrice > 0 ? (actualPrice - totalCost) / actualPrice : 0
+
   // Only create ERP Product + RecipeLines when NOT hidden (visible in Catalogue)
   if (!isHidden) {
     // Check SKU doesn't already exist in Product table
@@ -181,7 +186,6 @@ export async function POST(request: Request) {
       )
     }
 
-    const marginPct = actualPrice > 0 ? (actualPrice - totalCost) / actualPrice : 0
     const product = await db.product.create({
       data: {
         sku,

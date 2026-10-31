@@ -146,7 +146,9 @@ function buildDocDefinition(payload: ReciboPayload): TDocumentDefinitions {
   }
 
   // === TABLA DE PRODUCTOS ===
-  const lineItemsTable: Content = {
+  // Type as any: pdfmake's Content type is overly strict about table body
+  // cell shapes (mixed text/object rows), but the runtime accepts them.
+  const lineItemsTable: any = {
     table: {
       widths: ["*", "auto", "auto", "auto"],
       headerRows: 1,

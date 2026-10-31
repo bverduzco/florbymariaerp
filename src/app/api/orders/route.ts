@@ -143,7 +143,9 @@ export async function POST(request: Request) {
   }
 }
 
-function serializeOrder(o: typeof db.$inferTypes["order"] | any) {
+// v1.9: Prisma 6.x removed $inferTypes. Using `any` here is fine since this
+// function is only called with order objects fetched from Prisma.
+function serializeOrder(o: any) {
   return {
     id: o.id,
     orderNumber: o.orderNumber,

@@ -278,7 +278,7 @@ export async function POST(request: Request) {
   // File name includes SL number + GMT-6 date AND time (same as v1.7)
   const fileName = `Shopping List ${slNumber} (${nowGmtMinus6FileStamp()}).pdf`
 
-  return new Response(pdfBuffer, {
+  return new Response(pdfBuffer as unknown as BodyInit, {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",

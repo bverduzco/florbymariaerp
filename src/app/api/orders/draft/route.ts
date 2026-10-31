@@ -90,7 +90,7 @@ export async function POST(request: Request) {
   // Stream the Excel back as the HTTP response
   const fileName = `ERP Draft (${nowGmtMinus6FileStamp()}).xlsx`
 
-  return new Response(excelBuffer, {
+  return new Response(excelBuffer as unknown as BodyInit, {
     status: 200,
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

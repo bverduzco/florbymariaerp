@@ -100,7 +100,7 @@ export function CustomerSearch({ customers }: CustomerSearchProps) {
                   <td style={{ textAlign: "right", fontWeight: 600, color: c.lifetimeValue > 0 ? "#047857" : "#D6D3D1" }}>
                     {c.lifetimeValue > 0 ? `$${c.lifetimeValue.toLocaleString("es-MX", { maximumFractionDigits: 0 })}` : "—"}
                   </td>
-                  <td style={{ fontSize: "11px" }}>{new Date(c.createdAt).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" })}</td>
+                  <td style={{ fontSize: "11px" }}>{c.createdAt ? new Date(c.createdAt as string).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</td>
                   <td style={{ padding: "6px" }}>
                     <CustomerDetailDialog
                       customer={c}

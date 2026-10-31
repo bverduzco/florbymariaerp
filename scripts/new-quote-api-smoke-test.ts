@@ -78,17 +78,17 @@ async function main() {
       },
     ],
   }
-  // Expected math:
+  // Expected math (updated v1.9 for payment rules):
   //   line 1: 2 × product.actualPriceBeforeIva
   //   line 2: 1 × 50 = 50
   //   subtotal = (2 * product.actualPriceBeforeIva) + 50
   //   iva = subtotal * 0.16
   //   total = subtotal + iva
-  //   deposit = total * 0.5
+  //   deposit = total * 1.0  (100% COD, because quoteMode='no_event')
   const expectedSubtotalA = 2 * product.actualPriceBeforeIva + 50
   const expectedIvaA = expectedSubtotalA * 0.16
   const expectedTotalA = expectedSubtotalA + expectedIvaA
-  const expectedDepositA = expectedTotalA * 0.5
+  const expectedDepositA = expectedTotalA * 1.0 // 100% COD for no_event
 
   const resA = await fetch("http://localhost:3000/api/quotes", {
     method: "POST",
