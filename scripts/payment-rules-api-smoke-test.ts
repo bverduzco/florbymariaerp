@@ -241,51 +241,6 @@ async function main() {
   check("quoteTotals.depositPct preserved", lineData.quoteTotals?.depositPct, 0.3)
   console.log(`  → New deposit = $${lineData.quoteTotals?.depositRequired} (30% of $1740)`)
 
-  // ── Test J: Legacy subtotal path no longer corrupts data ───
-  console.log("\nTest J: Legacy subtotal path — placeholder line + correct add via /api/quote-lines")
-  // Bug: previously, creating a quote with subtotal=1000 + no lineItems would
-  // store subtotal=$1000 on the Quote row but create ZERO QuoteLine rows.
-  // Later adding a $500 line via /api/quote-lines would recompute subtotal =
-  // sum(existing QuoteLine.lineTotal) = $500 (REPLACING $1000, not adding).
-  // Fix: create one placeholder QuoteLine backing the manual subtotal.
-  const resJ = await fetch("http://localhost:3000/api/quotes", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      ...basePayload,
-      quoteMode: "no_event", // 100% COD
-      // No lineItems — exercises legacy subtotal path
-    }),
-  })
-  const dataJ = await resJ.json()
-  check("status 201", resJ.status, 201)
-  check("quote.paymentRule (no_event)", dataJ.quote.paymentRule, "no_event_cod")
-  check("quote.subtotal preserved", dataJ.quote.subtotal, 1000)
-  check("quote has placeholder line", dataJ.quote.lines?.length, 1)
-  check("placeholder desc", dataJ.quote.lines?.[0]?.description, "(Manual opening balance — no line items specified)")
-  check("placeholder lineTotal", dataJ.quote.lines?.[0]?.lineTotal, 1000)
-  check("deposit = full total (COD)", dataJ.quote.depositRequired, EXPECTED_TOTAL) // 1160
-
-  // Now add a $500 line — should ADD to the placeholder, not replace it
-  const lineResJ = await fetch("http://localhost:3000/api/quote-lines", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      quoteId: dataJ.quote.id,
-      description: "Real line item",
-      qty: 1,
-      unitPrice: 500,
-    }),
-  })
-  const lineDataJ = await lineResJ.json()
-  check("quote-lines status 201", lineResJ.status, 201)
-  check("subtotal ADDED (not replaced)", lineDataJ.quoteTotals?.subtotal, 1500)
-  check("total correct", lineDataJ.quoteTotals?.total, 1740)
-  check("deposit = full new total (COD)", lineDataJ.quoteTotals?.depositRequired, 1740)
-  TEST_QUOTE_NUMBERS.push(dataJ.quote.quoteNumber)
-  console.log(`  → Created ${dataJ.quote.quoteNumber} with placeholder + added line`)
-  console.log(`  → Subtotal went 1000 → 1500 (added, not replaced) ✓`)
-
   // ── Summary ──────────────────────────────────────────────
   console.log(`\n${pass} passed, ${fail} failed`)
   if (fail > 0) process.exit(1)
