@@ -5,6 +5,8 @@
 import { db as prisma } from "@/lib/db"
 import { NewQuoteDialog } from "./new-quote-dialog"
 import { StatusDropdown } from "@/components/status-dropdown"
+import { QuotePdfButton } from "@/components/quote-pdf-button"
+import { QuoteMessageButton } from "@/components/quote-message-button"
 import Link from "next/link"
 
 async function getQuotes() {
@@ -108,12 +110,14 @@ export default async function QuotesPage() {
                 <th>Status</th>
                 <th style={{ textAlign: "right" }}>Items</th>
                 <th style={{ textAlign: "right" }}>Total</th>
+                <th style={{ textAlign: "center" }}>PDF</th>
+                <th style={{ textAlign: "center" }}>MSG</th>
                 <th>Notes</th>
               </tr>
             </thead>
             <tbody>
               {quotes.length === 0 ? (
-                <tr><td colSpan={8} style={{ textAlign: "center", padding: "24px", color: "#9CA3AF" }}>No quotes yet.</td></tr>
+                <tr><td colSpan={10} style={{ textAlign: "center", padding: "24px", color: "#9CA3AF" }}>No quotes yet.</td></tr>
               ) : (
                 quotes.map((q) => (
                   <tr key={q.id}>
@@ -144,6 +148,12 @@ export default async function QuotesPage() {
                     <td style={{ textAlign: "right" }}>{q.lines.length}</td>
                     <td style={{ textAlign: "right", fontWeight: 600, color: "#44403C" }}>
                       ${q.total.toLocaleString("es-MX", { maximumFractionDigits: 0 })}
+                    </td>
+                    <td style={{ textAlign: "center", padding: "4px" }}>
+                      <QuotePdfButton quoteId={q.id} variant="icon" />
+                    </td>
+                    <td style={{ textAlign: "center", padding: "4px" }}>
+                      <QuoteMessageButton quoteId={q.id} variant="icon" />
                     </td>
                     <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {q.lostReason ? (

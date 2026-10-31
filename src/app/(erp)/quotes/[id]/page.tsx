@@ -7,6 +7,8 @@ import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { StatusDropdown } from "@/components/status-dropdown"
+import { QuotePdfButton } from "@/components/quote-pdf-button"
+import { QuoteMessageButton } from "@/components/quote-message-button"
 import { lookupPaymentRule } from "@/lib/payment-rules"
 import { notFound } from "next/navigation"
 import Link from "next/link"
@@ -76,6 +78,12 @@ export default async function QuoteDetailPage({
           <div className="text-sm text-stone-600">
             {quote.customerName ?? "No customer linked"}
             {quote.customer?.phone && <span className="ml-2 text-stone-500">· {quote.customer.phone}</span>}
+          </div>
+
+          {/* Customer-facing actions */}
+          <div className="flex items-center gap-2 mt-4">
+            <QuotePdfButton quoteId={quote.id} variant="button" />
+            <QuoteMessageButton quoteId={quote.id} variant="button" />
           </div>
         </header>
 
