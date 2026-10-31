@@ -14,6 +14,16 @@
 
 export const GMT_MINUS_6_OFFSET = -6 // hours
 
+// ───────────────────────────────────────────────────────────────────────────
+// Page size — Letter is the standard in Mexico (and the US).
+// A4 = 595 × 842 pt. Letter = 612 × 792 pt.
+// All PDF generators (recibo, shopping-list, quote) use these constants so
+// the page size + background band width stay in sync.
+// ───────────────────────────────────────────────────────────────────────────
+export const PAGE_SIZE = "LETTER" as const
+export const PAGE_WIDTH_PT = 612 // Letter width in points (used for background canvas rects)
+export const HEADER_BAND_HEIGHT_PT = 22 // height of the rose top band
+
 export const MESES_ES = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
   "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",

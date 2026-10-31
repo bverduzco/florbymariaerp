@@ -9,7 +9,7 @@
 // Output: PDF buffer (Promise<Buffer>).
 
 import type { TDocumentDefinitions, Content } from "pdfmake/interfaces"
-import { formatSpanishLong } from "./utils"
+import { formatSpanishLong, PAGE_SIZE, PAGE_WIDTH_PT, HEADER_BAND_HEIGHT_PT } from "./utils"
 
 // === Brand colors (match v1.7 exactly) ===
 const COLOR_ROSE = "#BE185D"
@@ -312,7 +312,7 @@ function buildDocDefinition(payload: ReciboPayload): TDocumentDefinitions {
   })
 
   return {
-    pageSize: "A4",
+    pageSize: PAGE_SIZE,
     pageMargins: [36, 36, 36, 36], // 18mm ≈ 51pt, but using 36pt for visual balance
     defaultStyle: {
       font: "Helvetica",
@@ -333,7 +333,7 @@ function buildDocDefinition(payload: ReciboPayload): TDocumentDefinitions {
     // Top decorative band (rose)
     background: () => ({
       canvas: [
-        { type: "rect", x: 0, y: 0, w: 595, h: 22, color: COLOR_ROSE },
+        { type: "rect", x: 0, y: 0, w: PAGE_WIDTH_PT, h: HEADER_BAND_HEIGHT_PT, color: COLOR_ROSE },
       ],
     }),
   }

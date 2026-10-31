@@ -13,7 +13,7 @@
 // Input: QuotePayload. Output: PDF buffer (Promise<Buffer>).
 
 import type { TDocumentDefinitions, Content } from "pdfmake/interfaces"
-import { formatSpanishLong } from "./utils"
+import { formatSpanishLong, PAGE_SIZE, PAGE_WIDTH_PT, HEADER_BAND_HEIGHT_PT } from "./utils"
 import { lookupPaymentRule } from "@/lib/payment-rules"
 
 // === Brand colors (match recibo.ts exactly for consistency) ===
@@ -280,7 +280,7 @@ function buildDocDefinition(payload: QuotePayload): TDocumentDefinitions {
   })
 
   return {
-    pageSize: "A4",
+    pageSize: PAGE_SIZE,
     pageMargins: [36, 36, 36, 36],
     defaultStyle: {
       font: "Helvetica",
@@ -301,7 +301,7 @@ function buildDocDefinition(payload: QuotePayload): TDocumentDefinitions {
     footer: footerFunction,
     background: () => ({
       canvas: [
-        { type: "rect", x: 0, y: 0, w: 595, h: 22, color: COLOR_ROSE },
+        { type: "rect", x: 0, y: 0, w: PAGE_WIDTH_PT, h: HEADER_BAND_HEIGHT_PT, color: COLOR_ROSE },
       ],
     }),
   }
