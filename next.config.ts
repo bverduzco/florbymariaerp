@@ -11,13 +11,11 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   serverExternalPackages: ["pdfmake"],
 
-  // v1.9: trailingSlash=true so /dashboard/ (with slash) serves the page directly.
-  // The space-z.ai preview proxy caches a 307 redirect from /dashboard → /dashboard/
-  // (leftover from an old redirect-loop bug). With trailingSlash=false (default),
-  // Next.js responds to /dashboard/ with a 308 redirect back to /dashboard, which
-  // the proxy turns into a 403 — creating a broken loop. With trailingSlash=true,
-  // /dashboard/ serves the page directly, breaking the loop.
-  trailingSlash: true,
+  // No trailingSlash — was added to fix a preview-proxy redirect loop on
+  // /dashboard, but it breaks all POST endpoints (308 redirect drops body)
+  // and causes auth redirect loops in production. The /dashboard issue was
+  // a preview-proxy artifact, not a real app bug — Vercel serves /dashboard
+  // cleanly without trailingSlash.
 
   // No `output: "standalone"` — Vercel handles this natively.
   // If you ever need to deploy to Fly.io or Render again, set:
