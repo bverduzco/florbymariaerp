@@ -2,74 +2,175 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
 import { toast } from "sonner"
+import {
+  NewQuoteFields,
+  INITIAL_NEW_QUOTE_FORM,
+  type NewQuoteForm,
+} from "@/components/new-quote-fields"
 
-const EVENT_TYPES = [
-  { value: "wedding", label: "Wedding" },
-  { value: "birthday", label: "Birthday" },
-  { value: "corporate", label: "Corporate" },
-  { value: "quinceanera", label: "Quinceañera" },
-  { value: "anniversary", label: "Anniversary" },
-  { value: "other", label: "Other" },
-]
+// ───────────────────────────────────────────────────────────────────────────
+// Types
+// ───────────────────────────────────────────────────────────────────────────
+type ProductOption = {
+  id: string
+  sku: string
+  name: string
+  size: string | null
+  actualPriceBeforeIva: number
+}
 
-const LEAD_SOURCES = [
-  { value: "instagram", label: "Instagram" },
-  { value: "referral", label: "Referral" },
-  { value: "walk_in", label: "Walk-in" },
-  { value: "wedding_planner", label: "Wedding planner" },
-  { value: "google", label: "Google" },
-  { value: "other", label: "Other" },
-]
+type CustomerOption = {
+  id: string
+  name: string
+}
 
-export function NewQuoteDialog() {
+type EventOption = {
+  id: string
+  eventNumber: string
+  name: string
+  eventDate: Date | null
+}
+
+// Internal line item state (editable)
+type EditLine = {
+  key: string
+  productId: string
+  productSku: string
+  description: string
+  size: string | null
+  qty: number
+  unitPrice: number
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Dialog
+// ───────────────────────────────────────────────────────────────────────────
+export function NewQuoteDialog({
+  products,
+  customers,
+  events,
+}: {
+  products: ProductOption[]
+  customers: CustomerOption[]
+  events: EventOption[]
+}) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [form, setForm] = useState({
-    customerName: "",
-    eventType: "",
-    eventDate: "",
-    subtotal: "",
-    leadSource: "",
-    notes: "",
-  })
+  const [form, setForm] = useState<NewQuoteForm>(INITIAL_NEW_QUOTE_FORM)
+  const [lines, setLines] = useState<EditLine[]>([])
   const router = useRouter()
 
+  // ── Line items table operations ──────────────────────────
+  function addLine() {
+    setLines((prev) => [
+      ...prev,
+      {
+        key: `new-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        productId: "",
+        productSku: "",
+        description: "",
+        size: null,
+        qty: 1,
+        unitPrice: 0,
+      },
+    ])
+  }
+
+  function removeLine(key: string) {
+    setLines((prev) => prev.filter((l) => l.key !== key))
+  }
+
+  function updateLine(key: string, patch: Partial<EditLine>) {
+    setLines((prev) =>
+      prev.map((l) => {
+        if (l.key !== key) return l
+        const next = { ...l, ...patch }
+        // When product changes, pre-fill description + size + unitPrice from catalog
+        if (patch.productId && patch.productId !== l.productId) {
+          const p = products.find((x) => x.id === patch.productId)
+          if (p) {
+            next.productSku = p.sku
+            next.description = `${p.name}${p.size ? ` (${p.size})` : ""}`
+            next.size = p.size
+            next.unitPrice = p.actualPriceBeforeIva
+          }
+        }
+        return next
+      })
+    )
+  }
+
+  // ── Live totals ─────────────────────────────────────────
+  const subtotal = lines.reduce((s, l) => s + l.qty * l.unitPrice, 0)
+  const iva = subtotal * 0.16
+  const total = subtotal + iva
+  const depositRequired = total * 0.5
+
+  // ── Submit ──────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.customerName || !form.subtotal) return
+    if (!form.customerName) return
     setLoading(true)
     try {
+      const payload = {
+        customerName: form.customerName,
+        eventId: form.eventId !== "_none" ? form.eventId : null,
+        eventType: form.eventType || null,
+        eventDate: form.eventDate || null,
+        quoteMode: form.quoteMode,
+        leadSource: form.leadSource || null,
+        leadSourceDetail: form.leadSourceDetail || null,
+        notes: form.notes || null,
+        lineItems: lines
+          .filter((l) => l.description && l.qty > 0)
+          .map((l) => ({
+            productSku: l.productSku || null,
+            productId: l.productId || null,
+            description: l.description,
+            qty: l.qty,
+            unitPrice: l.unitPrice,
+          })),
+      }
       const res = await fetch("/api/quotes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerName: form.customerName,
-          eventType: form.eventType || undefined,
-          eventDate: form.eventDate || undefined,
-          subtotal: Number(form.subtotal),
-          leadSource: form.leadSource || undefined,
-          notes: form.notes || undefined,
-        }),
+        body: JSON.stringify(payload),
       })
-      if (!res.ok) throw new Error((await res.json()).error ?? "Failed")
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error ?? "Failed")
+      }
       const data = await res.json()
-      toast.success("Quote created", { description: `${data.quote.quoteNumber} — $${data.quote.total.toFixed(0)}` })
+      toast.success("Quote created", {
+        description: `${data.quote.quoteNumber} — ${lines.length} line(s) · $${data.quote.total?.toFixed(0) ?? total.toFixed(0)}`,
+      })
       setOpen(false)
-      setForm({ customerName: "", eventType: "", eventDate: "", subtotal: "", leadSource: "", notes: "" })
+      setForm(INITIAL_NEW_QUOTE_FORM)
+      setLines([])
       router.refresh()
     } catch (e) {
-      toast.error("Failed to create quote", { description: e instanceof Error ? e.message : String(e) })
+      toast.error("Failed to create quote", {
+        description: e instanceof Error ? e.message : String(e),
+      })
     } finally {
       setLoading(false)
     }
   }
+
+  const canSubmit = !!form.customerName
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -78,76 +179,155 @@ export function NewQuoteDialog() {
           + New Quote
         </button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-[820px] max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>New Quote</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+        <form onSubmit={handleSubmit} className="space-y-5 pt-2">
+          <NewQuoteFields form={form} setForm={setForm} customers={customers} events={events} />
+
+          {/* ── LINE ITEMS ──────────────────────────────────── */}
           <div className="space-y-2">
-            <Label htmlFor="customerName">Customer name *</Label>
-            <Input
-              id="customerName"
-              value={form.customerName}
-              onChange={(e) => setForm({ ...form, customerName: e.target.value })}
-              placeholder="e.g. María González"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Event type</Label>
-              <Select value={form.eventType} onValueChange={(v) => setForm({ ...form, eventType: v })}>
-                <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
-                <SelectContent>
-                  {EVENT_TYPES.map((t) => (<SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>))}
-                </SelectContent>
-              </Select>
+            <div className="flex items-center justify-between">
+              <div className="text-[10px] uppercase tracking-wider text-stone-500 font-semibold border-b border-stone-200 pb-1 flex-1">
+                Line items ({lines.length})
+              </div>
+              <Button type="button" variant="outline" size="sm" onClick={addLine}>
+                + Add line
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="eventDate">Event date</Label>
-              <Input
-                id="eventDate"
-                type="date"
-                value={form.eventDate}
-                onChange={(e) => setForm({ ...form, eventDate: e.target.value })}
-              />
+
+            {lines.length === 0 ? (
+              <div className="p-4 text-center text-xs text-stone-500 border border-dashed border-stone-300 rounded-md">
+                No lines yet. Click <b>+ Add line</b> to add a product, or
+                save with no lines and add them later from the quote detail page.
+              </div>
+            ) : (
+              <div className="border border-stone-200 rounded-md overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead className="bg-stone-50 text-stone-600">
+                    <tr>
+                      <th className="text-left px-2 py-2 font-medium">Product</th>
+                      <th className="text-left px-2 py-2 font-medium w-16">Size</th>
+                      <th className="text-right px-2 py-2 font-medium w-16">Qty</th>
+                      <th className="text-right px-2 py-2 font-medium w-24">Unit $</th>
+                      <th className="text-right px-2 py-2 font-medium w-24">Line $</th>
+                      <th className="px-2 py-2 w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lines.map((l) => (
+                      <tr key={l.key} className="border-t border-stone-100">
+                        <td className="px-2 py-1">
+                          <Select
+                            value={l.productId}
+                            onValueChange={(v) => updateLine(l.key, { productId: v })}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue placeholder="Pick product..." />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-[260px]">
+                              {products.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.name} · ${p.actualPriceBeforeIva.toLocaleString("es-MX", { maximumFractionDigits: 0 })}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {/* Allow free-form description if no product picked */}
+                          {!l.productId && (
+                            <Input
+                              value={l.description}
+                              onChange={(e) => updateLine(l.key, { description: e.target.value })}
+                              placeholder="Or type a custom description"
+                              className="h-7 text-xs mt-1"
+                            />
+                          )}
+                        </td>
+                        <td className="px-2 py-1 text-stone-600">{l.size ?? "—"}</td>
+                        <td className="px-2 py-1">
+                          <Input
+                            type="number"
+                            min="1"
+                            value={l.qty}
+                            onChange={(e) => updateLine(l.key, { qty: Number(e.target.value) })}
+                            className="h-8 text-xs text-right"
+                          />
+                        </td>
+                        <td className="px-2 py-1">
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={l.unitPrice}
+                            onChange={(e) => updateLine(l.key, { unitPrice: Number(e.target.value) })}
+                            className="h-8 text-xs text-right"
+                          />
+                        </td>
+                        <td className="px-2 py-1 text-right font-semibold tabular-nums">
+                          ${(l.qty * l.unitPrice).toLocaleString("es-MX", { maximumFractionDigits: 2 })}
+                        </td>
+                        <td className="px-2 py-1 text-center">
+                          <button
+                            type="button"
+                            onClick={() => removeLine(l.key)}
+                            className="text-stone-400 hover:text-red-600 transition"
+                            title="Remove line"
+                          >
+                            ✕
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* ── LIVE TOTALS SUMMARY ────────────────────────── */}
+          {lines.length > 0 && (
+            <div className="grid grid-cols-4 gap-2">
+              <div className="p-3 bg-stone-50 border border-stone-200 rounded-md text-center">
+                <div className="text-[9px] uppercase tracking-wider text-stone-500">
+                  Subtotal
+                </div>
+                <div className="text-base font-bold text-stone-800">
+                  ${subtotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
+                </div>
+              </div>
+              <div className="p-3 bg-stone-50 border border-stone-200 rounded-md text-center">
+                <div className="text-[9px] uppercase tracking-wider text-stone-500">
+                  IVA (16%)
+                </div>
+                <div className="text-base font-bold text-stone-800">
+                  ${iva.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
+                </div>
+              </div>
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-md text-center">
+                <div className="text-[9px] uppercase tracking-wider text-rose-700">
+                  Total
+                </div>
+                <div className="text-base font-bold text-rose-900">
+                  ${total.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
+                </div>
+              </div>
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-center">
+                <div className="text-[9px] uppercase tracking-wider text-amber-700">
+                  Deposit (50%)
+                </div>
+                <div className="text-base font-bold text-amber-900">
+                  ${depositRequired.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="subtotal">Subtotal (MXN, before IVA) *</Label>
-            <Input
-              id="subtotal"
-              type="number"
-              step="0.01"
-              value={form.subtotal}
-              onChange={(e) => setForm({ ...form, subtotal: e.target.value })}
-              placeholder="e.g. 3500"
-              required
-            />
-            <p className="text-xs text-stone-500">IVA (16%) and total are calculated automatically.</p>
-          </div>
-          <div className="space-y-2">
-            <Label>Lead source</Label>
-            <Select value={form.leadSource} onValueChange={(v) => setForm({ ...form, leadSource: v })}>
-              <SelectTrigger><SelectValue placeholder="Select..." /></SelectTrigger>
-              <SelectContent>
-                {LEAD_SOURCES.map((s) => (<SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes (optional)</Label>
-            <Textarea
-              id="notes"
-              value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
-              placeholder="What does the customer want?"
-              rows={2}
-            />
-          </div>
+          )}
+
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={loading || !form.customerName || !form.subtotal}>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading || !canSubmit}>
               {loading ? "Creating..." : "✓ Create Quote"}
             </Button>
           </DialogFooter>

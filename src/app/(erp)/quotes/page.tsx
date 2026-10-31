@@ -18,7 +18,33 @@ async function getQuotes() {
 }
 
 export default async function QuotesPage() {
-  const quotes = await getQuotes()
+  const [quotes, products, customers, events] = await Promise.all([
+    getQuotes(),
+    // All products (including $0 ones) so Maria can pick placeholders
+    prisma.product.findMany({
+      orderBy: [{ name: "asc" }],
+      select: {
+        id: true,
+        sku: true,
+        name: true,
+        size: true,
+        actualPriceBeforeIva: true,
+      },
+    }),
+    prisma.customer.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+    prisma.event.findMany({
+      orderBy: { eventDate: "asc" },
+      select: {
+        id: true,
+        eventNumber: true,
+        name: true,
+        eventDate: true,
+      },
+    }),
+  ])
 
   const total = quotes.length
   const accepted = quotes.filter((q) => q.status === "accepted").length
@@ -37,7 +63,7 @@ export default async function QuotesPage() {
           <h1>Quotes</h1>
           <div className="fmd-subtitle">Sales pipeline · draft → sent → accepted → declined</div>
         </div>
-        <NewQuoteDialog />
+        <NewQuoteDialog products={products} customers={customers} events={events} />
       </div>
 
       {/* KPI bar */}

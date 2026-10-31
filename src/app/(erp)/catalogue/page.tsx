@@ -6,7 +6,20 @@ async function getProducts() { return prisma.product.findMany({ where: { actualP
 async function getActiveQuotes() { return prisma.quote.findMany({ where: { status: { in: ["draft", "sent", "viewed", "negotiating"] } }, orderBy: { quoteDate: "desc" }, select: { id: true, quoteNumber: true, customerName: true, status: true } }) }
 
 export default async function CataloguePage() {
-  const [products, activeQuotes] = await Promise.all([getProducts(), getActiveQuotes()])
+  // Fetch products, active quotes, all products (for line items dropdown), customers + events (for new-quote mode)
+  const [products, activeQuotes, allProducts, customers, events] = await Promise.all([
+    getProducts(),
+    getActiveQuotes(),
+    prisma.product.findMany({
+      orderBy: [{ name: "asc" }],
+      select: { id: true, sku: true, name: true, size: true, actualPriceBeforeIva: true },
+    }),
+    prisma.customer.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.event.findMany({
+      orderBy: { eventDate: "asc" },
+      select: { id: true, eventNumber: true, name: true, eventDate: true },
+    }),
+  ])
   const byCategory = products.reduce((acc, p) => { if (!acc[p.category]) acc[p.category] = []; acc[p.category].push(p); return acc }, {} as Record<string, typeof products>)
   const catEmoji: Record<string, string> = { Bouquet: "💐", Arrangement: "🌸", Centerpiece: "🏺" }
   const withPhoto = products.filter((p) => p.cloudinaryPublicId).length
@@ -34,7 +47,15 @@ export default async function CataloguePage() {
                     <div style={{ fontSize: "13px", fontWeight: 600, color: "#44403C" }}>{product.name}{product.size && <span style={{ fontSize: "10px", color: "#78716C", marginLeft: "4px" }}>({product.size})</span>}</div>
                     <div style={{ fontSize: "10px", color: "#78716C", fontFamily: "monospace" }}>{product.sku}</div>
                     <div style={{ fontSize: "16px", fontWeight: 700, color: "#BE185D", marginTop: "2px" }}>${product.actualPriceWithIva.toLocaleString("es-MX", { maximumFractionDigits: 0 })} MXN</div>
-                    <div style={{ marginTop: "6px" }}><AddToQuoteDialog product={product} existingQuotes={activeQuotes} /></div>
+                    <div style={{ marginTop: "6px" }}>
+                      <AddToQuoteDialog
+                        product={product}
+                        existingQuotes={activeQuotes}
+                        products={allProducts}
+                        customers={customers}
+                        events={events}
+                      />
+                    </div>
                   </div>
                 </div>
               )

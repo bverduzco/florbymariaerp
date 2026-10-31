@@ -306,6 +306,7 @@ model Event {
   // v1.9: back-relations
   lineItems   EventLineItem[]
   executionLogs ExecutionLog[]
+  quotes      Quote[]
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -383,8 +384,12 @@ model Quote {
   customerId      String?
   customer        Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
   customerName    String?   // denormalized for display when no customer link
-  eventType       String?   // wedding | birthday | corporate | ...
-  eventDate       DateTime?
+  // v1.9: optional FK link to an Event (for event-driven quotes — weddings, corporate, etc.).
+  // Quotes without an event use orderType + deliveryDate instead (everyday orders, sympathy, etc.).
+  eventId         String?
+  event           Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  eventType       String?   // wedding | birthday | corporate | quinceanera | anniversary | everyday | sympathy | just_because | corporate_restock | custom | other
+  eventDate       DateTime?  // doubles as "delivery date" for no-event quotes
   status          String   @default("draft")
   // draft | sent | viewed | negotiating | accepted | declined | expired
   validUntil      DateTime?
@@ -398,7 +403,10 @@ model Quote {
   order           Order?   @relation(fields: [orderId], references: [id], onDelete: SetNull)
   linkedOrderId   String?  // DEPRECATED — kept for backward compat during migration. Was a loose ref to Order.orderNumber (not id). New code must use orderId instead.
   lostReason      String?  // too_expensive | went_elsewhere | postponed | unresponsive | other
-  leadSource      String?  // instagram | referral | walk_in | wedding_planner | google | other
+  leadSource      String?  // instagram | referral | walk_in | wedding_planner | google | repeat_customer | other
+  // v1.9: free-text detail for the lead source — e.g. referrer name when source=referral,
+  // planner name when source=wedding_planner, URL when source=google/instagram, etc.
+  leadSourceDetail String?
   notes           String?
   sourceRowKey    String?  @unique
   lines           QuoteLine[]
@@ -406,6 +414,7 @@ model Quote {
   updatedAt       DateTime @updatedAt
 
   @@index([customerId])
+  @@index([eventId])
   @@index([orderId])
   @@index([status])
   @@index([quoteDate])
