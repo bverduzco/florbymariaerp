@@ -95,8 +95,26 @@ export async function POST(request: Request) {
       })
     subtotal = linesData.reduce((s, l) => s + l.lineTotal, 0)
   } else if (body.subtotal !== undefined && body.subtotal !== null && !Number.isNaN(Number(body.subtotal))) {
-    // Legacy path — caller supplied a subtotal directly
+    // Legacy path — caller supplied a subtotal directly without line items.
+    // v1.9 fix: previously, this stored subtotal=X on the Quote row but created
+    // NO QuoteLine rows. Later, when /api/quote-lines added a line, it
+    // recomputed subtotal = sum(existing QuoteLine.lineTotal) — replacing X
+    // instead of adding to it (data corruption).
+    //
+    // Fix: create one placeholder QuoteLine backing the manual subtotal. Now
+    // the subtotal is always equal to the sum of its line items, and adding
+    // a line via /api/quote-lines correctly adds to (not replaces) the total.
     subtotal = Number(body.subtotal)
+    if (subtotal > 0) {
+      linesData = [{
+        productSku: null,
+        productId: null,
+        description: "(Manual opening balance — no line items specified)",
+        qty: 1,
+        unitPrice: subtotal,
+        lineTotal: subtotal,
+      }]
+    }
   } else {
     subtotal = 0
   }
@@ -187,7 +205,7 @@ export async function POST(request: Request) {
         leadSource: body.leadSource ?? null,
         leadSourceDetail: body.leadSourceDetail ?? null,
         notes,
-        lines: hasLineItems
+        lines: linesData.length > 0
           ? {
               create: linesData.map((l, idx) => ({
                 lineNumber: idx + 1,
