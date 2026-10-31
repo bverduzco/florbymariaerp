@@ -397,6 +397,11 @@ model Quote {
   iva             Float    @default(0)
   total           Float    @default(0)
   depositRequired Float    @default(0)
+  // v1.9: which payment rule was applied when the quote was created/sent.
+  // Stored (not computed on the fly) so editing the event date later doesn't
+  // silently change the deposit due on an already-sent quote.
+  // Values: no_event_cod | event_30pct | event_50pct | event_declined_override | event_default_50pct
+  paymentRule     String?
   // v1.9: proper FK linking Quote → Order (replaces the loose string linkedOrderId).
   // Backfilled from linkedOrderId on 2026-10-31; new code should always set orderId.
   orderId         String?

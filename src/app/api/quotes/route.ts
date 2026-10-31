@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { computePaymentRule } from "@/lib/payment-rules"
 
 export const dynamic = "force-dynamic"
 
@@ -13,10 +14,12 @@ export const dynamic = "force-dynamic"
  *   eventId?:      string | null,        // optional — link to existing Event
  *   eventType?:    string | null,        // wedding | birthday | ... | everyday | sympathy | just_because | custom | other
  *   eventDate?:    string (ISO) | null,  // event date OR delivery date for no-event quotes
- *   quoteMode?:    "event" | "no_event", // pure UI hint — informs what eventType means; not stored
+ *   quoteMode?:    "event" | "no_event", // drives which payment rule applies
  *   leadSource?:        string | null,
  *   leadSourceDetail?:  string | null,   // v1.9: referrer/planner name or other source detail
  *   notes?:        string | null,
+ *   overrideDecline?: boolean,           // v1.9: must be true when payment rule is "decline" (event < 2 weeks)
+ *                                        //       When true, the override is logged in notes.
  *   lineItems?:   Array<{                // v1.9: optional — created in same transaction
  *     productSku?: string | null,
  *     productId?:  string | null,
@@ -26,8 +29,18 @@ export const dynamic = "force-dynamic"
  *   }>,
  * }
  *
+ * Payment rules (applied at creation, stored on Quote.paymentRule):
+ *   - quoteMode='no_event'                  → 100% upfront (COD), rule='no_event_cod'
+ *   - quoteMode='event', no eventDate       → 50% default + warning, rule='event_default_50pct'
+ *   - event > 6 months away                  → 30% deposit, rule='event_30pct'
+ *   - event ≤ 6 months, ≥ 2 weeks           → 50% deposit, rule='event_50pct'
+ *   - event < 2 weeks away                  → DECLINE — quote is created only if
+ *                                              overrideDecline=true (rule='event_declined_too_close'
+ *                                              is still stored so the override is auditable).
+ *
  * Backward compatibility:
  *   - Old shape { customerName, subtotal, eventType?, eventDate?, leadSource?, notes? } still works.
+ *   - quoteMode defaults to 'event' when not provided (preserves old behavior).
  *   - If `lineItems[]` provided, subtotal/iva/total/deposit are computed from lines (overrides any `subtotal` field).
  *   - If no `lineItems[]` AND `subtotal` provided → uses the supplied subtotal (legacy path).
  *   - If neither → subtotal defaults to 0.
@@ -90,7 +103,29 @@ export async function POST(request: Request) {
 
   const iva = subtotal * 0.16
   const total = subtotal + iva
-  const depositRequired = total * 0.5
+
+  // ── Compute payment rule + deposit ────────────────────────
+  // quoteMode defaults to "event" when not provided (preserves old behavior —
+  // legacy callers didn't send quoteMode but did send eventType/eventDate).
+  const quoteMode = body.quoteMode ?? "event"
+  const paymentRule = computePaymentRule(quoteMode, body.eventDate ?? null)
+
+  // ── Decline enforcement (warn + override) ──────────────────
+  // If the rule is "decline" and the caller didn't set overrideDecline=true,
+  // reject the request with 422 Unprocessable Entity.
+  if (paymentRule.decline && !body.overrideDecline) {
+    return NextResponse.json(
+      {
+        error: "Event is less than 2 weeks away — must decline.",
+        paymentRule: paymentRule.rule,
+        warning: paymentRule.warning,
+        hint: "Set overrideDecline=true in the request body to create the quote anyway (the override will be logged in notes).",
+      },
+      { status: 422 }
+    )
+  }
+
+  const depositRequired = total * paymentRule.depositPct
 
   // ── Generate next quote number ────────────────────────────
   const count = await db.quote.count()
@@ -125,6 +160,13 @@ export async function POST(request: Request) {
       eventId = null
     }
 
+    // ── Compose notes (append override marker if applicable) ──
+    let notes = body.notes ?? null
+    if (paymentRule.decline && body.overrideDecline) {
+      const overrideMarker = `[OVERRIDE: event <2wk accepted by ${body.executedBy ?? "Maria"} on ${new Date().toISOString().slice(0, 10)}]`
+      notes = notes ? `${notes}\n\n${overrideMarker}` : overrideMarker
+    }
+
     // ── Create quote + (optional) line items in one transaction ──
     const quote = await db.quote.create({
       data: {
@@ -141,9 +183,10 @@ export async function POST(request: Request) {
         iva,
         total,
         depositRequired,
+        paymentRule: paymentRule.rule, // v1.9: store the rule applied
         leadSource: body.leadSource ?? null,
         leadSourceDetail: body.leadSourceDetail ?? null,
-        notes: body.notes ?? null,
+        notes,
         lines: hasLineItems
           ? {
               create: linesData.map((l, idx) => ({
@@ -160,7 +203,20 @@ export async function POST(request: Request) {
       },
       include: { lines: true },
     })
-    return NextResponse.json({ quote }, { status: 201 })
+    return NextResponse.json(
+      {
+        quote,
+        paymentRule: {
+          rule: paymentRule.rule,
+          label: paymentRule.label,
+          depositPct: paymentRule.depositPct,
+          decline: paymentRule.decline,
+          warning: paymentRule.warning,
+          overridden: paymentRule.decline && body.overrideDecline,
+        },
+      },
+      { status: 201 }
+    )
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     return NextResponse.json({ error: msg }, { status: 500 })

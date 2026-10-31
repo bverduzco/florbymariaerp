@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { lookupPaymentRule } from "@/lib/payment-rules"
 
 export const dynamic = "force-dynamic"
 
@@ -8,6 +9,13 @@ export const dynamic = "force-dynamic"
  * Body: { quoteId, productSku?, productId?, description, qty, unitPrice, notes? }
  * Creates a new quote line. Auto-computes lineTotal = qty × unitPrice.
  * Auto-increments lineNumber within the quote.
+ *
+ * v1.9: When recomputing the quote's totals after adding a line, the deposit
+ * is recomputed using the stored `Quote.paymentRule` (looked up via
+ * lookupPaymentRule). This preserves the rule that was applied at creation —
+ * editing lines doesn't silently change the deposit % on an already-sent quote.
+ *
+ * For legacy quotes with `paymentRule=null`, falls back to 50%.
  */
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null)
@@ -56,17 +64,35 @@ export async function POST(request: Request) {
     const newIva = newSubtotal * 0.16
     const newTotal = newSubtotal + newIva
 
+    // v1.9: Recompute deposit using the stored payment rule (preserves the rule
+    // applied at creation — editing lines doesn't change the deposit %).
+    const { depositPct } = lookupPaymentRule(quote.paymentRule)
+    const newDeposit = newTotal * depositPct
+
     await db.quote.update({
       where: { id: body.quoteId },
       data: {
         subtotal: newSubtotal,
         iva: newIva,
         total: newTotal,
-        depositRequired: newTotal * 0.5,
+        depositRequired: newDeposit,
       },
     })
 
-    return NextResponse.json({ quoteLine, quoteTotals: { subtotal: newSubtotal, iva: newIva, total: newTotal } }, { status: 201 })
+    return NextResponse.json(
+      {
+        quoteLine,
+        quoteTotals: {
+          subtotal: newSubtotal,
+          iva: newIva,
+          total: newTotal,
+          depositRequired: newDeposit,
+          paymentRule: quote.paymentRule,
+          depositPct,
+        },
+      },
+      { status: 201 }
+    )
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     return NextResponse.json({ error: msg }, { status: 500 })

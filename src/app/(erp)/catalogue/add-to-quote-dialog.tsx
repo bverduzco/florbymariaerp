@@ -13,6 +13,7 @@ import {
   INITIAL_NEW_QUOTE_FORM,
   type NewQuoteForm,
 } from "@/components/new-quote-fields"
+import { DepositPreview } from "@/components/deposit-preview"
 
 // ───────────────────────────────────────────────────────────────────────────
 // Types
@@ -156,7 +157,12 @@ export function AddToQuoteDialog({
   const subtotal = newLines.reduce((s, l) => s + l.qty * l.unitPrice, 0)
   const iva = subtotal * 0.16
   const total = subtotal + iva
-  const depositRequired = total * 0.5
+  // depositRequired is now computed by <DepositPreview> using the payment rule
+  // (so it changes based on quoteMode + eventDate). The actual stored value
+  // is computed by the API.
+
+  // ── Override decline state (for <2 week events, new mode) ──
+  const [overrideDecline, setOverrideDecline] = useState(false)
 
   // ── Submit ─────────────────────────────────────────────
   async function handleSubmit(e: React.FormEvent) {
@@ -210,6 +216,7 @@ export function AddToQuoteDialog({
           leadSource: form.leadSource || null,
           leadSourceDetail: form.leadSourceDetail || null,
           notes: form.notes || null,
+          overrideDecline,
           lineItems: newLines
             .filter((l) => l.description && l.qty > 0)
             .map((l) => ({
@@ -227,6 +234,12 @@ export function AddToQuoteDialog({
         })
         if (!res.ok) {
           const err = await res.json()
+          // 422 = decline rule fired without override — show a specific toast
+          if (res.status === 422 && err.paymentRule === "event_declined_too_close") {
+            throw new Error(
+              `${err.error} Check the override box below the totals to create the quote anyway.`
+            )
+          }
           throw new Error(err.error ?? "Failed to create quote")
         }
         const data = await res.json()
@@ -236,6 +249,7 @@ export function AddToQuoteDialog({
         setOpen(false)
         setForm(INITIAL_NEW_QUOTE_FORM)
         setNewLines([])
+        setOverrideDecline(false)
         router.refresh()
       }
     } catch (e) {
@@ -456,34 +470,15 @@ export function AddToQuoteDialog({
                 )}
               </div>
 
-              {/* ── Live totals ─────────────────────────────────── */}
+              {/* ── Live totals + deposit rule + decline warning ─── */}
               {newLines.length > 0 && (
-                <div className="grid grid-cols-4 gap-2">
-                  <div className="p-3 bg-stone-50 border border-stone-200 rounded-md text-center">
-                    <div className="text-[9px] uppercase tracking-wider text-stone-500">Subtotal</div>
-                    <div className="text-base font-bold text-stone-800">
-                      ${subtotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
-                    </div>
-                  </div>
-                  <div className="p-3 bg-stone-50 border border-stone-200 rounded-md text-center">
-                    <div className="text-[9px] uppercase tracking-wider text-stone-500">IVA (16%)</div>
-                    <div className="text-base font-bold text-stone-800">
-                      ${iva.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
-                    </div>
-                  </div>
-                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-md text-center">
-                    <div className="text-[9px] uppercase tracking-wider text-rose-700">Total</div>
-                    <div className="text-base font-bold text-rose-900">
-                      ${total.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
-                    </div>
-                  </div>
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-md text-center">
-                    <div className="text-[9px] uppercase tracking-wider text-amber-700">Deposit (50%)</div>
-                    <div className="text-base font-bold text-amber-900">
-                      ${depositRequired.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
-                    </div>
-                  </div>
-                </div>
+                <DepositPreview
+                  total={total}
+                  quoteMode={form.quoteMode}
+                  eventDate={form.eventDate}
+                  overrideDecline={overrideDecline}
+                  setOverrideDecline={setOverrideDecline}
+                />
               )}
             </div>
           )}

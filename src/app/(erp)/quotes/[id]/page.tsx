@@ -7,6 +7,7 @@ import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { StatusDropdown } from "@/components/status-dropdown"
+import { lookupPaymentRule } from "@/lib/payment-rules"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 
@@ -38,6 +39,10 @@ export default async function QuoteDetailPage({
 
   const depositPaid = quote.depositRequired ?? 0
   const balanceDue = quote.total - depositPaid
+  // v1.9: look up the rule that was applied at creation (stored on Quote.paymentRule)
+  const ruleInfo = lookupPaymentRule(quote.paymentRule)
+  const isOverride = quote.paymentRule === "event_declined_too_close"
+  const isLegacy = !quote.paymentRule
 
   return (
     <main className="min-h-screen bg-stone-50 px-6 py-10">
@@ -163,14 +168,59 @@ export default async function QuoteDetailPage({
           </CardContent>
         </Card>
 
+        {/* Payment terms banner — customer-facing rule explanation */}
+        <Card className={`mb-4 ${isOverride ? "border-amber-300 bg-amber-50" : "border-stone-200"}`}>
+          <CardContent className="pt-5">
+            <div className="flex items-start gap-3">
+              <div className="text-2xl">
+                {isOverride ? "⚠️" : isLegacy ? "📜" : "💰"}
+              </div>
+              <div className="flex-1">
+                <div className="text-xs uppercase tracking-wider text-stone-500">
+                  Payment rule applied
+                </div>
+                <div className={`text-sm font-semibold mt-0.5 ${isOverride ? "text-amber-900" : "text-stone-900"}`}>
+                  {ruleInfo.label}
+                </div>
+                {isOverride && (
+                  <div className="text-xs text-amber-800 mt-1">
+                    ⚠ This quote was created with an override — the event date was
+                    less than 2 weeks away when the quote was made. Check the
+                    notes for the override audit log.
+                  </div>
+                )}
+                {isLegacy && (
+                  <div className="text-xs text-stone-500 mt-1">
+                    Legacy quote — payment rule was not recorded at creation.
+                    Deposit shown below assumes 50%.
+                  </div>
+                )}
+                <div className="text-xs text-stone-500 mt-1">
+                  Stored rule:{" "}
+                  <code className="px-1 py-0.5 bg-stone-100 rounded text-stone-700">
+                    {quote.paymentRule ?? "(null — legacy)"}
+                  </code>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Payment summary */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <Card className="border-emerald-200 bg-emerald-50/50">
             <CardContent className="pt-5">
-              <div className="text-xs uppercase tracking-wider text-stone-500">Deposit required (50%)</div>
+              <div className="text-xs uppercase tracking-wider text-stone-500">
+                {ruleInfo.shortLabel}
+              </div>
               <div className="text-2xl font-bold text-emerald-700 mt-1">
                 ${depositPaid.toLocaleString("es-MX", { maximumFractionDigits: 0 })}
               </div>
+              {ruleInfo.depositPct < 1.0 && (
+                <div className="text-[10px] text-stone-500 mt-0.5">
+                  ({Math.round(ruleInfo.depositPct * 100)}% of total)
+                </div>
+              )}
             </CardContent>
           </Card>
           <Card className="border-stone-200">
@@ -179,6 +229,15 @@ export default async function QuoteDetailPage({
               <div className="text-2xl font-bold text-stone-900 mt-1">
                 ${balanceDue.toLocaleString("es-MX", { maximumFractionDigits: 0 })}
               </div>
+              {ruleInfo.depositPct < 1.0 ? (
+                <div className="text-[10px] text-stone-500 mt-0.5">
+                  (on delivery / pickup)
+                </div>
+              ) : (
+                <div className="text-[10px] text-stone-500 mt-0.5">
+                  (paid in full upfront — COD)
+                </div>
+              )}
             </CardContent>
           </Card>
           <Card className="border-stone-200">
