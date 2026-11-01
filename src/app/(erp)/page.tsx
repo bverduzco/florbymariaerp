@@ -262,7 +262,7 @@ export default async function LandingPage() {
           </div>
         </div>
 
-        {/* Big action buttons */}
+        {/* Big action buttons — only 3: New Quote, Catalogue, Custom Builder */}
         <div style={{ padding: "0 24px 24px", display: "flex", flexDirection: "column", gap: "12px" }}>
           <Link
             href="/quotes?new=1"
@@ -281,46 +281,6 @@ export default async function LandingPage() {
               </span>
             </span>
             <span style={{ fontSize: "18px", opacity: 0.4 }}>›</span>
-          </Link>
-
-          <Link
-            href="/orders"
-            style={{
-              display: "flex", alignItems: "center", gap: "14px",
-              padding: "18px 20px", borderRadius: "12px",
-              background: "#fff", color: "#44403C", border: "1px solid #E7E5E4",
-              fontSize: "15px", fontWeight: 600, textDecoration: "none",
-            }}
-          >
-            <span style={{ fontSize: "20px" }}>🛒</span>
-            <span style={{ flex: 1 }}>
-              Ver pedidos
-              <span style={{ display: "block", fontSize: "11px", fontWeight: 400, color: "#78716C", marginTop: "2px" }}>
-                {data.inProgressCount > 0
-                  ? `${data.inProgressCount} en producción`
-                  : "Sin pedidos activos"}
-              </span>
-            </span>
-            <span style={{ fontSize: "18px", color: "#A8A29E" }}>›</span>
-          </Link>
-
-          <Link
-            href="/shoppinglist"
-            style={{
-              display: "flex", alignItems: "center", gap: "14px",
-              padding: "18px 20px", borderRadius: "12px",
-              background: "#fff", color: "#44403C", border: "1px solid #E7E5E4",
-              fontSize: "15px", fontWeight: 600, textDecoration: "none",
-            }}
-          >
-            <span style={{ fontSize: "20px" }}>📝</span>
-            <span style={{ flex: 1 }}>
-              Lista de compras
-              <span style={{ display: "block", fontSize: "11px", fontWeight: 400, color: "#78716C", marginTop: "2px" }}>
-                Materiales para pedidos activos
-              </span>
-            </span>
-            <span style={{ fontSize: "18px", color: "#A8A29E" }}>›</span>
           </Link>
 
           <Link
@@ -343,7 +303,7 @@ export default async function LandingPage() {
           </Link>
 
           <Link
-            href="/execution"
+            href="/custom"
             style={{
               display: "flex", alignItems: "center", gap: "14px",
               padding: "18px 20px", borderRadius: "12px",
@@ -351,30 +311,11 @@ export default async function LandingPage() {
               fontSize: "15px", fontWeight: 600, textDecoration: "none",
             }}
           >
-            <span style={{ fontSize: "20px" }}>🔨</span>
+            <span style={{ fontSize: "20px" }}>🌷</span>
             <span style={{ flex: 1 }}>
-              Log ejecución
+              Custom builder
               <span style={{ display: "block", fontSize: "11px", fontWeight: 400, color: "#78716C", marginTop: "2px" }}>
-                ¿Qué acabaste de armar?
-              </span>
-            </span>
-            <span style={{ fontSize: "18px", color: "#A8A29E" }}>›</span>
-          </Link>
-
-          <Link
-            href="/knowledge"
-            style={{
-              display: "flex", alignItems: "center", gap: "14px",
-              padding: "18px 20px", borderRadius: "12px",
-              background: "#fff", color: "#44403C", border: "1px solid #E7E5E4",
-              fontSize: "15px", fontWeight: 600, textDecoration: "none",
-            }}
-          >
-            <span style={{ fontSize: "20px" }}>📚</span>
-            <span style={{ flex: 1 }}>
-              Wiki
-              <span style={{ display: "block", fontSize: "11px", fontWeight: 400, color: "#78716C", marginTop: "2px" }}>
-                Vida en florero + tips
+                Diseña un ramo personalizado
               </span>
             </span>
             <span style={{ fontSize: "18px", color: "#A8A29E" }}>›</span>
