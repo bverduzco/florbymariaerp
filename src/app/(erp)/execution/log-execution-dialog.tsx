@@ -338,7 +338,7 @@ export function LogExecutionDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           {/* ── Header fields ─────────────────────────────────────── */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>Linked job (optional)</Label>
               <Select value={jobSelection} onValueChange={handleJobChange}>
@@ -497,7 +497,9 @@ export function LogExecutionDialog({
                 )}
               </div>
             ) : (
-              <div className="border border-stone-200 rounded-md overflow-hidden">
+              <>
+              {/* ── Desktop: table view ──────────────────────────── */}
+              <div className="hidden sm:block border border-stone-200 rounded-md overflow-hidden">
                 <table className="w-full text-xs">
                   <thead className="bg-stone-50 text-stone-600">
                     <tr>
@@ -532,7 +534,7 @@ export function LogExecutionDialog({
                             </SelectContent>
                           </Select>
                         </td>
-                        <td className="px-2 py-1">
+                        <td className="px-1 py-1">
                           <Input
                             type="number"
                             step="0.5"
@@ -543,7 +545,7 @@ export function LogExecutionDialog({
                                 qtyUsed: Number(e.target.value),
                               })
                             }
-                            className="h-8 text-xs text-right"
+                            className="h-8 text-xs text-right px-1"
                           />
                         </td>
                         <td className="px-2 py-1 text-stone-600">{l.unit}</td>
@@ -598,6 +600,85 @@ export function LogExecutionDialog({
                   </tbody>
                 </table>
               </div>
+
+              {/* ── Mobile: stacked card view ───────────────────── */}
+              <div className="sm:hidden space-y-2">
+                {lines.map((l) => (
+                  <div key={l.key} className="border border-stone-200 rounded-lg p-3 bg-stone-50">
+                    {/* Material picker */}
+                    <Select
+                      value={l.materialSku}
+                      onValueChange={(v) => updateLine(l.key, { materialSku: v })}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="Pick material…" />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[260px]">
+                        {materials.map((m) => (
+                          <SelectItem key={m.sku} value={m.sku}>
+                            {m.name} · ${m.unitCost ?? 0}/{m.unit}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {/* Qty × unit cost = line cost */}
+                    <div className="flex items-center gap-2 mt-2">
+                      <Input
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        value={l.qtyUsed}
+                        onChange={(e) => updateLine(l.key, { qtyUsed: Number(e.target.value) })}
+                        className="h-8 text-xs text-right px-1 w-16"
+                        placeholder="Qty"
+                      />
+                      <span className="text-xs text-stone-500">×</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={l.unitCost}
+                        onChange={(e) => updateLine(l.key, { unitCost: Number(e.target.value) })}
+                        className="h-8 text-xs text-right px-1 flex-1"
+                        placeholder="Cost/u"
+                      />
+                      <span className="text-xs text-stone-500">{l.unit}</span>
+                    </div>
+                    {/* Line total + type + remove */}
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-stone-200">
+                      <Select
+                        value={l.type}
+                        onValueChange={(v) => updateLine(l.key, { type: v as EditLine["type"] })}
+                      >
+                        <SelectTrigger className="h-7 text-[10px] w-auto min-w-[100px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LINE_TYPES.map((t) => (
+                            <SelectItem key={t.value} value={t.value}>
+                              {t.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold tabular-nums">
+                          ${l.lineCost.toFixed(2)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeLine(l.key)}
+                          className="text-stone-400 hover:text-red-600 transition text-sm"
+                          title="Remove line"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              </>
             )}
           </div>
 
