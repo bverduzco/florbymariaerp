@@ -1,12 +1,6 @@
 "use client"
 
-// src/app/calendar/markers-toggle.tsx
-//
-// Client-side button that toggles the visibility of season/holiday/trend markers
-// in the calendar grid. Receives the markers from the server component (read-only
-// display of the legend), but the actual show/hide state lives here.
-
-import { useState } from "react"
+import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 
 interface SeasonMarkerLite {
@@ -23,23 +17,47 @@ interface MarkersToggleProps {
   markers: SeasonMarkerLite[]
 }
 
+/**
+ * MarkersToggle — toggles season marker visibility via URL search params.
+ *
+ * Uses ?markers=on (default) or ?markers=off instead of local React state.
+ * This way the CalendarGrid (which is a separate client component) can
+ * read the same URL param and show/hide marker strips in sync with this toggle.
+ *
+ * The legend chips (shown below the button when markers are ON) are rendered
+ * in their own row below the button bar, not inline — so they don't push
+ * the Block Date button to a new row.
+ */
 export function MarkersToggle({ markers }: MarkersToggleProps) {
-  const [visible, setVisible] = useState(true)
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const markersVisible = searchParams.get("markers") !== "off" // default = ON
+
+  function toggle() {
+    const params = new URLSearchParams(searchParams.toString())
+    if (markersVisible) {
+      params.set("markers", "off")
+    } else {
+      params.delete("markers") // default = on
+    }
+    router.push(`${pathname}?${params.toString()}`)
+  }
 
   return (
     <>
       <button
-        onClick={() => setVisible(!visible)}
+        onClick={toggle}
         className={`px-4 py-1.5 text-sm font-medium border rounded-md transition cursor-pointer ${
-          visible
+          markersVisible
             ? "bg-violet-100 border-violet-400 text-violet-800"
             : "bg-white border-stone-300 text-stone-700 hover:bg-stone-50"
         }`}
         title="Show/hide season/holiday/trend overlay"
       >
-        🎨 Markers: {visible ? "ON" : "OFF"}
+        🎨 Markers: {markersVisible ? "ON" : "OFF"}
       </button>
-      {visible && (
+      {markersVisible && markers.length > 0 && (
         <div className="w-full mt-2 flex flex-wrap gap-2 text-xs">
           {markers.map((m) => (
             <span
