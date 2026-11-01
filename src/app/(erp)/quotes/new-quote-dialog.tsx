@@ -219,7 +219,9 @@ export function NewQuoteDialog({
                 save with no lines and add them later from the quote detail page.
               </div>
             ) : (
-              <div className="border border-stone-200 rounded-md overflow-hidden">
+              <>
+              {/* ── Desktop: table view ──────────────────────────── */}
+              <div className="hidden sm:block border border-stone-200 rounded-md overflow-hidden">
                 <table className="w-full text-xs">
                   <thead className="bg-stone-50 text-stone-600">
                     <tr>
@@ -250,7 +252,6 @@ export function NewQuoteDialog({
                               ))}
                             </SelectContent>
                           </Select>
-                          {/* Allow free-form description if no product picked */}
                           {!l.productId && (
                             <Input
                               value={l.description}
@@ -298,6 +299,71 @@ export function NewQuoteDialog({
                   </tbody>
                 </table>
               </div>
+
+              {/* ── Mobile: stacked card view ───────────────────── */}
+              <div className="sm:hidden space-y-2">
+                {lines.map((l) => (
+                  <div key={l.key} className="border border-stone-200 rounded-lg p-3 bg-stone-50">
+                    <Select
+                      value={l.productId}
+                      onValueChange={(v) => updateLine(l.key, { productId: v })}
+                    >
+                      <SelectTrigger className="h-9 text-xs">
+                        <SelectValue placeholder="Pick product..." />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-[260px]">
+                        {products.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name} · ${p.actualPriceBeforeIva.toLocaleString("es-MX", { maximumFractionDigits: 0 })}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {!l.productId && (
+                      <Input
+                        value={l.description}
+                        onChange={(e) => updateLine(l.key, { description: e.target.value })}
+                        placeholder="Custom description"
+                        className="h-7 text-xs mt-1"
+                      />
+                    )}
+                    <div className="flex items-center gap-2 mt-2">
+                      <Input
+                        type="number"
+                        min="1"
+                        value={l.qty}
+                        onChange={(e) => updateLine(l.key, { qty: Number(e.target.value) })}
+                        className="h-8 text-xs text-right px-1 w-16"
+                        placeholder="Qty"
+                      />
+                      <span className="text-xs text-stone-500">×</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={l.unitPrice}
+                        onChange={(e) => updateLine(l.key, { unitPrice: Number(e.target.value) })}
+                        className="h-8 text-xs text-right px-1 flex-1"
+                        placeholder="Unit $"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-stone-200">
+                      <span className="text-sm font-semibold tabular-nums">
+                        ${(l.qty * l.unitPrice).toLocaleString("es-MX", { maximumFractionDigits: 2 })}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeLine(l.key)}
+                        className="text-stone-400 hover:text-red-600 transition text-sm"
+                        title="Remove line"
+                      >
+                        ✕ Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              </>
             )}
           </div>
 

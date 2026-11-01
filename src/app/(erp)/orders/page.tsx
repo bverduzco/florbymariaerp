@@ -114,7 +114,8 @@ export default async function OrdersPage() {
 
   return (
     <div>
-      <div className="fmd-screen-header">
+      {/* ── Desktop view ───────────────────────────────────────── */}
+      <div className="fmd-screen-header hidden lg:flex">
         <div>
           <h1>Orders</h1>
           <div className="fmd-subtitle">Everyday sales · draft → payment → production → delivery</div>
@@ -122,14 +123,14 @@ export default async function OrdersPage() {
         <NewOrderDialog customers={customers} products={products} />
       </div>
 
-      <div className="fmd-kpi-bar">
+      <div className="fmd-kpi-bar hidden lg:flex">
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#44403C" }}>{total}</div><div className="fmd-kpi-label">Total orders</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#047857" }}>{fulfilled}</div><div className="fmd-kpi-label">Fulfilled</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#D97706" }}>{inProgress}</div><div className="fmd-kpi-label">In progress</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#BE185D" }}>${totalRevenue.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</div><div className="fmd-kpi-label">Total revenue</div></div>
       </div>
 
-      <div className="fmd-box">
+      <div className="fmd-box hidden lg:block">
         <div className="fmd-box-label">All Orders · click any order number to see full details + linked quote</div>
         <div style={{ overflowX: "auto" }}>
           <table className="fmd-table">
@@ -208,7 +209,66 @@ export default async function OrdersPage() {
         </div>
       </div>
 
-      <div className="fmd-note">💡 Small orders require 100% payment before procurement. Payment gate blocks Shopping List generation. Click any order number to see full details + linked quote.</div>
+      <div className="fmd-note hidden lg:block">💡 Small orders require 100% payment before procurement. Payment gate blocks Shopping List generation. Click any order number to see full details + linked quote.</div>
+
+      {/* ── Mobile view ────────────────────────────────────────── */}
+      <div className="lg:hidden" style={{ paddingBottom: "80px" }}>
+        <div style={{ padding: "16px 0 12px", background: "#fff", borderBottom: "1px solid #E7E5E4" }}>
+          <div style={{ fontSize: "20px", fontWeight: 700, color: "#44403C" }}>Orders</div>
+          <div style={{ fontSize: "12px", color: "#78716C", marginTop: "2px" }}>
+            {total} orders · {inProgress} in progress · {fulfilled} fulfilled
+          </div>
+        </div>
+
+        <div style={{ padding: "12px 0" }}>
+          {orders.map((o) => {
+            const itemsTotal = o.lineItems.reduce((s, l) => s + l.unitPrice * l.qty, 0) + o.deliveryFee
+            const quote = quotesByOrderId.get(o.id) ?? null
+            const detailOrder = serializeOrderForDetail(o)
+
+            return (
+              <div key={o.id} style={{ marginBottom: "8px", background: "#fff", border: "1px solid #E7E5E4", borderRadius: "10px", padding: "14px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "6px" }}>
+                  <OrderDetailDialog
+                    order={detailOrder}
+                    quote={quote}
+                    trigger={
+                      <button
+                        className="font-mono text-[13px] font-bold text-stone-900 hover:text-rose-700 transition"
+                        title={`View details for ${o.orderNumber}`}
+                      >
+                        {o.orderNumber}
+                        {quote && <span className="ml-1 text-[9px] text-rose-600">•Q</span>}
+                      </button>
+                    }
+                  />
+                  <span
+                    className={`fmd-status ${o.status}`}
+                    style={{ fontSize: "10px", fontWeight: 600, padding: "2px 8px", borderRadius: "4px", textTransform: "capitalize" }}
+                  >
+                    {o.status.replace(/_/g, " ")}
+                  </span>
+                </div>
+                <div style={{ fontSize: "14px", fontWeight: 600, color: "#44403C", marginBottom: "4px" }}>
+                  {o.customer?.name ?? "—"}
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px" }}>
+                  <div style={{ fontSize: "11px", color: "#78716C" }}>
+                    {o.lineItems.length} product{o.lineItems.length !== 1 ? "s" : ""}
+                    {" · "}
+                    {o.deliveryDate ? o.deliveryDate.toLocaleDateString("es-MX", { day: "2-digit", month: "short" }) : "no date"}
+                    {" · "}
+                    <span className={`fmd-status ${o.paymentStatus}`}>{o.paymentStatus.replace(/_/g, " ")}</span>
+                  </div>
+                  <div style={{ fontSize: "15px", fontWeight: 700, color: "#BE185D" }}>
+                    ${itemsTotal.toLocaleString("es-MX", { maximumFractionDigits: 0 })}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
