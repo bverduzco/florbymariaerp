@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation"
 /**
  * <MobileNav> — bottom tab bar for mobile (replaces sidebar on small screens).
  *
- * Option C: 5 tabs — Inicio · Cotiz · Pedidos · Compras · Ejec
+ * Option C: 5 tabs — Home · Quotes · Orders · Shopping · Exec
  * Wiki is NOT in the bottom nav (accessible via hamburger menu + landing button).
  *
  * Shown only on screens < lg (1024px). Hidden on desktop where the
@@ -16,11 +16,11 @@ import { usePathname } from "next/navigation"
  */
 
 const TABS = [
-  { href: "/", icon: "🏠", label: "Inicio", match: (p: string) => p === "/" },
-  { href: "/quotes", icon: "📋", label: "Cotiz.", match: (p: string) => p.startsWith("/quotes") },
-  { href: "/orders", icon: "🛒", label: "Pedidos", match: (p: string) => p.startsWith("/orders") },
-  { href: "/shoppinglist", icon: "📝", label: "Compras", match: (p: string) => p.startsWith("/shoppinglist") },
-  { href: "/execution", icon: "🔨", label: "Ejec.", match: (p: string) => p.startsWith("/execution") },
+  { href: "/", icon: "🏠", label: "Home", match: (p: string) => p === "/" },
+  { href: "/quotes", icon: "📋", label: "Quotes", match: (p: string) => p.startsWith("/quotes") },
+  { href: "/orders", icon: "🛒", label: "Orders", match: (p: string) => p.startsWith("/orders") },
+  { href: "/shoppinglist", icon: "📝", label: "Shopping", match: (p: string) => p.startsWith("/shoppinglist") },
+  { href: "/execution", icon: "🔨", label: "Exec", match: (p: string) => p.startsWith("/execution") },
 ]
 
 export function MobileNav() {

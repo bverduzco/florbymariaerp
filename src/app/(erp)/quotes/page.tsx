@@ -183,15 +183,15 @@ export default async function QuotesPage({
       <div className="lg:hidden" style={{ paddingBottom: "80px" }}>
         {/* Mobile page header */}
         <div style={{ padding: "16px 16px 12px", background: "#fff", borderBottom: "1px solid #E7E5E4" }}>
-          <div style={{ fontSize: "20px", fontWeight: 700, color: "#44403C" }}>Cotizaciones</div>
+          <div style={{ fontSize: "20px", fontWeight: 700, color: "#44403C" }}>Quotes</div>
           <div style={{ fontSize: "12px", color: "#78716C", marginTop: "2px" }}>
-            {quotes.length} cotizaciones · {quotes.filter(q => ["draft", "sent", "viewed", "negotiating"].includes(q.status)).length} activas · {quotes.filter(q => q.status === "accepted").length} aceptadas
+            {quotes.length} quotes · {quotes.filter(q => ["draft", "sent", "viewed", "negotiating"].includes(q.status)).length} active · {quotes.filter(q => q.status === "accepted").length} accepted
           </div>
         </div>
 
         {quotes.length === 0 ? (
           <div style={{ textAlign: "center", padding: "32px 16px", color: "#9CA3AF", fontSize: "13px" }}>
-            No hay cotizaciones todavía.
+            No quotes yet.
           </div>
         ) : (
           <div style={{ padding: "12px 16px" }}>
@@ -232,7 +232,7 @@ export default async function QuotesPage({
                   <div style={{ fontSize: "11px", color: "#78716C" }}>
                     {(q.eventType ?? "—").charAt(0).toUpperCase() + (q.eventType ?? "—").slice(1)}
                     {" · "}
-                    {q.eventDate ? q.eventDate.toLocaleDateString("es-MX", { day: "2-digit", month: "short" }) : "sin fecha"}
+                    {q.eventDate ? q.eventDate.toLocaleDateString("es-MX", { day: "2-digit", month: "short" }) : "no date"}
                     {" · "}
                     {q.lines.length} item{q.lines.length !== 1 ? "s" : ""}
                   </div>

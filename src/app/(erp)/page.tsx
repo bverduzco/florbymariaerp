@@ -79,7 +79,7 @@ async function getLandingData() {
       type: "order",
       number: o.orderNumber,
       title: o.customer?.name ?? "—",
-      meta: `Produciendo · ${o.deliveryDate ? o.deliveryDate.toLocaleDateString("es-MX", { day: "2-digit", month: "short" }) : "sin fecha"}`,
+      meta: `Producing · ${o.deliveryDate ? o.deliveryDate.toLocaleDateString("es-MX", { day: "2-digit", month: "short" }) : "no date"}`,
       amount: total,
       href: `/orders`,
     })
@@ -237,11 +237,11 @@ export default async function LandingPage() {
             {new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "short" })}
           </div>
           <div style={{ fontSize: "22px", fontWeight: 700, color: "#44403C" }}>
-            Buenos días, María 👋
+            Good morning, María 👋
           </div>
           {data.inProgressCount > 0 && (
             <div style={{ fontSize: "12px", color: "#78716C", marginTop: "4px" }}>
-              Tienes {data.inProgressCount} pedido{data.inProgressCount !== 1 ? "s" : ""} pendiente{data.inProgressCount !== 1 ? "s" : ""} de producción
+              You have {data.inProgressCount} order{data.inProgressCount !== 1 ? "s" : ""} pending production
             </div>
           )}
         </div>
@@ -250,15 +250,15 @@ export default async function LandingPage() {
         <div style={{ margin: "8px 16px 20px", background: "#fff", border: "1px solid #E7E5E4", borderRadius: "10px", padding: "14px", display: "flex", justifyContent: "space-around" }}>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: "20px", fontWeight: 700, color: "#BE185D" }}>{data.ordersToday}</div>
-            <div style={{ fontSize: "10px", color: "#78716C", textTransform: "uppercase", letterSpacing: "0.5px", marginTop: "2px" }}>Hoy</div>
+            <div style={{ fontSize: "10px", color: "#78716C", textTransform: "uppercase", letterSpacing: "0.5px", marginTop: "2px" }}>Today</div>
           </div>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: "20px", fontWeight: 700, color: "#BE185D" }}>{data.eventsThisWeek}</div>
-            <div style={{ fontSize: "10px", color: "#78716C", textTransform: "uppercase", letterSpacing: "0.5px", marginTop: "2px" }}>Esta sem.</div>
+            <div style={{ fontSize: "10px", color: "#78716C", textTransform: "uppercase", letterSpacing: "0.5px", marginTop: "2px" }}>This wk</div>
           </div>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: "20px", fontWeight: 700, color: "#BE185D" }}>{data.activeQuoteCount}</div>
-            <div style={{ fontSize: "10px", color: "#78716C", textTransform: "uppercase", letterSpacing: "0.5px", marginTop: "2px" }}>Cotiz.</div>
+            <div style={{ fontSize: "10px", color: "#78716C", textTransform: "uppercase", letterSpacing: "0.5px", marginTop: "2px" }}>Quotes</div>
           </div>
         </div>
 
@@ -275,9 +275,9 @@ export default async function LandingPage() {
           >
             <span style={{ fontSize: "20px" }}>📋</span>
             <span style={{ flex: 1 }}>
-              Nueva cotización
+              New quote
               <span style={{ display: "block", fontSize: "11px", fontWeight: 400, opacity: 0.8, marginTop: "2px" }}>
-                Crea y envía en 2 minutos
+                Create and send in 2 minutes
               </span>
             </span>
             <span style={{ fontSize: "18px", opacity: 0.4 }}>›</span>
@@ -294,9 +294,9 @@ export default async function LandingPage() {
           >
             <span style={{ fontSize: "20px" }}>🌸</span>
             <span style={{ flex: 1 }}>
-              Catálogo
+              Catalogue
               <span style={{ display: "block", fontSize: "11px", fontWeight: 400, color: "#78716C", marginTop: "2px" }}>
-                Añadir a cotización
+                Add to quote
               </span>
             </span>
             <span style={{ fontSize: "18px", color: "#A8A29E" }}>›</span>
@@ -315,7 +315,7 @@ export default async function LandingPage() {
             <span style={{ flex: 1 }}>
               Custom builder
               <span style={{ display: "block", fontSize: "11px", fontWeight: 400, color: "#78716C", marginTop: "2px" }}>
-                Diseña un ramo personalizado
+                Design a custom bouquet
               </span>
             </span>
             <span style={{ fontSize: "18px", color: "#A8A29E" }}>›</span>
@@ -326,7 +326,7 @@ export default async function LandingPage() {
         {data.pendingItems.length > 0 && (
           <>
             <div style={{ padding: "0 16px 8px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", color: "#78716C" }}>
-              Pendientes de hoy
+              Today&apos;s pending
             </div>
             <div style={{ margin: "0 16px 20px", background: "#fff", border: "1px solid #E7E5E4", borderRadius: "10px", overflow: "hidden" }}>
               {data.pendingItems.map((item, i) => {
