@@ -129,7 +129,7 @@ async function main() {
         for (const row of batch) {
           const insert = buildInsert(table, row as Record<string, unknown>)
           try {
-            await turso.execute(insert.sql, insert.args)
+            await turso.execute({ sql: insert.sql, args: insert.args as any })
             batchInserted++
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e)

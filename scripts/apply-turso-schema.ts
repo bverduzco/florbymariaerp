@@ -58,7 +58,7 @@ async function main() {
   )
   console.log(`\nTables in database (${tables.rows.length}):`)
   for (const row of tables.rows) {
-    console.log(`  - ${(row as { name: string }).name}`)
+    console.log(`  - ${(row as unknown as { name: string }).name}`)
   }
 
   client.close()
