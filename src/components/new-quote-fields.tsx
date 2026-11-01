@@ -176,7 +176,7 @@ export function NewQuoteFields({
         <div className="text-[10px] uppercase tracking-wider text-stone-500 font-semibold border-b border-stone-200 pb-1">
           Customer
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label htmlFor="customerName">Customer name *</Label>
             <Input
@@ -269,7 +269,7 @@ export function NewQuoteFields({
           </label>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label>{form.quoteMode === "event" ? "Event type" : "Order type"}</Label>
             <Select
@@ -307,7 +307,7 @@ export function NewQuoteFields({
         <div className="text-[10px] uppercase tracking-wider text-stone-500 font-semibold border-b border-stone-200 pb-1">
           Lead source
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label>Source</Label>
             <Select

@@ -395,7 +395,7 @@ export function AddToQuoteDialog({
                         <tr>
                           <th className="text-left px-2 py-2 font-medium">Product</th>
                           <th className="text-left px-2 py-2 font-medium w-16">Size</th>
-                          <th className="text-right px-2 py-2 font-medium w-16">Qty</th>
+                          <th className="text-right px-2 py-2 font-medium w-20">Qty</th>
                           <th className="text-right px-2 py-2 font-medium w-24">Unit $</th>
                           <th className="text-right px-2 py-2 font-medium w-24">Line $</th>
                           <th className="px-2 py-2 w-8"></th>
@@ -430,13 +430,13 @@ export function AddToQuoteDialog({
                               )}
                             </td>
                             <td className="px-2 py-1 text-stone-600">{l.size ?? "—"}</td>
-                            <td className="px-2 py-1">
+                            <td className="px-1 py-1">
                               <Input
                                 type="number"
                                 min="1"
                                 value={l.qty}
                                 onChange={(e) => updateLine(l.key, { qty: Number(e.target.value) })}
-                                className="h-8 text-xs text-right"
+                                className="h-8 text-xs text-right px-1"
                               />
                             </td>
                             <td className="px-2 py-1">
