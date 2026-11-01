@@ -182,7 +182,7 @@ export default async function QuotesPage({
       {/* ── Mobile: card list view ───────────────────────────── */}
       <div className="lg:hidden" style={{ paddingBottom: "80px" }}>
         {/* Mobile page header */}
-        <div style={{ padding: "16px 16px 12px", background: "#fff", borderBottom: "1px solid #E7E5E4" }}>
+        <div style={{ padding: "16px 0 12px", background: "#fff", borderBottom: "1px solid #E7E5E4" }}>
           <div style={{ fontSize: "20px", fontWeight: 700, color: "#44403C" }}>Quotes</div>
           <div style={{ fontSize: "12px", color: "#78716C", marginTop: "2px" }}>
             {quotes.length} quotes · {quotes.filter(q => ["draft", "sent", "viewed", "negotiating"].includes(q.status)).length} active · {quotes.filter(q => q.status === "accepted").length} accepted
@@ -194,7 +194,7 @@ export default async function QuotesPage({
             No quotes yet.
           </div>
         ) : (
-          <div style={{ padding: "12px 16px" }}>
+          <div style={{ padding: "12px 0" }}>
             {quotes.map((q) => (
               <Link
                 key={q.id}

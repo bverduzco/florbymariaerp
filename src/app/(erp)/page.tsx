@@ -232,7 +232,7 @@ export default async function LandingPage() {
       {/* ════════════════════════════════════════════════════════ */}
       <div className="lg:hidden" style={{ paddingBottom: "80px" }}>
         {/* Greeting */}
-        <div style={{ padding: "20px 16px 12px", textAlign: "center" }}>
+        <div style={{ padding: "20px 0 12px", textAlign: "center" }}>
           <div style={{ fontSize: "11px", color: "#78716C", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "4px" }}>
             {new Date().toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "short" })}
           </div>
@@ -247,7 +247,7 @@ export default async function LandingPage() {
         </div>
 
         {/* Compact snapshot */}
-        <div style={{ margin: "8px 16px 20px", background: "#fff", border: "1px solid #E7E5E4", borderRadius: "10px", padding: "14px", display: "flex", justifyContent: "space-around" }}>
+        <div style={{ margin: "8px 0 20px", background: "#fff", border: "1px solid #E7E5E4", borderRadius: "10px", padding: "14px", display: "flex", justifyContent: "space-around" }}>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: "20px", fontWeight: 700, color: "#BE185D" }}>{data.ordersToday}</div>
             <div style={{ fontSize: "10px", color: "#78716C", textTransform: "uppercase", letterSpacing: "0.5px", marginTop: "2px" }}>Today</div>
@@ -263,7 +263,7 @@ export default async function LandingPage() {
         </div>
 
         {/* Big action buttons — only 3: New Quote, Catalogue, Custom Builder */}
-        <div style={{ padding: "0 24px 24px", display: "flex", flexDirection: "column", gap: "12px" }}>
+        <div style={{ padding: "0 0 24px", display: "flex", flexDirection: "column", gap: "12px" }}>
           <Link
             href="/quotes?new=1"
             style={{
@@ -325,10 +325,10 @@ export default async function LandingPage() {
         {/* Pending items */}
         {data.pendingItems.length > 0 && (
           <>
-            <div style={{ padding: "0 16px 8px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", color: "#78716C" }}>
+            <div style={{ padding: "0 0 8px", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px", color: "#78716C" }}>
               Today&apos;s pending
             </div>
-            <div style={{ margin: "0 16px 20px", background: "#fff", border: "1px solid #E7E5E4", borderRadius: "10px", overflow: "hidden" }}>
+            <div style={{ margin: "0 0 20px", background: "#fff", border: "1px solid #E7E5E4", borderRadius: "10px", overflow: "hidden" }}>
               {data.pendingItems.map((item, i) => {
                 const badgeClass =
                   item.type === "order" ? "background:#DBEAFE"
