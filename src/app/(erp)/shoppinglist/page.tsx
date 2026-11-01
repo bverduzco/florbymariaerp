@@ -72,7 +72,7 @@ export default async function ShoppingListPage() {
           }))} />
         </div>
       </div>
-      <div className="fmd-kpi-bar">
+      <div className="fmd-kpi-bar hidden lg:flex">
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#44403C" }}>{activeOrders.length}</div><div className="fmd-kpi-label">Active orders</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#BE185D" }}>{materials.length}</div><div className="fmd-kpi-label">Materials needed</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#D97706" }}>{totalPacks}</div><div className="fmd-kpi-label">Packs to buy</div></div>

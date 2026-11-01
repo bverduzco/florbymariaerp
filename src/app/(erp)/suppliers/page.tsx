@@ -28,7 +28,7 @@ export default async function SuppliersPage() {
       </div>
 
       {/* KPI bar */}
-      <div className="fmd-kpi-bar">
+      <div className="fmd-kpi-bar hidden lg:flex">
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#44403C" }}>{suppliers.length}</div><div className="fmd-kpi-label">Total suppliers</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#047857" }}>{withContact}</div><div className="fmd-kpi-label">With contact info</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#BE185D" }}>{totalMaterials}</div><div className="fmd-kpi-label">Materials tracked</div></div>

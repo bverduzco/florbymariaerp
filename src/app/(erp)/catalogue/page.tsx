@@ -26,8 +26,8 @@ export default async function CataloguePage() {
 
   return (
     <div>
-      <div className="fmd-screen-header"><div><h1>Catalogue</h1><div className="fmd-subtitle">Internal product reference · click "Add to Quote" to build quotes</div></div></div>
-      <div className="fmd-kpi-bar">
+      <div className="fmd-screen-header hidden lg:flex"><div><h1>Catalogue</h1><div className="fmd-subtitle">Internal product reference · click "Add to Quote" to build quotes</div></div></div>
+      <div className="fmd-kpi-bar hidden lg:flex">
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#44403C" }}>{products.length}</div><div className="fmd-kpi-label">Products</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#047857" }}>{withPhoto}</div><div className="fmd-kpi-label">With photo</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#D97706" }}>{activeQuotes.length}</div><div className="fmd-kpi-label">Active quotes</div></div>

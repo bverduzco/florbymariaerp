@@ -68,7 +68,7 @@ export default async function EventsPage() {
         <NewEventDialog />
       </div>
 
-      <div className="fmd-kpi-bar">
+      <div className="fmd-kpi-bar hidden lg:flex">
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#44403C" }}>{total}</div><div className="fmd-kpi-label">Total events</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#2563EB" }}>{upcoming}</div><div className="fmd-kpi-label">Upcoming</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#BE185D" }}>${estRevenue.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</div><div className="fmd-kpi-label">Est. revenue</div></div>

@@ -147,7 +147,7 @@ export default async function ExecutionPage() {
 
   return (
     <div>
-      <div className="fmd-screen-header">
+      <div className="fmd-screen-header hidden lg:flex">
         <div>
           <h1>Execution Logs</h1>
           <div className="fmd-subtitle">What was actually used per job</div>
@@ -159,7 +159,24 @@ export default async function ExecutionPage() {
           recipeLinesByProduct={recipeLinesByProduct}
         />
       </div>
-      <div className="fmd-kpi-bar">
+
+      {/* Mobile header */}
+      <div className="lg:hidden" style={{ padding: "16px 0 12px", background: "#fff", borderBottom: "1px solid #E7E5E4" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: "20px", fontWeight: 700, color: "#44403C" }}>Execution Logs</div>
+            <div style={{ fontSize: "12px", color: "#78716C", marginTop: "2px" }}>{logs.length} logs · {executed} executed</div>
+          </div>
+          <LogExecutionDialog
+            events={events}
+            pendingOrders={pendingOrders}
+            materials={materials}
+            recipeLinesByProduct={recipeLinesByProduct}
+          />
+        </div>
+      </div>
+
+      <div className="fmd-kpi-bar hidden lg:flex">
         <div className="fmd-kpi-cell">
           <div className="fmd-kpi-value" style={{ color: "#44403C" }}>
             {logs.length}
@@ -266,12 +283,7 @@ export default async function ExecutionPage() {
                 </div>
               </div>
               <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(4, 1fr)",
-                  gap: "8px",
-                  marginTop: "8px",
-                }}
+                className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2"
               >
                 <div
                   style={{

@@ -17,7 +17,7 @@ export default async function LossesPage() {
         <div><h1>Losses</h1><div className="fmd-subtitle">Damaged, spoiled & lost inventory</div></div>
         <LogLossDialog materials={materials} />
       </div>
-      <div className="fmd-kpi-bar">
+      <div className="fmd-kpi-bar hidden lg:flex">
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#44403C" }}>{losses.length}</div><div className="fmd-kpi-label">Loss events</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#D97706" }}>{totalPacks}</div><div className="fmd-kpi-label">Packs lost</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#991B1B" }}>${totalCost.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</div><div className="fmd-kpi-label">Cost impact</div></div>

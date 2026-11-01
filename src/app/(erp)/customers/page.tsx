@@ -146,7 +146,7 @@ export default async function CustomersPage() {
       </div>
 
       {/* KPI bar */}
-      <div className="fmd-kpi-bar">
+      <div className="fmd-kpi-bar hidden lg:flex">
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#44403C" }}>{total}</div><div className="fmd-kpi-label">Total contacts</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#78716C" }}>{leads}</div><div className="fmd-kpi-label">Leads</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#D97706" }}>{prospects}</div><div className="fmd-kpi-label">Prospects</div></div>

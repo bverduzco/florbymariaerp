@@ -32,7 +32,7 @@ export default async function MaterialsPage() {
           <AddMaterialDialog suppliers={suppliers} />
         </div>
       </div>
-      <div className="fmd-kpi-bar">
+      <div className="fmd-kpi-bar hidden lg:flex">
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#44403C" }}>{total}</div><div className="fmd-kpi-label">Total materials</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#047857" }}>{inStock}</div><div className="fmd-kpi-label">In stock</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#D97706" }}>{needsReorder}</div><div className="fmd-kpi-label">Needs reorder</div></div>
