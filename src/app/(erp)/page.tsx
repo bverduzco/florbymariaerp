@@ -265,7 +265,7 @@ export default async function LandingPage() {
         {/* Big action buttons */}
         <div style={{ padding: "0 24px 24px", display: "flex", flexDirection: "column", gap: "12px" }}>
           <Link
-            href="/quotes"
+            href="/quotes?new=1"
             style={{
               display: "flex", alignItems: "center", gap: "14px",
               padding: "18px 20px", borderRadius: "12px",

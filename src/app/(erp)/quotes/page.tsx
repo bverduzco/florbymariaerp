@@ -19,7 +19,14 @@ async function getQuotes() {
   })
 }
 
-export default async function QuotesPage() {
+export default async function QuotesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ new?: string }>
+}) {
+  const params = await searchParams
+  const autoOpenNewQuote = params.new === "1"
+
   const [quotes, products, customers, events] = await Promise.all([
     getQuotes(),
     // All products (including $0 ones) so Maria can pick placeholders
@@ -65,7 +72,7 @@ export default async function QuotesPage() {
           <h1>Quotes</h1>
           <div className="fmd-subtitle">Sales pipeline · draft → sent → accepted → declined</div>
         </div>
-        <NewQuoteDialog products={products} customers={customers} events={events} />
+        <NewQuoteDialog products={products} customers={customers} events={events} autoOpen={autoOpenNewQuote} />
       </div>
 
       {/* KPI bar — desktop only */}

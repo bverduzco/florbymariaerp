@@ -63,12 +63,14 @@ export function NewQuoteDialog({
   products,
   customers,
   events,
+  autoOpen = false,
 }: {
   products: ProductOption[]
   customers: CustomerOption[]
   events: EventOption[]
+  autoOpen?: boolean
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(autoOpen)
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState<NewQuoteForm>(INITIAL_NEW_QUOTE_FORM)
   const [lines, setLines] = useState<EditLine[]>([])
