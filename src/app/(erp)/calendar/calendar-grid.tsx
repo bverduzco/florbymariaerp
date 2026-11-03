@@ -202,14 +202,18 @@ export function CalendarGrid({
                           </div>
                         )}
                         {activeMarkers.length > 0 && (
-                          <div className="mt-1 flex flex-col gap-0.5">
-                            {activeMarkers.slice(0, 2).map((m) => (
-                              <div
+                          <div className="mt-1 flex flex-wrap gap-0.5 items-center">
+                            {activeMarkers.slice(0, 4).map((m) => (
+                              <span
                                 key={m.markerId}
-                                style={{ height: "3px", backgroundColor: m.color, borderRadius: "2px" }}
+                                className="inline-block w-2 h-2 rounded-full"
+                                style={{ backgroundColor: m.color }}
                                 title={m.name}
                               />
                             ))}
+                            {activeMarkers.length > 4 && (
+                              <span className="text-[8px] text-stone-400 ml-0.5">+{activeMarkers.length - 4}</span>
+                            )}
                           </div>
                         )}
                       </div>

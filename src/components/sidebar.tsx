@@ -34,6 +34,7 @@ const NAV_SECTIONS = [
       { href: "/expenses", icon: "💸", label: "Expenses" },
       { href: "/payments", icon: "💰", label: "Payments" },
       { href: "/calendar", icon: "📅", label: "Calendar" },
+      { href: "/seasons", icon: "🗓️", label: "Seasons" },
       { href: "/suppliers", icon: "🏪", label: "Suppliers" },
       { href: "/legal", icon: "📄", label: "Legal Templates" },
       { href: "/settings", icon: "⚙️", label: "Settings" },
