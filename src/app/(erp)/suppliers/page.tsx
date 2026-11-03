@@ -1,5 +1,6 @@
 import { db as prisma } from "@/lib/db"
 import { AddSupplierDialog } from "./add-supplier-dialog"
+import { PriceListDialog } from "./price-list-dialog"
 
 async function getSuppliers() {
   return prisma.supplier.findMany({
@@ -16,8 +17,39 @@ async function getRecentPrices() {
   })
 }
 
+async function getMaterials() {
+  return prisma.material.findMany({
+    where: { packPrice: { gt: 0 } },
+    select: { sku: true, name: true, supplier: true, packPrice: true },
+    orderBy: { name: "asc" },
+  })
+}
+
+async function getSupplierComparison() {
+  const prices = await prisma.supplierPrice.findMany({
+    where: { isLatest: true },
+    select: { materialSku: true, supplierName: true, packPrice: true },
+  })
+  const byMaterial = new Map<string, Array<{ supplier: string; price: number }>>()
+  for (const p of prices) {
+    if (!byMaterial.has(p.materialSku)) byMaterial.set(p.materialSku, [])
+    byMaterial.get(p.materialSku)!.push({ supplier: p.supplierName, price: p.packPrice })
+  }
+  return Array.from(byMaterial.entries())
+    .filter(([_, suppliers]) => suppliers.length >= 2)
+    .map(([sku, suppliers]) => {
+      const cheapest = suppliers.reduce((min, s) => s.price < min.price ? s : min, suppliers[0])
+      return { sku, suppliers, cheapest }
+    })
+}
+
 export default async function SuppliersPage() {
-  const [suppliers, recentPrices] = await Promise.all([getSuppliers(), getRecentPrices()])
+  const [suppliers, recentPrices, materials, comparison] = await Promise.all([
+    getSuppliers(),
+    getRecentPrices(),
+    getMaterials(),
+    getSupplierComparison(),
+  ])
   const withContact = suppliers.filter((s) => s.phone || s.email).length
   const totalMaterials = suppliers.reduce((s, sup) => s + sup._count.materials, 0)
   const totalPrices = suppliers.reduce((s, sup) => s + sup._count.supplierPrices, 0)
@@ -71,6 +103,66 @@ export default async function SuppliersPage() {
           </div>
         )}
       </div>
+
+      {/* Price List Management */}
+      <div className="fmd-box">
+        <div className="fmd-box-label">Price List Management · update prices from received quotes</div>
+        <div className="fmd-note blue" style={{ marginBottom: "8px" }}>
+          When you receive a new price quote from a supplier (WhatsApp, email, photo), log it here. Each update creates a new SupplierPrice row (isLatest = true on new, false on old).
+        </div>
+        <PriceListDialog
+          materials={materials.map((m) => ({ sku: m.sku, name: m.name, supplier: m.supplier, packPrice: m.packPrice }))}
+          suppliers={suppliers.map((s) => ({ id: s.id, name: s.name }))}
+        />
+      </div>
+
+      {/* Supplier Comparison */}
+      {comparison.length > 0 && (
+        <div className="fmd-box" style={{ borderColor: "#BE185D" }}>
+          <div className="fmd-box-label" style={{ color: "#BE185D" }}>Supplier Comparison · {comparison.length} materials with 2+ suppliers</div>
+          <div style={{ overflowX: "auto" }}>
+            <table className="fmd-table">
+              <thead>
+                <tr>
+                  <th>SKU</th>
+                  {["LA FINCA", "BDF Palacio Floral SA de CV", "PRO Flor", "OASIS"].map((s) => (
+                    <th key={s} style={{ textAlign: "right" }}>{s.replace("BDF Palacio Floral SA de CV", "BDF").replace("Palacio Floral", "")}</th>
+                  ))}
+                  <th>Cheapest</th>
+                </tr>
+              </thead>
+              <tbody>
+                {comparison.map((c) => {
+                  const supplierNames = ["LA FINCA", "BDF Palacio Floral SA de CV", "PRO Flor", "OASIS"]
+                  return (
+                    <tr key={c.sku}>
+                      <td style={{ fontFamily: "monospace", fontSize: "10px" }}>{c.sku}</td>
+                      {supplierNames.map((supName) => {
+                        const found = c.suppliers.find((s) => s.supplier === supName)
+                        if (!found) return <td key={supName} style={{ textAlign: "right", color: "#D6D3D1" }}>—</td>
+                        const isCheapest = found.supplier === c.cheapest.supplier && found.price === c.cheapest.price
+                        return (
+                          <td key={supName} style={{ textAlign: "right" }}>
+                            <span style={{ fontWeight: isCheapest ? 700 : 400, color: isCheapest ? "#047857" : "#44403C" }}>
+                              ${found.price}
+                            </span>
+                          </td>
+                        )
+                      })}
+                      <td style={{ fontWeight: 600, color: "#047857" }}>
+                        {c.cheapest.supplier.replace("BDF Palacio Floral SA de CV", "BDF")} ${c.cheapest.price}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="fmd-note" style={{ marginTop: "8px" }}>
+            Green = cheapest. To switch a material's default supplier, change the Supplier field on the Materials page.
+          </div>
+        </div>
+      )}
 
       {/* Price Update History */}
       <div className="fmd-box">

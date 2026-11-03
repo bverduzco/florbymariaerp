@@ -1,5 +1,6 @@
 import { db as prisma } from "@/lib/db"
 import { NewPoDialog } from "./new-po-dialog"
+import { AdHocPurchaseDialog } from "./ad-hoc-purchase-dialog"
 import { PODetailDialog } from "@/components/po-detail-dialog"
 
 async function getPurchaseOrders() {
@@ -38,7 +39,17 @@ async function getSupplierComparison() {
 }
 
 export default async function ProcurementPage() {
-  const [pos, suppliers, adHocs, comparison] = await Promise.all([getPurchaseOrders(), getSuppliers(), getAdHocPurchases(), getSupplierComparison()])
+  const [pos, suppliers, adHocs, comparison, materials] = await Promise.all([
+    getPurchaseOrders(),
+    getSuppliers(),
+    getAdHocPurchases(),
+    getSupplierComparison(),
+    prisma.material.findMany({
+      where: { sku: { not: "" } },
+      select: { sku: true, name: true, unit: true, packPrice: true },
+      orderBy: { name: "asc" },
+    }),
+  ])
   const received = pos.filter((p) => p.status === "received").length
   const totalCost = pos.reduce((s, p) => s + p.totalCost, 0)
   const adHocTotal = adHocs.reduce((s, a) => s + a.total, 0)
@@ -49,7 +60,7 @@ export default async function ProcurementPage() {
         <div><h1>Procurement</h1><div className="fmd-subtitle">Buying materials — formal POs + ad-hoc purchases + supplier comparison</div></div>
         <div style={{ display: "flex", gap: "8px" }}>
           <NewPoDialog suppliers={suppliers.map((s) => s.name)} />
-          <button className="fmd-btn outline">+ Log Ad-hoc</button>
+          <AdHocPurchaseDialog materials={materials} />
         </div>
       </div>
 
