@@ -585,6 +585,69 @@ export default async function SettingsPage() {
             effort="~2 hours (mostly mechanical refactor across 27 page files)"
           />
 
+          {/* ─── Soft-delete for audit trail + legal compliance ─── */}
+          <WishlistItem
+            priority="next up"
+            title="Soft-delete (preserve audit trail + comply with LFPDPPP)"
+            description={
+              <>
+                Stop hard-deleting records. Replace <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>prisma.quote.delete()</code>{" "}
+                with a soft-delete pattern: add a <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>deletedAt: DateTime?</code> column
+                to the 5 entities with downstream references (Quote, Order, Customer, Event, Material), set
+                <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}> deletedAt = now()</code> on delete-click, and filter
+                <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}> where: {"{ deletedAt: null }"}</code> in all list queries by default.
+                Add a &ldquo;Show deleted&rdquo; toggle on each list page so Maria can recover mis-deleted records.
+              </>
+            }
+            why={
+              <>
+                <strong>Audit trail:</strong> hard-deleting a Quote destroys all its linkages
+                (QuoteLines, converted Orders, Payments, AuditLog entries, QuoteReminders). Same for
+                Order (Payments, ExecutionLogs, customer lifetime-value history), Customer (whole
+                CRM record + communication log), Event (orders that came from it), Material (Recipes,
+                StockMovements, SupplierPrices, Losses all reference it by SKU). With soft-delete, the
+                audit trail stays intact — you can always answer &ldquo;why did this happen?&rdquo;
+                <br/><br/>
+                <strong>Legal compliance (Mexico LFPDPPP):</strong> the <em>Ley Federal de Protección de
+                Datos Personales en Posesión de los Particulares</em> grants data subjects the right
+                to ARCO — including <em>cancelación</em> (deletion) of their personal data. For Customer
+                specifically, soft-delete alone doesn&apos;t satisfy a legal erasure request — the PII
+                still lives in the database. So Customer needs <strong>two</strong> delete actions:
+                <ol style={{ paddingLeft: "20px", margin: "4px 0 0 0", lineHeight: 1.7 }}>
+                  <li><strong>Soft-delete (hide):</strong> for accidental deletes or inactive customers. Sets <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>deletedAt</code>, hides from lists, preserves history.</li>
+                  <li><strong>Permanent erase (for ARCO):</strong> for legal erasure requests. Hard-deletes PII fields (name, phone, email, address, notes), writes an AuditLog entry noting the erasure happened (without storing the PII itself), and soft-deletes the row. Implementation: replace PII with <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>&quot;[ERASED per ARCO request]&quot;</code> tokens, not a true SQL DELETE — because Orders/Quotes still reference the customer by ID and we need them to keep working.</li>
+                </ol>
+                Quote, Order, Event, Material: soft-delete only (no legal erasure need — they&apos;re business records, not personal data).
+              </>
+            }
+            implementation={
+              <>
+                <strong>Implementation sketch:</strong>
+                <ol style={{ paddingLeft: "20px", margin: "4px 0 0 0", lineHeight: 1.7 }}>
+                  <li>Add migration: <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>ALTER TABLE Quote ADD COLUMN deletedAt DATETIME</code> (same for Order, Customer, Event, Material). 5 columns total.</li>
+                  <li>Add <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>deletedAt DateTime?</code> field to each model in <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>prisma/schema.prisma</code>.</li>
+                  <li>Update delete API routes: <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>prisma.quote.delete()</code> → <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>prisma.quote.update({"{ deletedAt: new Date() }"})</code>.</li>
+                  <li>Update list queries on ~10 pages: add <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>where: {"{ deletedAt: null }"}</code> to <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>findMany</code> calls.</li>
+                  <li>For Customer specifically, add a second button &ldquo;Erase PII (ARCO)&rdquo; that does the field-replacement dance described above.</li>
+                  <li>Optional: add a &ldquo;Recently deleted&rdquo; view on each list page (hidden behind a toggle) showing <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>deletedAt: {"{ not: null }"}</code> records with a &ldquo;Restore&rdquo; button.</li>
+                </ol>
+              </>
+            }
+            risks={
+              <>
+                Existing reports / KPIs that count quotes or orders may start including soft-deleted
+                rows if we forget to add the filter to a query site — needs careful audit of every
+                <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}> findMany</code> /
+                <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}> count</code> /
+                <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}> aggregate</code> call.
+                Also: the Customer ARCO erase is a one-way operation — once PII is replaced with
+                <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}> [ERASED]</code> tokens,
+                it can&apos;t be undone. Should require a confirmation dialog with the customer name spelled out.
+              </>
+            }
+            effort="~3 hours (5-column migration + ~15 query sites to update + Customer ARCO flow + restore UI)"
+          />
+
           {/* ─── Other wishlist items (from prior sessions) ─── */}
           <WishlistItem
             priority="backlog"
