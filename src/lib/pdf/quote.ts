@@ -60,6 +60,8 @@ export interface QuotePayload {
   total: number
   depositRequired: number
   paymentRule: string | null
+  discount?: number
+  discountType?: string
   notes?: string | null
 }
 
@@ -187,37 +189,60 @@ function buildDocDefinition(payload: QuotePayload): TDocumentDefinitions {
 
   // === TOTALES ===
   // (balanceDue already computed above near rule lookup)
-  const totalsTable: any = {
-    table: {
-      widths: ["*", "auto"],
-      body: [
-        [
-          { text: "Subtotal", color: COLOR_STONE_LIGHT, fontSize: 9, alignment: "right" },
-          { text: `$${payload.subtotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })}`, color: COLOR_STONE, fontSize: 10, alignment: "right" },
-        ],
-        [
-          { text: "IVA (16%)", color: COLOR_STONE_LIGHT, fontSize: 9, alignment: "right" },
-          { text: `$${payload.iva.toLocaleString("es-MX", { maximumFractionDigits: 2 })}`, color: COLOR_STONE, fontSize: 10, alignment: "right" },
-        ],
-        [
-          { text: "TOTAL", color: COLOR_ROSE, fontSize: 11, bold: true, alignment: "right" },
-          { text: `$${payload.total.toLocaleString("es-MX", { maximumFractionDigits: 2 })}`, color: COLOR_ROSE, fontSize: 13, bold: true, alignment: "right" },
-        ],
-        [
-          { text: `Anticipo (${Math.round(rule.depositPct * 100)}%)`, color: COLOR_STONE_LIGHT, fontSize: 9, alignment: "right" },
-          { text: `$${payload.depositRequired.toLocaleString("es-MX", { maximumFractionDigits: 2 })}`, color: COLOR_EMERALD, fontSize: 10, alignment: "right", bold: true },
-        ],
-      ],
-    },
-    layout: "noBorders",
-    margin: [0, 0, 0, 4],
+  // Compute discount amount for display
+  const discountAmount = payload.discount && payload.discount > 0
+    ? (payload.discountType === "percentage"
+        ? payload.subtotal * (payload.discount / 100)
+        : payload.discount)
+    : 0
+
+  const totalsBody: any[][] = [
+    [
+      { text: "Subtotal", color: COLOR_STONE_LIGHT, fontSize: 9, alignment: "right" },
+      { text: `$${payload.subtotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })}`, color: COLOR_STONE, fontSize: 10, alignment: "right" },
+    ],
+  ]
+
+  if (discountAmount > 0) {
+    const discLabel = payload.discountType === "percentage"
+      ? `Descuento (${payload.discount}%)`
+      : "Descuento"
+    totalsBody.push([
+      { text: discLabel, color: COLOR_ROSE, fontSize: 9, alignment: "right" },
+      { text: `−$${discountAmount.toLocaleString("es-MX", { maximumFractionDigits: 2 })}`, color: COLOR_ROSE, fontSize: 10, alignment: "right" },
+    ])
   }
-  // Only show balance due row if there's actually a balance (i.e. deposit < 100%)
+
+  totalsBody.push(
+    [
+      { text: "IVA (16%)", color: COLOR_STONE_LIGHT, fontSize: 9, alignment: "right" },
+      { text: `$${payload.iva.toLocaleString("es-MX", { maximumFractionDigits: 2 })}`, color: COLOR_STONE, fontSize: 10, alignment: "right" },
+    ],
+    [
+      { text: "TOTAL", color: COLOR_ROSE, fontSize: 11, bold: true, alignment: "right" },
+      { text: `$${payload.total.toLocaleString("es-MX", { maximumFractionDigits: 2 })}`, color: COLOR_ROSE, fontSize: 13, bold: true, alignment: "right" },
+    ],
+    [
+      { text: `Anticipo (${Math.round(rule.depositPct * 100)}%)`, color: COLOR_STONE_LIGHT, fontSize: 9, alignment: "right" },
+      { text: `$${payload.depositRequired.toLocaleString("es-MX", { maximumFractionDigits: 2 })}`, color: COLOR_EMERALD, fontSize: 10, alignment: "right", bold: true },
+    ],
+  )
+
+  // Only show balance due row if there's actually a balance
   if (rule.depositPct < 1.0) {
-    totalsTable.table.body.push([
+    totalsBody.push([
       { text: "Saldo contra entrega", color: COLOR_STONE_LIGHT, fontSize: 9, alignment: "right" },
       { text: `$${balanceDue.toLocaleString("es-MX", { maximumFractionDigits: 2 })}`, color: COLOR_AMBER, fontSize: 10, alignment: "right" },
     ])
+  }
+
+  const totalsTable: any = {
+    table: {
+      widths: ["*", "auto"],
+      body: totalsBody,
+    },
+    layout: "noBorders",
+    margin: [0, 0, 0, 4],
   }
 
   // === CONDICIONES DE PAGO ===

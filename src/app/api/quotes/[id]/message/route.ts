@@ -45,6 +45,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
       depositRequired: quote.depositRequired,
       paymentRule: quote.paymentRule,
       validUntil: quote.validUntil,
+      discount: quote.discount,
+      discountType: quote.discountType,
       notes: quote.notes,
     },
     quote.lines.map((l) => ({

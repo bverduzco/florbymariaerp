@@ -52,6 +52,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
     total: quote.total,
     depositRequired: quote.depositRequired,
     paymentRule: quote.paymentRule,
+    discount: quote.discount,
+    discountType: quote.discountType,
     notes: quote.notes,
   }
 

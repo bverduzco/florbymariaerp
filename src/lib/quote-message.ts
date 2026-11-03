@@ -34,6 +34,8 @@ export type QuoteForMessage = {
   depositRequired: number
   paymentRule: string | null
   validUntil: Date | string | null
+  discount?: number
+  discountType?: string
   notes?: string | null
 }
 
@@ -65,6 +67,14 @@ export function buildQuoteWhatsAppMessage(
   }
   out.push("")
   out.push(`💵 *Subtotal:* $${Math.round(quote.subtotal).toLocaleString("es-MX")}`)
+  // Show discount if any
+  if ((quote.discount ?? 0) > 0) {
+    const discAmount = quote.discountType === "percentage"
+      ? quote.subtotal * ((quote.discount ?? 0) / 100)
+      : (quote.discount ?? 0)
+    const discLabel = quote.discountType === "percentage" ? `${quote.discount}%` : "monto fijo"
+    out.push(`🏷️ *Descuento (${discLabel}):* −$${Math.round(discAmount).toLocaleString("es-MX")}`)
+  }
   out.push(`📊 *IVA (16%):* $${Math.round(quote.iva).toLocaleString("es-MX")}`)
   out.push(`✅ *Total:* $${Math.round(quote.total).toLocaleString("es-MX")}`)
   out.push("")

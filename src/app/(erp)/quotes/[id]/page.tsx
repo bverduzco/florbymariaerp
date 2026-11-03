@@ -12,6 +12,7 @@ import { QuoteMessageButton } from "@/components/quote-message-button"
 import { ConvertToOrderButton } from "@/components/convert-to-order-button"
 import { DeleteQuoteButton } from "@/components/delete-quote-button"
 import { QuoteRemindersSection } from "@/components/quote-reminders-section"
+import { DiscountSection } from "@/components/discount-section"
 import { ManageQuoteLines } from "./manage-quote-lines"
 import { lookupPaymentRule } from "@/lib/payment-rules"
 import { notFound } from "next/navigation"
@@ -48,10 +49,14 @@ export default async function QuoteDetailPage({
 
   const depositPaid = quote.depositRequired ?? 0
   const balanceDue = quote.total - depositPaid
-  // v1.9: look up the rule that was applied at creation (stored on Quote.paymentRule)
   const ruleInfo = lookupPaymentRule(quote.paymentRule)
   const isOverride = quote.paymentRule === "event_declined_too_close"
   const isLegacy = !quote.paymentRule
+  // Compute discount amount for display
+  const discountAmount = quote.discountType === "percentage"
+    ? quote.subtotal * (quote.discount / 100)
+    : quote.discount
+  const effectiveSubtotal = Math.max(0, quote.subtotal - discountAmount)
 
   return (
     <main className="min-h-screen bg-stone-50 px-6 py-10">
@@ -168,6 +173,16 @@ export default async function QuoteDetailPage({
                           ${quote.subtotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
                         </td>
                       </tr>
+                      {discountAmount > 0 && (
+                        <tr>
+                          <td colSpan={5} className="py-1 px-3 text-right text-rose-600 text-xs">
+                            Discount ({quote.discountType === "percentage" ? `${quote.discount}%` : "flat"}):
+                          </td>
+                          <td className="py-1 px-3 text-right text-rose-700">
+                            −${discountAmount.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      )}
                       <tr>
                         <td colSpan={5} className="py-1 px-3 text-right text-stone-500 text-xs">
                           IVA (16%):
@@ -225,6 +240,12 @@ export default async function QuoteDetailPage({
                       <span>Subtotal (before IVA)</span>
                       <span className="font-semibold">${quote.subtotal.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</span>
                     </div>
+                    {discountAmount > 0 && (
+                      <div className="flex justify-between text-xs text-rose-600">
+                        <span>Discount ({quote.discountType === "percentage" ? `${quote.discount}%` : "flat"})</span>
+                        <span>−${discountAmount.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-xs text-stone-500">
                       <span>IVA (16%)</span>
                       <span>${quote.iva.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</span>
@@ -252,6 +273,14 @@ export default async function QuoteDetailPage({
             />
           </CardContent>
         </Card>
+
+        {/* Discount */}
+        <DiscountSection
+          quoteId={quote.id}
+          discount={quote.discount}
+          discountType={quote.discountType}
+          subtotal={quote.subtotal}
+        />
 
         {/* Payment terms banner — customer-facing rule explanation */}
         <Card className={`mb-4 ${isOverride ? "border-amber-300 bg-amber-50" : "border-stone-200"}`}>

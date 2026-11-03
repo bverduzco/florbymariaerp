@@ -35,21 +35,25 @@ export async function PATCH(
     (!body.status &&
       body.lostReason === undefined &&
       body.orderId === undefined &&
-      body.linkedOrderId === undefined)
+      body.linkedOrderId === undefined &&
+      body.discount === undefined &&
+      body.discountType === undefined)
   ) {
     return NextResponse.json(
       {
         error:
-          "Nothing to update — provide status, lostReason, orderId, or linkedOrderId (legacy)",
+          "Nothing to update — provide status, lostReason, orderId, linkedOrderId, discount, or discountType",
       },
       { status: 400 }
     )
   }
 
   try {
-    const data: Record<string, string | null> = {}
+    const data: Record<string, unknown> = {}
     if (body.status) data.status = body.status
     if (body.lostReason !== undefined) data.lostReason = body.lostReason ?? null
+    if (body.discount !== undefined) data.discount = Number(body.discount) || 0
+    if (body.discountType !== undefined) data.discountType = body.discountType
 
     // ── Resolve the linked order ────────────────────────────────
     // Priority: orderId > linkedOrderId (legacy)

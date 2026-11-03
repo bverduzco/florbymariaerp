@@ -159,7 +159,8 @@ model Order {
   internalNotes   String?
 
   deliveryFee     Float    @default(100)
-  discount        Float    @default(0)
+  discount        Float    @default(0)     // flat $ amount OR percentage (see discountType)
+  discountType   String   @default("flat") // flat | percentage
 
   quoteSentAt       DateTime?
   quoteSentVia      String?
@@ -399,6 +400,8 @@ model Quote {
   iva             Float    @default(0)
   total           Float    @default(0)
   depositRequired Float    @default(0)
+  discount        Float    @default(0)      // flat $ amount OR percentage (see discountType)
+  discountType    String   @default("flat") // flat | percentage
   // v1.9: which payment rule was applied when the quote was created/sent.
   // Stored (not computed on the fly) so editing the event date later doesn't
   // silently change the deposit due on an already-sent quote.
