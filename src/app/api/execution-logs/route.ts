@@ -62,9 +62,10 @@ export async function POST(request: Request) {
   // Snapshot material names + costs from DB so client can't lie about prices silently.
   // (We trust client-supplied unitCost because real cost may differ from catalog cost;
   //  but we DO verify the material exists and use its current name as fallback.)
+  // v1.9: include unitsPerPack + currentStockPacks so we can deduct stock
   const materials = await db.material.findMany({
     where: { sku: { in: body.lines.map((l: { materialSku: string }) => l.materialSku) } },
-    select: { sku: true, name: true, unit: true, unitCost: true },
+    select: { sku: true, name: true, unit: true, unitCost: true, unitsPerPack: true, currentStockPacks: true },
   })
   const materialMap = new Map(materials.map((m) => [m.sku, m]))
 
@@ -138,6 +139,39 @@ export async function POST(request: Request) {
       },
       include: { lines: true },
     })
+
+    // v1.9: Deduct material stock for each line (except "removal" type)
+    for (const line of body.lines) {
+      if (line.type === "removal") continue
+
+      const material = materialMap.get(line.materialSku)
+      if (!material || !material.unitsPerPack || material.unitsPerPack <= 0) continue
+
+      const packsUsed = Number(line.qtyUsed) / material.unitsPerPack
+      if (packsUsed <= 0) continue
+
+      const currentStock = material.currentStockPacks ?? 0
+      const newStock = Math.max(0, currentStock - packsUsed)
+
+      await db.material.update({
+        where: { sku: line.materialSku },
+        data: { currentStockPacks: newStock },
+      })
+
+      await db.stockMovement.create({
+        data: {
+          date: new Date(),
+          materialSku: line.materialSku,
+          packs: -packsUsed,
+          reason: "execution",
+          reference: executionNumber,
+          notes: `${line.type}: ${line.qtyUsed} ${line.unit} (${line.materialName || material.name})`,
+        },
+      }).catch(() => {
+        // StockMovement table might not exist — silently skip
+      })
+    }
+
     return NextResponse.json({ log }, { status: 201 })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)

@@ -128,6 +128,26 @@ export async function POST(request: Request) {
     )
   }
 
+  // v1.9: Check if the delivery/event date falls on a blocked date
+  if (body.eventDate) {
+    const eventDateObj = new Date(body.eventDate)
+    const dateKey = eventDateObj.toISOString().slice(0, 10)
+    const blocked = await db.blockedDate.findUnique({ where: { date: eventDateObj } })
+    if (blocked) {
+      return NextResponse.json(
+        {
+          error: `The date ${dateKey} is blocked (${blocked.reason}). Cannot create a quote for this date.`,
+          blockedReason: blocked.reason,
+          blockedBy: blocked.blockedBy,
+          hint: blocked.blockedBy === "system"
+            ? "This is a system block (Sunday/holiday). Choose a different date."
+            : "Unblock this date in the Calendar tab, or choose a different date.",
+        },
+        { status: 422 }
+      )
+    }
+  }
+
   const depositRequired = total * paymentRule.depositPct
 
   // ── Generate next quote number ────────────────────────────

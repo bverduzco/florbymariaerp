@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { StatusDropdown } from "@/components/status-dropdown"
 import { QuotePdfButton } from "@/components/quote-pdf-button"
 import { QuoteMessageButton } from "@/components/quote-message-button"
+import { ConvertToOrderButton } from "@/components/convert-to-order-button"
 import { lookupPaymentRule } from "@/lib/payment-rules"
 import { notFound } from "next/navigation"
 import Link from "next/link"
@@ -81,9 +82,14 @@ export default async function QuoteDetailPage({
           </div>
 
           {/* Customer-facing actions */}
-          <div className="flex items-center gap-2 mt-4">
+          <div className="flex flex-wrap items-center gap-2 mt-4">
             <QuotePdfButton quoteId={quote.id} variant="button" />
             <QuoteMessageButton quoteId={quote.id} variant="button" />
+            <ConvertToOrderButton
+              quoteId={quote.id}
+              alreadyLinkedOrderId={quote.order?.id ?? null}
+              alreadyLinkedOrderNumber={quote.order?.orderNumber ?? null}
+            />
           </div>
         </header>
 

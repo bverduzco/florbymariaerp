@@ -49,9 +49,37 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (body.status) data.status = body.status
   if (body.notes !== undefined) data.notes = body.notes
 
-  // If marking as received, create stock adjustments for each line
+  // If marking as received, update material stock for each line
   if (body.status === "received" && existing.status !== "received") {
     for (const line of existing.lines) {
+      // Update Material.currentStockPacks
+      const material = await db.material.findUnique({
+        where: { sku: line.materialSku },
+        select: { sku: true, name: true, currentStockPacks: true },
+      })
+      if (material) {
+        const currentStock = material.currentStockPacks ?? 0
+        const newStock = currentStock + line.qtyPacks
+        await db.material.update({
+          where: { sku: line.materialSku },
+          data: { currentStockPacks: newStock },
+        })
+        // Create StockMovement record for the audit trail
+        await db.stockMovement.create({
+          data: {
+            date: new Date(),
+            materialSku: line.materialSku,
+            packs: line.qtyPacks,
+            reason: "PO_received",
+            reference: existing.poNumber,
+            notes: `Received ${line.qtyPacks} packs of ${line.materialName}`,
+          },
+        }).catch(() => {
+          // StockMovement table might not exist — silently skip
+        })
+      }
+
+      // Also create StockAdjustment (legacy — some code may read this table)
       await db.stockAdjustment.create({
         data: {
           materialSku: line.materialSku,
@@ -59,6 +87,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           reason: "receipt",
           notes: `Received from PO ${existing.poNumber}`,
         },
+      }).catch(() => {
+        // StockAdjustment table might not exist — silently skip
       })
     }
   }

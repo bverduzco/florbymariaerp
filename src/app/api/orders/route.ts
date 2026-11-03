@@ -80,6 +80,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Customer not found" }, { status: 404 })
   }
 
+  // v1.9: Check if the delivery date falls on a blocked date
+  if (body.deliveryDate) {
+    const deliveryDateObj = new Date(body.deliveryDate)
+    const blocked = await db.blockedDate.findUnique({ where: { date: deliveryDateObj } })
+    if (blocked) {
+      const dateKey = deliveryDateObj.toISOString().slice(0, 10)
+      return NextResponse.json(
+        {
+          error: `The delivery date ${dateKey} is blocked (${blocked.reason}). Cannot create an order for this date.`,
+          blockedReason: blocked.reason,
+          blockedBy: blocked.blockedBy,
+          hint: blocked.blockedBy === "system"
+            ? "This is a system block (Sunday/holiday). Choose a different date."
+            : "Unblock this date in the Calendar tab, or choose a different date.",
+        },
+        { status: 422 }
+      )
+    }
+  }
+
   // Validate line items + snapshot product info
   const productSkus = body.lineItems.map((i) => i.productSku)
   const products = await db.product.findMany({ where: { sku: { in: productSkus } } })
