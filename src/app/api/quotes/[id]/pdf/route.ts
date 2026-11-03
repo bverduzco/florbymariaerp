@@ -2,6 +2,11 @@
 //
 // Streams the Quote PDF directly to the browser. No disk writes.
 // Mirrors src/app/api/orders/[id]/pdf/route.ts but for quotes.
+//
+// v1.9.1: Also fetches the relevant LegalTemplate (LT-002 for small
+// orders / no-event quotes, LT-003 for event quotes) and passes it as
+// `termsText` in the payload. The PDF renders it as a "TÉRMINOS Y
+// CONDICIONES" section above the validity notice.
 
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
@@ -12,6 +17,30 @@ export const maxDuration = 60 // 60s — needed for Vercel Pro if generating lar
 
 interface RouteParams {
   params: Promise<{ id: string }>
+}
+
+/**
+ * Pick the right LegalTemplate for this quote.
+ *
+ * - Event quotes (weddings, corporate, etc.) → LT-003 "Condiciones del Servicio (Eventos)"
+ * - No-event / everyday orders (COD) → LT-002 "Condiciones de Pedidos Pequeños"
+ *
+ * Returns the templateText (with [PLACEHOLDERS] still in place — the PDF
+ * renders them as-is for now; placeholder substitution is a future task).
+ *
+ * Returns null if no matching template is found (e.g. seed data missing)
+ * — the PDF gracefully omits the section in that case.
+ */
+async function fetchTermsText(quote: { eventType: string | null; paymentRule: string | null }): Promise<string | null> {
+  // Treat no_event_cod or any quote without an event type as "small order"
+  // → LT-002 applies. Anything with an eventType → LT-003.
+  const appliesTo = quote.eventType ? "event_quotes" : "small_orders"
+  const template = await db.legalTemplate.findFirst({
+    where: { appliesTo },
+    select: { templateText: true },
+    orderBy: { lastUpdated: "desc" }, // most recent version if multiple exist
+  })
+  return template?.templateText ?? null
 }
 
 export async function GET(_request: Request, { params }: RouteParams) {
@@ -27,6 +56,9 @@ export async function GET(_request: Request, { params }: RouteParams) {
   if (!quote) {
     return NextResponse.json({ error: "Quote not found" }, { status: 404 })
   }
+
+  // Fetch the relevant LegalTemplate (LT-002 or LT-003) in parallel
+  const termsText = await fetchTermsText(quote)
 
   const payload: QuotePayload = {
     quoteNumber: quote.quoteNumber,
@@ -56,6 +88,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
     discountType: quote.discountType,
     deliveryFee: quote.deliveryFee,
     notes: quote.notes,
+    termsText, // v1.9.1: legal terms section content
   }
 
   // Generate PDF in-process — no execFile, no Python, no disk writes

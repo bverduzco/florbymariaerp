@@ -68,19 +68,44 @@ function buildDocDefinition(payload: ReciboPayload): TDocumentDefinitions {
   const createdDate = formatSpanishLong(payload.createdAt)
   const deliveryDateFmt = formatSpanishLong(payload.deliveryDate)
 
-  // === HEADER: Logo + business info (left) | Recibo meta (right) ===
+  // === HEADER: Logo (left) + Business info (next) | Recibo meta (right) ===
+  // Same 3-column layout as the Quote PDF. Embeds the flower-logo.svg
+  // inline using pdfmake's `svg` content type (no VFS / fs read needed).
+  // See src/lib/pdf/quote.ts for the full rationale.
+  const FLOWER_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="6" fill="rgb(190, 24, 93)"/>
+  <g transform="translate(16,16)">
+    <g fill="#FFFFFF">
+      <ellipse cx="0" cy="-7" rx="3.2" ry="5.5"/>
+      <ellipse cx="0" cy="-7" rx="3.2" ry="5.5" transform="rotate(72)"/>
+      <ellipse cx="0" cy="-7" rx="3.2" ry="5.5" transform="rotate(144)"/>
+      <ellipse cx="0" cy="-7" rx="3.2" ry="5.5" transform="rotate(216)"/>
+      <ellipse cx="0" cy="-7" rx="3.2" ry="5.5" transform="rotate(288)"/>
+    </g>
+    <circle r="2.6" fill="#FFD23F"/>
+    <circle r="1" fill="rgb(190, 24, 93)" opacity="0.35"/>
+  </g>
+</svg>`
+
   const headerTable: Content = {
     table: {
-      widths: ["*", "*"],
+      // 3 columns: logo (fixed 42pt) | business info (flex) | recibo meta (auto)
+      widths: [42, "*", "auto"],
       body: [
         [
+          // Col 1: Logo
+          {
+            svg: FLOWER_LOGO_SVG,
+            width: 36,
+            margin: [0, 2, 0, 0],
+          },
+          // Col 2: Business name + tagline + contact info
           {
             stack: [
-              { text: "✿ Flor by Maria", color: COLOR_ROSE, bold: true, fontSize: 24, lineHeight: 1.1 },
+              { text: "Flor by Maria", color: COLOR_ROSE, bold: true, fontSize: 24, lineHeight: 1.1 },
               { text: "Bouquets & arreglos personalizados", color: COLOR_STONE_LIGHT, italics: true, fontSize: 10, margin: [0, 2, 0, 6] },
               {
                 text: [
-                  { text: "Flor by Maria\n", bold: true, color: COLOR_STONE, fontSize: 9 },
                   { text: "Arreglos florales & bouquets\n", color: COLOR_STONE, fontSize: 9 },
                   { text: "Ciudad de México\n", color: COLOR_STONE, fontSize: 9 },
                   { text: "WhatsApp: (pendiente)\n", color: COLOR_STONE, fontSize: 9 },
@@ -88,7 +113,9 @@ function buildDocDefinition(payload: ReciboPayload): TDocumentDefinitions {
                 ],
               },
             ],
+            margin: [4, 0, 0, 0],
           },
+          // Col 3: Recibo meta (right-aligned)
           {
             stack: [
               { text: "RECIBO", bold: true, fontSize: 14, color: COLOR_STONE, alignment: "right" },

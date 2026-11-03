@@ -10,7 +10,7 @@
  *   - Future: customer-facing PDF quote
  *
  * Rules (per Maria's spec):
- *   - No event (everyday order)       → 100% upfront (COD)
+ *   - No event (everyday order)       → Pago anticipado (100% — pedido pequeño)
  *   - Event > 6 months away           → 30% deposit
  *   - Event ≤ 6 months, > 2 weeks     → 50% deposit
  *   - Event ≤ 2 weeks away            → DECLINE (warn + override allowed in UI)
@@ -70,8 +70,8 @@ export function computePaymentRule(
     return {
       rule: "no_event_cod",
       depositPct: 1.0,
-      label: "100% upfront (everyday order, COD)",
-      shortLabel: "Deposit (100% COD)",
+      label: "Pago anticipado (100% — pedido pequeño)",
+      shortLabel: "Pago anticipado (100%)",
       decline: false,
     }
   }
@@ -173,8 +173,8 @@ export function computeDepositAmount(
 // ───────────────────────────────────────────────────────────────────────────
 const RULE_LABELS: Record<PaymentRuleValue, { label: string; shortLabel: string; depositPct: number }> = {
   no_event_cod: {
-    label: "100% upfront (everyday order, COD)",
-    shortLabel: "Deposit (100% COD)",
+    label: "Pago anticipado (100% — pedido pequeño)",
+    shortLabel: "Pago anticipado (100%)",
     depositPct: 1.0,
   },
   event_30pct: {
@@ -213,7 +213,7 @@ export function lookupPaymentRule(
   if (!paymentRule) {
     return {
       label: "50% deposit (legacy quote — rule not recorded)",
-      shortLabel: "Deposit (50%)",
+      shortLabel: "Anticipo (50%)",
       depositPct: 0.5,
     }
   }
