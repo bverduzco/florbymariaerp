@@ -7,6 +7,7 @@ import {
   SCHEMA_CHANGE_REQUIRES_MIGRATION,
   SCHEMA_CHANGE_NO_MIGRATION,
 } from "@/lib/migrations"
+import { getDbTarget } from "@/lib/db-target"
 
 async function getSettings() { return prisma.workbookSetting.findMany({ orderBy: [{ section: "asc" }, { key: "asc" }] }) }
 async function getCounts() {
@@ -68,31 +69,19 @@ function getBuildInfo() {
 }
 
 function getDatabaseInfo() {
-  const url = process.env.DATABASE_URL ?? ""
-  const isTurso = url.startsWith("libsql://") || url.startsWith("https://") || url.startsWith("http://")
-  const isLocalFile = url.startsWith("file:")
-
-  let dbType: string
-  let dbHost: string
-  if (isTurso) {
-    dbType = "Turso (libSQL)"
-    // Extract just the hostname — strip query params (auth token!)
-    try {
-      const u = new URL(url)
-      dbHost = u.hostname
-    } catch {
-      dbHost = "(invalid URL)"
-    }
-  } else if (isLocalFile) {
-    dbType = "Local SQLite"
-    // Show just the basename, not the full path
-    dbHost = url.replace(/^file:/, "").split("/").pop() ?? url
-  } else {
-    dbType = "Unknown"
-    dbHost = "(unset)"
+  // Delegates to the shared db-target module so the Settings page and the
+  // TopBar badge always agree on what database the deployment is using.
+  const target = getDbTarget()
+  return {
+    dbType: target.description,
+    dbHost: target.hostname,
+    isTurso: target.isTurso,
+    isLocalFile: target.target === "local",
+    target: target.target,
+    label: target.label,
+    color: target.color,
+    textColor: target.textColor,
   }
-
-  return { dbType, dbHost, isTurso, isLocalFile }
 }
 
 function fmtDate(iso: string | null): string {
@@ -215,10 +204,10 @@ export default async function SettingsPage() {
             color={build.vercelEnv === "production" ? "#047857" : build.vercelEnv === "preview" ? "#D97706" : "#6B7280"}
           />
           <InfoCell
-            label="Database"
-            value={dbInfo.dbType}
-            color={dbInfo.isTurso ? "#047857" : "#6B7280"}
-            sub={dbInfo.dbHost}
+            label="Database target"
+            value={dbInfo.label}
+            sub={dbInfo.dbType}
+            color={dbInfo.color}
           />
           <InfoCell
             label="DB tables"
@@ -252,6 +241,80 @@ export default async function SettingsPage() {
               <span style={{ fontStyle: "italic" }}>&ldquo;{build.commitMessage.split("\n")[0]}&rdquo;</span>
             </div>
           )}
+        </div>
+
+        {/* ─── Database connection documentation ───────────────────────── */}
+        <div style={{ background: "#fff", border: `2px solid ${dbInfo.color}`, borderRadius: "6px", padding: "12px", marginBottom: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+            <span
+              style={{
+                background: dbInfo.color,
+                color: dbInfo.textColor,
+                padding: "2px 8px",
+                borderRadius: "4px",
+                fontSize: "10px",
+                fontWeight: 700,
+                letterSpacing: "0.05em",
+              }}
+            >
+              {dbInfo.label}
+            </span>
+            <span style={{ fontSize: "11px", color: "#78716C" }}>
+              All reads and writes from this deployment go to:
+            </span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "8px", fontSize: "12px" }}>
+            <KV label="DB type" value={dbInfo.dbType} />
+            <KV label="Hostname / file" value={dbInfo.dbHost} mono />
+            <KV label="Toggle status" value="Read-only badge (toggle is on the Wishlist ↓)" />
+          </div>
+          <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid #E7E5E4", fontSize: "11px", color: "#44403C", lineHeight: 1.6 }}>
+            <strong>What this means:</strong> every customer, quote, order, payment, or material edit you make on this
+            deployment is written to <code style={{ background: "#FAFAF9", padding: "1px 4px", borderRadius: "3px" }}>{dbInfo.dbHost}</code>.
+            The DB badge in the top bar reflects this same target — if it says <span style={{ fontWeight: 700, color: dbInfo.color }}>{dbInfo.label}</span>,
+            you&apos;re talking to {dbInfo.dbType}.
+          </div>
+
+          {/* Architecture explainer */}
+          <div style={{ marginTop: "10px", paddingTop: "10px", borderTop: "1px solid #E7E5E4", fontSize: "11px", color: "#44403C", lineHeight: 1.6 }}>
+            <div style={{ fontWeight: 700, marginBottom: "4px" }}>How the DB wiring works:</div>
+            <ol style={{ paddingLeft: "20px", margin: 0, lineHeight: 1.7 }}>
+              <li>
+                Vercel&apos;s <code style={{ background: "#FAFAF9", padding: "1px 4px", borderRadius: "3px" }}>DATABASE_URL</code> env var
+                points to one Turso database (currently <code style={{ background: "#FAFAF9", padding: "1px 4px", borderRadius: "3px" }}>{dbInfo.dbHost}</code>).
+              </li>
+              <li>
+                <code style={{ background: "#FAFAF9", padding: "1px 4px", borderRadius: "3px" }}>src/lib/db.ts</code> reads that env var
+                at startup, picks the right Prisma adapter (libsql for Turso, better-sqlite3 for local files), and caches a single
+                PrismaClient in <code style={{ background: "#FAFAF9", padding: "1px 4px", borderRadius: "3px" }}>globalThis.prisma</code>.
+              </li>
+              <li>
+                Every server component and route handler imports that same cached client. There&apos;s currently no per-request DB switching —
+                the cached client is reused for the lifetime of the serverless function instance.
+              </li>
+              <li>
+                The DB badge reads <code style={{ background: "#FAFAF9", padding: "1px 4px", borderRadius: "3px" }}>process.env.DATABASE_URL</code> on
+                the server, pattern-matches the hostname for <code style={{ background: "#FAFAF9", padding: "1px 4px", borderRadius: "3px" }}>-prod</code> /
+                <code style={{ background: "#FAFAF9", padding: "1px 4px", borderRadius: "3px" }}> -demo</code> / file: to derive the
+                <code style={{ background: "#FAFAF9", padding: "1px 4px", borderRadius: "3px" }}> PROD</code> /
+                <code style={{ background: "#FAFAF9", padding: "1px 4px", borderRadius: "3px" }}> DEMO</code> /
+                <code style={{ background: "#FAFAF9", padding: "1px 4px", borderRadius: "3px" }}> LOCAL</code> label.
+              </li>
+            </ol>
+          </div>
+
+          {/* Two DBs explainer */}
+          <div className="fmd-note blue" style={{ marginTop: "10px", marginBottom: 0 }}>
+            <strong>Two Turso databases exist:</strong>{" "}
+            <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>florbymaria-prod</code> (real business data)
+            {" "}and{" "}
+            <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>florbymaria-demo</code> (clean slate for testing).
+            {" "}Currently this deployment is connected to{" "}
+            <strong>{dbInfo.target === "prod" ? "prod" : dbInfo.target === "demo" ? "demo" : dbInfo.dbType}</strong>.
+            {" "}To switch deployments between them, change the{" "}
+            <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>DATABASE_URL</code> env var in the Vercel dashboard.
+            {" "}A runtime toggle (no Vercel dashboard visit required) is on the Wishlist below.
+          </div>
         </div>
       </div>
 
@@ -462,6 +525,149 @@ export default async function SettingsPage() {
         </div>
       </div>
 
+      {/* ════════════════════════════════════════════════════════════════ */}
+      {/* Wishlist — features under consideration                          */}
+      {/* ════════════════════════════════════════════════════════════════ */}
+      <div className="fmd-box" style={{ borderColor: "#FDE68A", background: "#FFFBEB" }}>
+        <div className="fmd-box-label" style={{ color: "#92400E" }}>
+          🌟 Wishlist — features under consideration
+        </div>
+        <div style={{ fontSize: "11px", color: "#78716C", marginBottom: "12px", lineHeight: 1.5 }}>
+          These are improvements we&apos;ve discussed but haven&apos;t built yet.
+          Items marked <span className="fmd-status accepted" style={{ background: "#D1FAE5", color: "#065F46" }}>next up</span>{" "}
+          are the most likely to be picked up in the next iteration.
+        </div>
+
+        {/* Wishlist items */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {/* ─── Runtime DB toggle (HIGH PRIORITY) ─── */}
+          <WishlistItem
+            priority="next up"
+            title="Runtime DB toggle (PROD ⇄ DEMO without leaving the page)"
+            description={
+              <>
+                Make the DB badge in the top bar clickable. Clicking it opens a dropdown with{" "}
+                <strong>Production</strong> and <strong>Demo</strong> options. Selecting one switches
+                the active database for the current session (via a cookie), and the page re-fetches
+                all data from the new DB instantly. No Vercel dashboard visit required.
+              </>
+            }
+            why={
+              <>
+                Currently, switching between prod and demo requires changing the{" "}
+                <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>DATABASE_URL</code>{" "}
+                env var in Vercel and waiting for a redeploy (~2 min). The toggle would make it
+                instant — useful for testing features against a clean demo DB without polluting
+                prod, or for previewing prod data from a demo session.
+              </>
+            }
+            implementation={
+              <>
+                <strong>Implementation sketch (Option B from the design discussion):</strong>
+                <ol style={{ paddingLeft: "20px", margin: "4px 0 0 0", lineHeight: 1.7 }}>
+                  <li>Add <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>DATABASE_URL_DEMO</code> env var on Vercel.</li>
+                  <li>Cookie <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>fmd_db_target</code> = <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>prod</code> | <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>demo</code> (HttpOnly, 30-day).</li>
+                  <li>Middleware reads cookie → sets <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>x-fmd-db-target</code> header (strips any client-sent value).</li>
+                  <li><code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>src/lib/db.ts</code> keeps a <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>Map&lt;target, PrismaClient&gt;</code> and picks based on the header.</li>
+                  <li>Update ~27 page files: <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>import {"{"} db {"}"} from "@/lib/db"</code> → <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>import {"{"} getDb {"}"} from "@/lib/db"</code>, <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>prisma.X</code> → <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>getDb().X</code>.</li>
+                  <li>Convert TopBar to client component, add dropdown, POST to <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>/api/admin/db-switch</code> on click, then <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>router.refresh()</code>.</li>
+                  <li>Also apply the latest migration to the demo DB (currently only has the 40-table base schema).</li>
+                </ol>
+              </>
+            }
+            risks={
+              <>
+                Two Prisma clients held in memory per serverless instance (~10MB extra RAM).
+                Writes in flight when the toggle is clicked still land in the old DB until the
+                next request — minor, but worth noting in the dropdown UI.
+              </>
+            }
+            effort="~2 hours (mostly mechanical refactor across 27 page files)"
+          />
+
+          {/* ─── Other wishlist items (from prior sessions) ─── */}
+          <WishlistItem
+            priority="backlog"
+            title="Delivery rules (dynamic fee based on zone / distance / date)"
+            description={
+              <>
+                Replace the flat $100 MXN delivery fee with a rules engine: different fees for
+                different zones (San Pedro vs Monterrey vs Santa Catarina), surcharges for
+                far-away venues or holiday dates, free delivery above a quote threshold.
+              </>
+            }
+          />
+          <WishlistItem
+            priority="backlog"
+            title="Wiki image upload + Wiki → Material auto-link"
+            description={
+              <>
+                Let Maria paste/upload photos into Wiki articles (currently text-only via
+                Markdown). When an article mentions a material SKU, auto-link to the Materials
+                page so she can jump from &ldquo;Vida en florero&rdquo; straight to the material
+                detail.
+              </>
+            }
+          />
+          <WishlistItem
+            priority="backlog"
+            title="Multi-user / tenant support"
+            description={
+              <>
+                Currently every visitor shares the same demo password. For production with
+                multiple staff (Maria + assistants), add per-user accounts with role-based
+                permissions (admin can delete, staff can only create/edit).
+              </>
+            }
+          />
+          <WishlistItem
+            priority="backlog"
+            title="Language switcher (ES / EN)"
+            description={
+              <>
+                Most customer-facing text is in Spanish; some internal labels are in English.
+                Add a proper i18n layer (Next.js + next-intl is already installed) so Maria can
+                flip the UI language for English-speaking staff without changing customer
+                documents.
+              </>
+            }
+          />
+          <WishlistItem
+            priority="backlog"
+            title="Seasonal promotions + bulk discounts"
+            description={
+              <>
+                Auto-apply discounts during slow periods (e.g. August is the slowest month — show
+                a banner offering 10% off). Add bulk pricing tiers (50+ bouquets = 5% off, 100+ =
+                10% off) on quotes.
+              </>
+            }
+          />
+          <WishlistItem
+            priority="backlog"
+            title="Mobile: card view for remaining list pages"
+            description={
+              <>
+                Quotes and Orders already have mobile card views. Extend the pattern to
+                Customers, Materials, Suppliers, Payments, Expenses — currently they show as
+                horizontally-scrolling tables on mobile.
+              </>
+            }
+          />
+          <WishlistItem
+            priority="backlog"
+            title="Mobile: bottom-sheet dialogs instead of centered modals"
+            description={
+              <>
+                On mobile, dialogs currently render as full-screen centered modals. Bottom-sheet
+                dialogs (slide up from the bottom, swipe down to dismiss) are more ergonomic on
+                phones. The vaul library is already installed.
+              </>
+            }
+          />
+        </div>
+      </div>
+
       {/* DB Counts */}
       <div className="fmd-box">
         <div className="fmd-box-label">Database Row Counts</div>
@@ -507,6 +713,95 @@ function KV({ label, value, mono = false }: { label: string; value: string; mono
     <div>
       <div style={{ fontSize: "9px", textTransform: "uppercase", color: "#78716C", letterSpacing: "0.5px" }}>{label}</div>
       <div style={{ fontWeight: 600, color: "#44403C", fontFamily: mono ? "monospace" : "inherit" }}>{value}</div>
+    </div>
+  )
+}
+
+type WishlistPriority = "next up" | "backlog"
+
+function WishlistItem({
+  priority,
+  title,
+  description,
+  why,
+  implementation,
+  risks,
+  effort,
+}: {
+  priority: WishlistPriority
+  title: string
+  description: React.ReactNode
+  why?: React.ReactNode
+  implementation?: React.ReactNode
+  risks?: React.ReactNode
+  effort?: string
+}) {
+  const priorityConfig: Record<WishlistPriority, { bg: string; color: string }> = {
+    "next up": { bg: "#D1FAE5", color: "#065F46" },
+    backlog: { bg: "#F3F4F6", color: "#6B7280" },
+  }
+  const p = priorityConfig[priority]
+  return (
+    <div
+      style={{
+        background: "#ffffff",
+        border: "1px solid #FDE68A",
+        borderRadius: "6px",
+        padding: "12px",
+      }}
+    >
+      {/* Title row */}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px", flexWrap: "wrap" }}>
+        <span
+          style={{
+            background: p.bg,
+            color: p.color,
+            padding: "2px 8px",
+            borderRadius: "10px",
+            fontSize: "9px",
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {priority}
+        </span>
+        <span style={{ fontSize: "13px", fontWeight: 700, color: "#44403C", flex: 1, minWidth: "200px" }}>
+          {title}
+        </span>
+        {effort && (
+          <span style={{ fontSize: "10px", color: "#92400E", fontStyle: "italic" }}>{effort}</span>
+        )}
+      </div>
+
+      {/* Description */}
+      <div style={{ fontSize: "12px", color: "#44403C", lineHeight: 1.6, marginBottom: why || implementation || risks ? "10px" : "0" }}>
+        {description}
+      </div>
+
+      {/* Why section */}
+      {why && (
+        <div style={{ marginTop: "6px", fontSize: "11px", color: "#78716C", lineHeight: 1.6, paddingTop: "6px", borderTop: "1px dashed #FDE68A" }}>
+          <strong style={{ color: "#92400E" }}>Why: </strong>
+          {why}
+        </div>
+      )}
+
+      {/* Implementation sketch */}
+      {implementation && (
+        <div style={{ marginTop: "6px", fontSize: "11px", color: "#44403C", lineHeight: 1.6, paddingTop: "6px", borderTop: "1px dashed #FDE68A" }}>
+          {implementation}
+        </div>
+      )}
+
+      {/* Risks */}
+      {risks && (
+        <div style={{ marginTop: "6px", fontSize: "11px", color: "#92400E", lineHeight: 1.6, paddingTop: "6px", borderTop: "1px dashed #FDE68A" }}>
+          <strong>Risks: </strong>
+          {risks}
+        </div>
+      )}
     </div>
   )
 }
