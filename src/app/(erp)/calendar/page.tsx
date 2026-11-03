@@ -167,6 +167,7 @@ export default async function CalendarPage({
             startDate: m.startDate, endDate: m.endDate, color: m.color, intensity: m.intensity,
           }))}
           markersVisible={markersVisible}
+          orderSchedule={orderSchedule}
         />
         <div className="mt-4 text-xs text-stone-500 leading-relaxed">
           <span className="text-green-700">🟢 Green</span> = available ·{" "}

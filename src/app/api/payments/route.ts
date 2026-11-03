@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { logChange } from "@/lib/audit"
 
 export const dynamic = "force-dynamic"
 
@@ -71,6 +72,19 @@ export async function POST(request: Request) {
         await db.order.update({
           where: { id: order.id },
           data: updateData,
+        })
+
+        // Audit trail
+        await logChange({
+          entityType: "Order", entityId: order.id,
+          action: "status_change", fieldName: "status",
+          oldValue: order.status,
+          newValue: String(updateData.status ?? order.status),
+        })
+        await logChange({
+          entityType: "Payment", entityId: payment.id,
+          action: "create", fieldName: "amount",
+          newValue: String(payment.amount),
         })
       }
     }

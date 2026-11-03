@@ -59,6 +59,10 @@ async function getCustomers() {
         },
         orderBy: { quoteDate: "desc" },
       },
+      customerNotes: {
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      },
     },
     orderBy: { createdAt: "desc" },
   })
@@ -108,6 +112,17 @@ async function getCustomers() {
           qty: l.qty,
           unitPrice: l.unitPrice,
         })),
+      })),
+      customerNotes: c.customerNotes.map((n) => ({
+        id: n.id,
+        channel: n.channel,
+        direction: n.direction,
+        subject: n.subject,
+        body: n.body,
+        followUpDate: n.followUpDate?.toISOString() ?? null,
+        followUpDone: n.followUpDone,
+        recordedBy: n.recordedBy,
+        createdAt: n.createdAt.toISOString(),
       })),
     }
   })

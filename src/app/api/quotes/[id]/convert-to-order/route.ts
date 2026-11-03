@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { logChange } from "@/lib/audit"
 
 export const dynamic = "force-dynamic"
 
@@ -139,6 +140,18 @@ export async function POST(_request: Request, { params }: RouteParams) {
     await db.customer.updateMany({
       where: { id: customerId, status: "prospect" },
       data: { status: "customer" },
+    })
+
+    // Audit trail
+    await logChange({
+      entityType: "Quote", entityId: id,
+      action: "convert", fieldName: "orderId",
+      oldValue: null, newValue: order.id,
+    })
+    await logChange({
+      entityType: "Order", entityId: order.id,
+      action: "create", fieldName: "source",
+      newValue: `Converted from ${quote.quoteNumber}`,
     })
 
     return NextResponse.json(

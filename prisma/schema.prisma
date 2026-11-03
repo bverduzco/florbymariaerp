@@ -136,6 +136,7 @@ model Customer {
   events    Event[]
   // v1.9: back-relations
   quotes    Quote[]
+  customerNotes CustomerNote[]
 
   @@unique([name, phone])
 }
@@ -416,6 +417,7 @@ model Quote {
   notes           String?
   sourceRowKey    String?  @unique
   lines           QuoteLine[]
+  reminders       QuoteReminder[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -866,5 +868,56 @@ model WikiArticle {
   @@index([category])
   @@index([pinned])
   @@index([updatedAt])
+}
+
+// v1.9 Tier 3: Customer communication log — track interactions with each
+// customer (calls, WhatsApp messages, emails, in-person visits).
+model CustomerNote {
+  id          String   @id @default(cuid())
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  channel     String   // call | whatsapp | email | in_person | other
+  direction   String   @default("outbound") // inbound | outbound
+  subject     String?
+  body        String
+  followUpDate DateTime? // if set, shows as a reminder on the landing page
+  followUpDone Boolean  @default(false)
+  recordedBy  String   @default("Maria")
+  createdAt   DateTime @default(now())
+
+  @@index([customerId])
+  @@index([followUpDate])
+  @@index([createdAt])
+}
+
+// v1.9 Tier 3: Quote follow-up reminders
+model QuoteReminder {
+  id          String   @id @default(cuid())
+  quoteId     String
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  remindAt    DateTime
+  note        String?
+  done        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([quoteId])
+  @@index([remindAt])
+  @@index([done])
+}
+
+// v1.9 Tier 3: Audit trail — track who changed what, when
+model AuditLog {
+  id          String   @id @default(cuid())
+  entityType  String   // Order | Quote | Customer | Event | Material | BlockedDate | etc.
+  entityId    String
+  action      String   // create | update | delete | status_change | convert
+  fieldName   String?  // which field changed (null for create/delete)
+  oldValue    String?  // JSON-serialized old value
+  newValue    String?  // JSON-serialized new value
+  changedBy   String   @default("Maria")
+  changedAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([changedAt])
 }
 

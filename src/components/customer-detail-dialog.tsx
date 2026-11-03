@@ -14,6 +14,7 @@ import {
   type OrderDetailOrder,
   type OrderDetailQuote,
 } from "./order-detail-dialog"
+import { CustomerNotesSection } from "@/components/customer-notes-section"
 
 // ───────────────────────────────────────────────────────────────────────────
 // Types
@@ -35,6 +36,17 @@ export type CustomerDetailCustomer = {
   eventCount: number
   orders: OrderDetailOrder[]
   quotes: OrderDetailQuote[]
+  customerNotes?: Array<{
+    id: string
+    channel: string
+    direction: string
+    subject: string | null
+    body: string
+    followUpDate: DateOrString
+    followUpDone: boolean
+    recordedBy: string
+    createdAt: DateOrString
+  }>
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -230,6 +242,9 @@ export function CustomerDetailDialog({
             </div>
           )}
         </div>
+
+        {/* ── Communication log ─────────────────────────────────── */}
+        <CustomerNotesSection customerId={customer.id} notes={customer.customerNotes ?? []} />
 
         {/* ── Quotes section ────────────────────────────────────── */}
         <div className="border border-stone-200 rounded-md p-3">

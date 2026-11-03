@@ -11,6 +11,7 @@ import { QuotePdfButton } from "@/components/quote-pdf-button"
 import { QuoteMessageButton } from "@/components/quote-message-button"
 import { ConvertToOrderButton } from "@/components/convert-to-order-button"
 import { DeleteQuoteButton } from "@/components/delete-quote-button"
+import { QuoteRemindersSection } from "@/components/quote-reminders-section"
 import { ManageQuoteLines } from "./manage-quote-lines"
 import { lookupPaymentRule } from "@/lib/payment-rules"
 import { notFound } from "next/navigation"
@@ -21,12 +22,15 @@ async function getQuote(id: string) {
     where: { id },
     include: {
       customer: { select: { id: true, name: true, phone: true, email: true, address: true } },
-      order: { select: { id: true, orderNumber: true, status: true } }, // v1.9: proper FK relation
+      order: { select: { id: true, orderNumber: true, status: true } },
       lines: {
         orderBy: { lineNumber: "asc" },
         include: {
           product: { select: { sku: true, name: true, cloudinaryPublicId: true } },
         },
+      },
+      reminders: {
+        orderBy: { remindAt: "asc" },
       },
     },
   })
@@ -367,6 +371,18 @@ export default async function QuoteDetailPage({
             </CardContent>
           </Card>
         )}
+
+        {/* Reminders */}
+        <QuoteRemindersSection
+          quoteId={quote.id}
+          reminders={quote.reminders.map((r) => ({
+            id: r.id,
+            remindAt: r.remindAt.toISOString(),
+            note: r.note,
+            done: r.done,
+            createdAt: r.createdAt.toISOString(),
+          }))}
+        />
 
         {/* Lost reason (if declined) */}
         {quote.status === "declined" && quote.lostReason && (
