@@ -62,6 +62,7 @@ export interface QuotePayload {
   paymentRule: string | null
   discount?: number
   discountType?: string
+  deliveryFee?: number
   notes?: string | null
 }
 
@@ -210,6 +211,15 @@ function buildDocDefinition(payload: QuotePayload): TDocumentDefinitions {
     totalsBody.push([
       { text: discLabel, color: COLOR_ROSE, fontSize: 9, alignment: "right" },
       { text: `−$${discountAmount.toLocaleString("es-MX", { maximumFractionDigits: 2 })}`, color: COLOR_ROSE, fontSize: 10, alignment: "right" },
+    ])
+  }
+
+  // Delivery fee
+  const fee = payload.deliveryFee ?? 0
+  if (fee > 0) {
+    totalsBody.push([
+      { text: "Envío", color: COLOR_STONE_LIGHT, fontSize: 9, alignment: "right" },
+      { text: `$${fee.toLocaleString("es-MX", { maximumFractionDigits: 2 })}`, color: COLOR_STONE, fontSize: 10, alignment: "right" },
     ])
   }
 

@@ -47,6 +47,7 @@ export async function GET(_request: Request, { params }: RouteParams) {
       validUntil: quote.validUntil,
       discount: quote.discount,
       discountType: quote.discountType,
+      deliveryFee: quote.deliveryFee,
       notes: quote.notes,
     },
     quote.lines.map((l) => ({

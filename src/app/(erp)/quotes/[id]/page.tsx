@@ -57,6 +57,7 @@ export default async function QuoteDetailPage({
     ? quote.subtotal * (quote.discount / 100)
     : quote.discount
   const effectiveSubtotal = Math.max(0, quote.subtotal - discountAmount)
+  const deliveryFee = quote.deliveryFee ?? 100
 
   return (
     <main className="min-h-screen bg-stone-50 px-6 py-10">
@@ -183,6 +184,16 @@ export default async function QuoteDetailPage({
                           </td>
                         </tr>
                       )}
+                      {deliveryFee > 0 && (
+                        <tr>
+                          <td colSpan={5} className="py-1 px-3 text-right text-stone-500 text-xs">
+                            🚚 Delivery:
+                          </td>
+                          <td className="py-1 px-3 text-right text-stone-700">
+                            ${deliveryFee.toLocaleString("es-MX", { maximumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      )}
                       <tr>
                         <td colSpan={5} className="py-1 px-3 text-right text-stone-500 text-xs">
                           IVA (16%):
@@ -244,6 +255,12 @@ export default async function QuoteDetailPage({
                       <div className="flex justify-between text-xs text-rose-600">
                         <span>Discount ({quote.discountType === "percentage" ? `${quote.discount}%` : "flat"})</span>
                         <span>−${discountAmount.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</span>
+                      </div>
+                    )}
+                    {deliveryFee > 0 && (
+                      <div className="flex justify-between text-xs text-stone-500">
+                        <span>🚚 Delivery</span>
+                        <span>${deliveryFee.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-xs text-stone-500">

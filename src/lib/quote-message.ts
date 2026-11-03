@@ -36,6 +36,7 @@ export type QuoteForMessage = {
   validUntil: Date | string | null
   discount?: number
   discountType?: string
+  deliveryFee?: number
   notes?: string | null
 }
 
@@ -76,6 +77,9 @@ export function buildQuoteWhatsAppMessage(
     out.push(`🏷️ *Descuento (${discLabel}):* −$${Math.round(discAmount).toLocaleString("es-MX")}`)
   }
   out.push(`📊 *IVA (16%):* $${Math.round(quote.iva).toLocaleString("es-MX")}`)
+  if ((quote.deliveryFee ?? 0) > 0) {
+    out.push(`🚚 *Envío:* $${Math.round(quote.deliveryFee ?? 0).toLocaleString("es-MX")}`)
+  }
   out.push(`✅ *Total:* $${Math.round(quote.total).toLocaleString("es-MX")}`)
   out.push("")
 

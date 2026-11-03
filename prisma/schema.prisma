@@ -400,6 +400,7 @@ model Quote {
   iva             Float    @default(0)
   total           Float    @default(0)
   depositRequired Float    @default(0)
+  deliveryFee      Float    @default(100)    // flat delivery fee (default $100 MXN)
   discount        Float    @default(0)      // flat $ amount OR percentage (see discountType)
   discountType    String   @default("flat") // flat | percentage
   // v1.9: which payment rule was applied when the quote was created/sent.
