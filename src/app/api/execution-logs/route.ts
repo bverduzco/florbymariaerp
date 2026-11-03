@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { generateSequentialNumber } from "@/lib/sequential-number"
 
 export const dynamic = "force-dynamic"
 
@@ -93,8 +94,7 @@ export async function POST(request: Request) {
     : null
 
   // EXE-NNNN
-  const count = await db.executionLog.count()
-  const executionNumber = `EXE-${String(count + 1).padStart(4, "0")}`
+  const executionNumber = await generateSequentialNumber(db, "executionLog", "executionNumber", "EXE-", 4)
 
   try {
     const log = await db.executionLog.create({

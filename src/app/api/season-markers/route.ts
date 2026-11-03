@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { generateSequentialNumber } from "@/lib/sequential-number"
 
 export const dynamic = "force-dynamic"
 
@@ -27,9 +28,11 @@ export async function POST(request: Request) {
     )
   }
 
-  // Generate next markerId
-  const count = await db.seasonMarker.count()
-  const markerId = `sm_${String(count + 1).padStart(3, "0")}`
+  // Generate next markerId — find MAX existing sm_NNN and increment.
+  // (The SeasonMarker table is seeded with sm_001..sm_006, so count+1
+  // would generate sm_007 on first add. But after any marker is deleted,
+  // count+1 would collide. Max+1 is safe regardless.)
+  const markerId = await generateSequentialNumber(db, "seasonMarker", "markerId", "sm_", 3)
 
   try {
     const marker = await db.seasonMarker.create({

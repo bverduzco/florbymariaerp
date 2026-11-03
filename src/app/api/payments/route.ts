@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { logChange } from "@/lib/audit"
+import { generateSequentialNumber } from "@/lib/sequential-number"
 
 export const dynamic = "force-dynamic"
 
@@ -27,8 +28,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const count = await db.payment.count()
-  const paymentNumber = `PAY-${String(count + 1).padStart(4, "0")}`
+  const paymentNumber = await generateSequentialNumber(db, "payment", "paymentNumber", "PAY-", 4)
 
   try {
     const payment = await db.payment.create({

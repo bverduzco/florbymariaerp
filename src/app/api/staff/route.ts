@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { generateSequentialNumber } from "@/lib/sequential-number"
 
 export const dynamic = "force-dynamic"
 
@@ -17,8 +18,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const count = await db.staff.count()
-  const staffNumber = `STAFF-${String(count + 1).padStart(3, "0")}`
+  const staffNumber = await generateSequentialNumber(db, "staff", "staffNumber", "STAFF-", 3)
 
   try {
     const staff = await db.staff.create({

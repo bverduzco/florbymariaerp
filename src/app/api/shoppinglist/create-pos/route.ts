@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { generateSequentialNumber } from "@/lib/sequential-number"
 
 export const dynamic = "force-dynamic"
 
@@ -40,9 +41,14 @@ export async function POST(request: Request) {
     })
   }
 
-  // Get current PO count for numbering
-  const poCount = await db.purchaseOrder.count()
-  let poNum = poCount + 1
+  // Find the MAX existing PO-NNNN number and start incrementing from there.
+  // The /api/purchase-orders/route.ts handler uses the same pattern (find
+  // max + increment) for POs created directly via the Procurement tab, so
+  // we stay consistent — if a PO was created there and then the Shopping
+  // List is used, we won't collide.
+  const firstPoNumber = await generateSequentialNumber(db, "purchaseOrder", "poNumber", "PO-", 4)
+  const match = /^PO-(\d+)$/.exec(firstPoNumber)
+  let poNum = match ? parseInt(match[1], 10) : 1
 
   const createdPOs: Array<{ poNumber: string; supplier: string; lineCount: number; total: number }> = []
 

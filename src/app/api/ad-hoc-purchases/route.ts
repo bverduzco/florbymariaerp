@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { generateSequentialNumber } from "@/lib/sequential-number"
 
 export const dynamic = "force-dynamic"
 
@@ -26,8 +27,7 @@ export async function POST(request: Request) {
   const unitCost = Number(body.unitCost)
   const total = qtyPacks * unitCost
 
-  const count = await db.adHocPurchase.count()
-  const adhocNumber = `ADHOC-${String(count + 1).padStart(4, "0")}`
+  const adhocNumber = await generateSequentialNumber(db, "adHocPurchase", "adhocNumber", "ADHOC-", 4)
 
   try {
     const purchase = await db.adHocPurchase.create({

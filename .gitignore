@@ -81,3 +81,4 @@ server.log
 /.bun/
 # Lockfiles for sandbox tooling
 *.pidtool-results/
+tool-results/

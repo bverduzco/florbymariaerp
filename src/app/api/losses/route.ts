@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { generateSequentialNumber } from "@/lib/sequential-number"
 
 export const dynamic = "force-dynamic"
 
@@ -32,8 +33,7 @@ export async function POST(request: Request) {
   const qtyLost = Number(body.qtyLostPacks)
   const costImpact = (material.packPrice ?? 0) * qtyLost
 
-  const count = await db.loss.count()
-  const lossNumber = `LOSS-${String(count + 1).padStart(4, "0")}`
+  const lossNumber = await generateSequentialNumber(db, "loss", "lossNumber", "LOSS-", 4)
 
   try {
     const loss = await db.loss.create({

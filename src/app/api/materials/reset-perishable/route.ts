@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { generateSequentialNumber } from "@/lib/sequential-number"
 
 export const dynamic = "force-dynamic"
 
@@ -34,9 +35,13 @@ export async function POST() {
     })
   }
 
-  // Get current loss count for numbering
-  const lossCount = await db.loss.count()
-  let lossNum = lossCount + 1
+  // Find the MAX existing LOSS-NNNN number and start incrementing from there.
+  // Calling generateSequentialNumber() once and then manually bumping the
+  // counter saves N redundant queries when resetting many materials at once.
+  const firstLossNumber = await generateSequentialNumber(db, "loss", "lossNumber", "LOSS-", 4)
+  // Parse the numeric suffix so we can increment it locally for subsequent losses.
+  const match = /^LOSS-(\d+)$/.exec(firstLossNumber)
+  let lossNum = match ? parseInt(match[1], 10) : 1
 
   const created: Array<{ lossNumber: string; materialSku: string; materialName: string; qtyLost: number; costImpact: number }> = []
   let totalPacks = 0

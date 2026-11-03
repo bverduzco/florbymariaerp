@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { computePaymentRule } from "@/lib/payment-rules"
+import { generateSequentialNumber } from "@/lib/sequential-number"
 
 export const dynamic = "force-dynamic"
 
@@ -151,8 +152,11 @@ export async function POST(request: Request) {
   const depositRequired = total * paymentRule.depositPct
 
   // ── Generate next quote number ────────────────────────────
-  const count = await db.quote.count()
-  const quoteNumber = `QTE-${String(count + 1).padStart(4, "0")}`
+  // Find the MAX existing QTE-NNNN and increment it. This avoids
+  // collisions when quote numbers have gaps (e.g. QTE-0001 deleted,
+  // or seeded out of order). The old `count + 1` heuristic broke
+  // whenever the count didn't match the max number.
+  const quoteNumber = await generateSequentialNumber(db, "quote", "quoteNumber", "QTE-", 4)
 
   try {
     // ── Resolve customer link ────────────────────────────────
