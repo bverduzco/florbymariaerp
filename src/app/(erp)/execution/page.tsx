@@ -1,5 +1,6 @@
 import { db as prisma } from "@/lib/db"
 import { LogExecutionDialog } from "./log-execution-dialog"
+import Link from "next/link"
 
 async function getLogs() {
   return prisma.executionLog.findMany({
@@ -245,16 +246,19 @@ export default async function ExecutionPage() {
                       gap: "8px",
                     }}
                   >
-                    <span
+                    <Link
+                      href={`/execution/${log.id}`}
                       style={{
                         fontFamily: "monospace",
                         fontSize: "12px",
                         fontWeight: 700,
                         color: "#44403C",
+                        textDecoration: "none",
                       }}
+                      className="hover:text-rose-700 hover:underline transition"
                     >
                       {log.executionNumber}
-                    </span>
+                    </Link>
                     <span className={`fmd-status ${log.status}`}>
                       {log.status}
                     </span>
