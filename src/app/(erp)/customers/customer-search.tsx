@@ -2,10 +2,8 @@
 
 import { useState } from "react"
 import { StatusDropdown } from "@/components/status-dropdown"
-import {
-  CustomerDetailDialog,
-  type CustomerDetailCustomer,
-} from "@/components/customer-detail-dialog"
+import { CustomerDetailDialog, type CustomerDetailCustomer } from "@/components/customer-detail-dialog"
+import { EditCustomerDialog } from "./edit-customer-dialog"
 
 interface CustomerSearchProps {
   customers: CustomerDetailCustomer[]
@@ -53,11 +51,12 @@ export function CustomerSearch({ customers }: CustomerSearchProps) {
               <th style={{ textAlign: "right" }}>LTV</th>
               <th>Added</th>
               <th></th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={8} style={{ textAlign: "center", padding: "16px", color: "#9CA3AF" }}>No customers match &quot;{query}&quot;</td></tr>
+              <tr><td colSpan={10} style={{ textAlign: "center", padding: "16px", color: "#9CA3AF" }}>No customers match &quot;{query}&quot;</td></tr>
             ) : (
               filtered.map((c) => (
                 <tr key={c.id}>
@@ -110,6 +109,26 @@ export function CustomerSearch({ customers }: CustomerSearchProps) {
                           title={`View details for ${c.name}`}
                         >
                           Details →
+                        </button>
+                      }
+                    />
+                  </td>
+                  <td style={{ padding: "6px" }}>
+                    <EditCustomerDialog
+                      customer={{
+                        id: c.id,
+                        name: c.name,
+                        phone: c.phone,
+                        email: c.email,
+                        address: c.address,
+                        notes: c.notes,
+                      }}
+                      trigger={
+                        <button
+                          className="px-2 py-1 text-xs border border-stone-300 rounded hover:bg-stone-900 hover:text-white hover:border-stone-900 transition"
+                          title={`Edit ${c.name}`}
+                        >
+                          ✏️ Edit
                         </button>
                       }
                     />

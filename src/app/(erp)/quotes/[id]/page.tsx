@@ -10,6 +10,8 @@ import { StatusDropdown } from "@/components/status-dropdown"
 import { QuotePdfButton } from "@/components/quote-pdf-button"
 import { QuoteMessageButton } from "@/components/quote-message-button"
 import { ConvertToOrderButton } from "@/components/convert-to-order-button"
+import { DeleteQuoteButton } from "@/components/delete-quote-button"
+import { ManageQuoteLines } from "./manage-quote-lines"
 import { lookupPaymentRule } from "@/lib/payment-rules"
 import { notFound } from "next/navigation"
 import Link from "next/link"
@@ -90,6 +92,7 @@ export default async function QuoteDetailPage({
               alreadyLinkedOrderId={quote.order?.id ?? null}
               alreadyLinkedOrderNumber={quote.order?.orderNumber ?? null}
             />
+            <DeleteQuoteButton quoteId={quote.id} quoteNumber={quote.quoteNumber} hasOrder={!!quote.orderId} />
           </div>
         </header>
 
@@ -230,6 +233,19 @@ export default async function QuoteDetailPage({
                 </div>
               </>
             )}
+            <ManageQuoteLines
+              quoteId={quote.id}
+              lines={quote.lines.map((l) => ({
+                id: l.id,
+                lineNumber: l.lineNumber,
+                description: l.description,
+                productSku: l.productSku,
+                qty: l.qty,
+                unitPrice: l.unitPrice,
+                lineTotal: l.lineTotal,
+                notes: l.notes,
+              }))}
+            />
           </CardContent>
         </Card>
 

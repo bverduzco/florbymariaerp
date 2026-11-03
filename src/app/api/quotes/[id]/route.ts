@@ -3,6 +3,10 @@ import { db } from "@/lib/db"
 
 export const dynamic = "force-dynamic"
 
+interface RouteParams {
+  params: Promise<{ id: string }>
+}
+
 /**
  * PATCH /api/quotes/[id]
  * Body: { status?, lostReason?, orderId? }
@@ -102,6 +106,40 @@ export async function PATCH(
       data,
     })
     return NextResponse.json({ quote })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return NextResponse.json({ error: msg }, { status: 500 })
+  }
+}
+
+/**
+ * DELETE /api/quotes/[id]
+ * Permanently deletes a quote and its lines (cascade). Use with caution.
+ * If the quote is linked to an Order, the Order is NOT deleted (only the
+ * quote.orderId link is cleared).
+ */
+export async function DELETE(_request: Request, { params }: RouteParams) {
+  const { id } = await params
+
+  const existing = await db.quote.findUnique({
+    where: { id },
+    select: { id: true, orderId: true, quoteNumber: true },
+  })
+  if (!existing) {
+    return NextResponse.json({ error: "Quote not found" }, { status: 404 })
+  }
+
+  try {
+    // Clear the order link (if any) before deleting — don't cascade to the order
+    if (existing.orderId) {
+      await db.quote.update({
+        where: { id },
+        data: { orderId: null },
+      })
+    }
+
+    await db.quote.delete({ where: { id } })
+    return NextResponse.json({ deleted: id, quoteNumber: existing.quoteNumber })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     return NextResponse.json({ error: msg }, { status: 500 })

@@ -3,6 +3,8 @@
 // src/app/materials/material-search.tsx
 //
 // Client-side searchable + filterable materials table.
+
+import { EditMaterialDialog } from "./edit-material-dialog"
 // Filter by name/SKU + by category.
 
 import { useState } from "react"
@@ -131,12 +133,13 @@ export function MaterialSearch({ materials }: MaterialSearchProps) {
               <th className="text-right py-2 px-3">Unit cost</th>
               <th className="text-left py-2 px-3">Status</th>
               <th className="text-left py-2 px-3">Supplier</th>
+              <th className="py-2 px-2"></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={9} className="py-12 text-center text-stone-400">
+                <td colSpan={10} className="py-12 text-center text-stone-400">
                   No materials match your search.
                 </td>
               </tr>
@@ -180,6 +183,19 @@ export function MaterialSearch({ materials }: MaterialSearchProps) {
                       </Badge>
                     </td>
                     <td className="py-2 px-3 text-xs text-stone-500">{m.supplier ?? "—"}</td>
+                    <td className="py-2 px-1">
+                      <EditMaterialDialog
+                        material={m}
+                        trigger={
+                          <button
+                            className="px-2 py-1 text-xs border border-stone-300 rounded hover:bg-stone-900 hover:text-white hover:border-stone-900 transition"
+                            title={`Edit ${m.name}`}
+                          >
+                            ✏️
+                          </button>
+                        }
+                      />
+                    </td>
                   </tr>
                 )
               })
