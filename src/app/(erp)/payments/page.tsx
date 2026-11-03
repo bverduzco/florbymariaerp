@@ -1,5 +1,7 @@
 // src/app/(erp)/payments/page.tsx — wireframe-matched styling
 
+export const dynamic = "force-dynamic"
+
 import { db as prisma } from "@/lib/db"
 import { RecordPaymentDialog } from "./record-payment-dialog"
 import { PaymentsFilters } from "./payments-filters"

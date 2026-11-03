@@ -13,6 +13,8 @@
 //   2. Product detail page (full info + hero photo)
 //   3. Same image at multiple sizes (proving transformation URLs work)
 
+export const dynamic = "force-dynamic"
+
 import { AssetImage, buildAssetUrl } from "@/components/asset-image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"

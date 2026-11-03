@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import { db as prisma } from "@/lib/db"
 import { SeasonMarkerDialog } from "./season-marker-dialog"
 import { DeleteSeasonButton } from "./delete-season-button"

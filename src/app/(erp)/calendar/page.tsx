@@ -12,6 +12,8 @@
 //   6. Blocked dates list (MANUAL blocks only, with unblock button)
 //   7. Weekly rhythm table
 
+export const dynamic = "force-dynamic"
+
 import { db as prisma } from "@/lib/db"
 import { CalendarGrid } from "./calendar-grid"
 import { MarkersToggle } from "./markers-toggle"

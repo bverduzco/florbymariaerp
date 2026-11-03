@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import { db as prisma } from "@/lib/db"
 
 async function getSettings() { return prisma.workbookSetting.findMany({ orderBy: [{ section: "asc" }, { key: "asc" }] }) }

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import { db as prisma } from "@/lib/db"
 import { AddSupplierDialog } from "./add-supplier-dialog"
 import { PriceListDialog } from "./price-list-dialog"

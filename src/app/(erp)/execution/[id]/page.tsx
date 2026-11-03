@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import { db as prisma } from "@/lib/db"
 import { notFound } from "next/navigation"
 import Link from "next/link"

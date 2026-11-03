@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import { db as prisma } from "@/lib/db"
 import { AddIngredientDialog } from "./add-ingredient-dialog"
 import { RecipeFilter } from "./recipe-filter"

@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import { db as prisma } from "@/lib/db"
 import { AddToQuoteDialog } from "./add-to-quote-dialog"
 import { AssetImage } from "@/components/asset-image"

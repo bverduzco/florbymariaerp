@@ -2,6 +2,8 @@
 //
 // Quotes — wireframe-matched styling.
 
+export const dynamic = "force-dynamic"
+
 import { db as prisma } from "@/lib/db"
 import { NewQuoteDialog } from "./new-quote-dialog"
 import { StatusDropdown } from "@/components/status-dropdown"

@@ -3,6 +3,8 @@
 // Quote detail page — shows full quote with line items, deposit, status timeline.
 // Accessible by clicking a quote number from /quotes (once links are wired).
 
+export const dynamic = "force-dynamic"
+
 import { db as prisma } from "@/lib/db"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"

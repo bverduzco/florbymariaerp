@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import { db as prisma } from "@/lib/db"
 import { NewEventDialog } from "./new-event-dialog"
 import { StatusDropdown } from "@/components/status-dropdown"

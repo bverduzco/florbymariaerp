@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import { db as prisma } from "@/lib/db"
 import { GeneratePdfButton } from "./generate-pdf-button"
 import { CreatePosButton } from "./create-pos-button"

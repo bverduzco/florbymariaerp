@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import { db as prisma } from "@/lib/db"
 import { WikiEditDialog } from "./wiki-edit-dialog"
 import { ArticleReader } from "./article-reader"

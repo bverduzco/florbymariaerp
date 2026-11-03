@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import { db as prisma } from "@/lib/db"
 import { LogExecutionDialog } from "./log-execution-dialog"
 import Link from "next/link"

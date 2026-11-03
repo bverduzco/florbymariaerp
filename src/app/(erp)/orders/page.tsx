@@ -1,5 +1,7 @@
 // src/app/(erp)/orders/page.tsx — wireframe-matched styling
 
+export const dynamic = "force-dynamic"
+
 import { db as prisma } from "@/lib/db"
 import { NewOrderDialog } from "./new-order-dialog"
 import { StatusDropdown } from "@/components/status-dropdown"

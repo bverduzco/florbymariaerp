@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import { db as prisma } from "@/lib/db"
 import { AddMaterialDialog } from "./add-material-dialog"
 import { MaterialSearch } from "./material-search"

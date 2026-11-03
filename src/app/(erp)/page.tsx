@@ -7,6 +7,8 @@
 //
 // Mobile layout matches the wireframe in /download/mobile-wireframe-flow.html
 
+export const dynamic = "force-dynamic"
+
 import { db as prisma } from "@/lib/db"
 import Link from "next/link"
 

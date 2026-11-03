@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"
+
 import { db as prisma } from "@/lib/db"
 import { AddCustomerDialog } from "./add-customer-dialog"
 import { CustomerSearch } from "./customer-search"
