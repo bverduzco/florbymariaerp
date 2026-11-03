@@ -45,7 +45,7 @@ export function MarkersToggle({ markers }: MarkersToggleProps) {
   }
 
   return (
-    <>
+    <div className="flex flex-col gap-2">
       <button
         onClick={toggle}
         className={`px-4 py-1.5 text-sm font-medium border rounded-md transition cursor-pointer ${
@@ -58,7 +58,7 @@ export function MarkersToggle({ markers }: MarkersToggleProps) {
         🎨 Markers: {markersVisible ? "ON" : "OFF"}
       </button>
       {markersVisible && markers.length > 0 && (
-        <div className="w-full mt-2 flex flex-wrap gap-2 text-xs">
+        <div className="w-full flex flex-wrap gap-2 text-xs">
           {markers.map((m) => (
             <span
               key={m.markerId}
@@ -81,6 +81,6 @@ export function MarkersToggle({ markers }: MarkersToggleProps) {
           ))}
         </div>
       )}
-    </>
+    </div>
   )
 }
