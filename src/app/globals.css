@@ -146,14 +146,20 @@
 }
 
 /* === Wireframe-matching component styles === */
-/* Apply these alongside Tailwind classes on page elements */
-
-/* Screen header — matches .screen-header */
-.fmd-screen-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
+/* Apply these alongside Tailwind classes on page elements.
+   The `.fmd-screen-header` and `.fmd-kpi-bar` rules live inside
+   `@layer components` so Tailwind utility classes (`.hidden`, `.lg:flex`)
+   — which live in the later-priority `utilities` layer — win when both are
+   applied. Without this, source-order would let these rules override
+   `.hidden`, leaking desktop-only headers/KPI bars into mobile view. */
+@layer components {
+  /* Screen header — matches .screen-header */
+  .fmd-screen-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
 }
 .fmd-screen-header h1 {
   font-size: 22px;
@@ -304,16 +310,20 @@
   border-color: #BE185D !important;
 }
 
-/* KPI bar — horizontal compact strip */
-.fmd-kpi-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0;
-  margin-bottom: 16px;
-  border: 1px solid #D6D3D1;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #ffffff;
+/* KPI bar — horizontal compact strip.
+   Lives in `@layer components` so Tailwind utilities (`.hidden`, `.lg:flex`)
+   win the cascade when both are applied. */
+@layer components {
+  .fmd-kpi-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin-bottom: 16px;
+    border: 1px solid #D6D3D1;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #ffffff;
+  }
 }
 .fmd-kpi-cell {
   flex: 1 1 0;

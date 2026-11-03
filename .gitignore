@@ -80,4 +80,4 @@ server.log
 # Bun cache
 /.bun/
 # Lockfiles for sandbox tooling
-*.pid
+*.pidtool-results/

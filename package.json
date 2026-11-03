@@ -14,7 +14,8 @@
     "db:turso:init-sql": "prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script --output prisma/turso-init.sql",
     "db:seed:turso": "npx --yes tsx scripts/seed-turso.ts",
     "db:fix-spellings": "npx --yes tsx scripts/fix-spellings-turso.ts",
-    "db:fix-spellings:dry-run": "npx --yes tsx scripts/fix-spellings-turso.ts --dry-run"
+    "db:fix-spellings:dry-run": "npx --yes tsx scripts/fix-spellings-turso.ts --dry-run",
+    "db:migrate:turso": "npx --yes tsx scripts/apply-turso-expansion.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
