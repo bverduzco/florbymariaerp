@@ -42,7 +42,11 @@ export default async function MaterialsPage() {
       </div>
       <div className="fmd-box">
         <div className="fmd-box-label">All Materials ({total})</div>
-        <MaterialSearch materials={materials} />
+        {materials.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "24px", color: "#9CA3AF" }}>No materials yet. Click <b>+ Add Material</b> above to add your first item.</div>
+        ) : (
+          <MaterialSearch materials={materials} />
+        )}
       </div>
     </div>
   )

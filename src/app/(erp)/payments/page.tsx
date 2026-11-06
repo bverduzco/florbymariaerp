@@ -46,7 +46,11 @@ export default async function PaymentsPage() {
 
       <div className="fmd-box">
         <div className="fmd-box-label">All Payments ({payments.length})</div>
-        <PaymentsFilters payments={serialized} />
+        {payments.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "24px", color: "#9CA3AF" }}>No payments recorded yet.</div>
+        ) : (
+          <PaymentsFilters payments={serialized} />
+        )}
       </div>
 
       <div className="fmd-note blue">💡 Small orders = 100% prepay. Events = 50% deposit + 50% balance 14 days before. All suppliers = COD.</div>

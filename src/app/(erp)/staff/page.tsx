@@ -39,6 +39,9 @@ export default async function StaffPage() {
               </tr>
             </thead>
             <tbody>
+              {staff.length === 0 && (
+                <tr><td colSpan={7} style={{ textAlign: "center", padding: "24px", color: "#9CA3AF" }}>No staff members yet. Click <b>+ Add Staff</b> above to add your first team member.</td></tr>
+              )}
               {staff.map((s) => {
                 const skills = s.skills?.split(",").map((sk) => sk.trim()).filter(Boolean) ?? []
                 return (

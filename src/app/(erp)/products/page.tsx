@@ -27,6 +27,11 @@ export default async function ProductsPage() {
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#44403C" }}>${totalValue.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</div><div className="fmd-kpi-label">Catalogue value</div></div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "8px" }}>
+        {products.length === 0 && (
+          <div className="fmd-box" style={{ marginBottom: 0, textAlign: "center", padding: "32px", gridColumn: "1 / -1" }}>
+            <div style={{ fontSize: "13px", color: "#78716C" }}>No products yet. Click <b>+ Add Product</b> above to add your first item.</div>
+          </div>
+        )}
         {products.map((product) => {
           const hasPhoto = Boolean(product.cloudinaryPublicId)
           return (

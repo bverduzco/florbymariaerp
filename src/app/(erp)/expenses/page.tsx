@@ -46,6 +46,9 @@ export default async function ExpensesPage() {
           <table className="fmd-table">
             <thead><tr><th>Expense #</th><th>Date</th><th>Category</th><th>Description</th><th>Vendor</th><th style={{ textAlign: "right" }}>Amount</th></tr></thead>
             <tbody>
+              {expenses.length === 0 && (
+                <tr><td colSpan={6} style={{ textAlign: "center", padding: "24px", color: "#9CA3AF" }}>No expenses recorded yet.</td></tr>
+              )}
               {expenses.map((e) => (
                 <tr key={e.id}>
                   <td style={{ fontFamily: "monospace", fontSize: "11px" }}>{e.expenseNumber}</td>

@@ -148,6 +148,9 @@ export default async function OrdersPage() {
               </tr>
             </thead>
             <tbody>
+              {orders.length === 0 && (
+                <tr><td colSpan={10} style={{ textAlign: "center", padding: "24px", color: "#9CA3AF" }}>No orders yet.</td></tr>
+              )}
               {orders.map((o) => {
                 const itemsTotal = o.lineItems.reduce((s, l) => s + l.unitPrice * l.qty, 0) + o.deliveryFee
                 const itemCount = o.lineItems.reduce((s, l) => s + l.qty, 0)
@@ -223,6 +226,11 @@ export default async function OrdersPage() {
         </div>
 
         <div style={{ padding: "12px 0" }}>
+          {orders.length === 0 && (
+            <div className="fmd-box" style={{ marginBottom: 0, textAlign: "center", padding: "32px" }}>
+              <div style={{ fontSize: "13px", color: "#78716C" }}>No orders yet.</div>
+            </div>
+          )}
           {orders.map((o) => {
             const itemsTotal = o.lineItems.reduce((s, l) => s + l.unitPrice * l.qty, 0) + o.deliveryFee
             const quote = quotesByOrderId.get(o.id) ?? null

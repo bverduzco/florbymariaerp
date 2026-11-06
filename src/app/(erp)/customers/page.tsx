@@ -173,7 +173,11 @@ export default async function CustomersPage() {
 
       <div className="fmd-box">
         <div className="fmd-box-label">Contact List ({customers.length}) · click any name for full details, quotes, and orders</div>
-        <CustomerSearch customers={customers} />
+        {customers.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "24px", color: "#9CA3AF" }}>No customers yet. Click <b>+ Add Customer</b> above to add your first contact.</div>
+        ) : (
+          <CustomerSearch customers={customers} />
+        )}
       </div>
     </div>
   )

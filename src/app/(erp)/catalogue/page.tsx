@@ -34,7 +34,12 @@ export default async function CataloguePage() {
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#047857" }}>{withPhoto}</div><div className="fmd-kpi-label">With photo</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#D97706" }}>{activeQuotes.length}</div><div className="fmd-kpi-label">Active quotes</div></div>
       </div>
-      {Object.entries(byCategory).map(([category, items]) => (
+      {products.length === 0 ? (
+        <div className="fmd-box" style={{ textAlign: "center", padding: "32px" }}>
+          <div style={{ fontSize: "13px", color: "#78716C" }}>No products in catalogue yet. Add products from the Products tab.</div>
+        </div>
+      ) : (
+        Object.entries(byCategory).map(([category, items]) => (
         <div key={category} className="fmd-box">
           <div className="fmd-box-label">{catEmoji[category] ?? "🌸"} {category}s ({items.length})</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "8px" }}>
@@ -64,7 +69,8 @@ export default async function CataloguePage() {
             })}
           </div>
         </div>
-      ))}
+      ))
+      )}
     </div>
   )
 }

@@ -111,6 +111,9 @@ export default async function LegalPage() {
           <table className="fmd-table">
             <thead><tr><th>ID</th><th>Name</th><th>Applies To</th><th>Trigger</th><th>Version</th><th style={{ textAlign: "right" }}>Length</th></tr></thead>
             <tbody>
+              {templates.length === 0 && (
+                <tr><td colSpan={6} style={{ textAlign: "center", padding: "24px", color: "#9CA3AF" }}>No legal templates configured.</td></tr>
+              )}
               {templates.map((t) => (
                 <tr key={t.id}>
                   <td style={{ fontFamily: "monospace", fontSize: "11px" }}>{t.templateNumber}</td>

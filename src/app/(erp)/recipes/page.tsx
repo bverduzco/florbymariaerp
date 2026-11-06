@@ -65,7 +65,12 @@ export default async function RecipesPage() {
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#047857" }}>{versions.length}</div><div className="fmd-kpi-label">Recipe versions</div></div>
       </div>
 
-      <RecipeFilter
+      {products.length === 0 ? (
+        <div className="fmd-box" style={{ textAlign: "center", padding: "32px" }}>
+          <div style={{ fontSize: "13px", color: "#78716C" }}>No products with recipes yet. Add products and recipe lines to get started.</div>
+        </div>
+      ) : (
+        <RecipeFilter
         products={products.map((p) => ({
           id: p.id,
           sku: p.sku,
@@ -89,6 +94,7 @@ export default async function RecipesPage() {
         materials={materials}
         versionsByProduct={versionsByProduct}
       />
+      )}
     </div>
   )
 }
