@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { serializeOrder } from "../route"
+import { isValidOrderTransition, ORDER_VALID_STATUSES } from "@/lib/status-transitions"
 
 export const dynamic = "force-dynamic"
 
@@ -65,6 +66,35 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   const data: Record<string, unknown> = {}
   for (const key of allowedFields) {
     if (key in body) data[key] = body[key]
+  }
+
+  // Class 6 fix: validate status transition if body.status was set directly.
+  // (The advancePipeline and cancel paths below do their own validation.)
+  // This catches raw `status: "X"` in the body from bypassing the pipeline rules.
+  if (data.status && typeof data.status === "string" && !body.advancePipeline && !body.cancel) {
+    if (!ORDER_VALID_STATUSES.includes(data.status as typeof ORDER_VALID_STATUSES[number])) {
+      return NextResponse.json(
+        { error: `Invalid status "${data.status}". Valid: ${ORDER_VALID_STATUSES.join(", ")}` },
+        { status: 400 },
+      )
+    }
+    const transition = isValidOrderTransition(existing.status, data.status as string)
+    if (!transition.valid) {
+      return NextResponse.json(
+        {
+          error: transition.reason ?? "Invalid status transition",
+          currentStatus: existing.status,
+          requestedStatus: data.status,
+        },
+        { status: 422 },
+      )
+    }
+
+    // Auto-set timestamps for direct status changes (same as /status endpoint)
+    if (data.status === "delivered" && !data.deliveredAt) data.deliveredAt = new Date()
+    if (data.status === "fulfilled" && !data.fulfilledAt) data.fulfilledAt = new Date()
+    if (data.status === "cancelled" && !data.cancelledAt) data.cancelledAt = new Date()
+    if (data.status === "payment_confirmed" && !data.paymentConfirmedAt) data.paymentConfirmedAt = new Date()
   }
 
   // Handle date fields (ISO string → Date object)

@@ -1,12 +1,24 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { isValidOrderTransition, ORDER_VALID_STATUSES } from "@/lib/status-transitions"
 
 export const dynamic = "force-dynamic"
 
 /**
  * PATCH /api/orders/[id]/status
  * Body: { status: string }
- * Updates an order's status.
+ *
+ * Updates an order's status. Validates that the transition is allowed
+ * per the canonical pipeline (Class 6 fix):
+ *   draft → quote_sent → awaiting_payment → payment_confirmed →
+ *   procuring → producing → delivered → fulfilled
+ *
+ *   - Cancellation ("cancelled") is allowed from any non-terminal state.
+ *   - Forward skips are allowed (e.g. draft → delivered for quick orders).
+ *   - Backward transitions are NOT allowed (e.g. fulfilled → draft).
+ *   - Terminal states (fulfilled, cancelled) are locked.
+ *
+ * The auto-timestamp logic (deliveredAt, fulfilledAt, etc.) is preserved.
  */
 export async function PATCH(
   request: Request,
@@ -19,14 +31,32 @@ export async function PATCH(
     return NextResponse.json({ error: "Missing field: status" }, { status: 400 })
   }
 
-  const validStatuses = [
-    "draft", "quote_sent", "awaiting_payment", "payment_confirmed",
-    "procuring", "producing", "delivered", "fulfilled", "cancelled",
-  ]
-  if (!validStatuses.includes(body.status)) {
+  // Validate the target status is a recognized value
+  if (!ORDER_VALID_STATUSES.includes(body.status)) {
     return NextResponse.json(
-      { error: `Invalid status. Valid: ${validStatuses.join(", ")}` },
+      { error: `Invalid status. Valid: ${ORDER_VALID_STATUSES.join(", ")}` },
       { status: 400 }
+    )
+  }
+
+  // Class 6 fix: fetch the current status and validate the transition
+  const existing = await db.order.findUnique({
+    where: { id },
+    select: { status: true },
+  })
+  if (!existing) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 })
+  }
+
+  const transition = isValidOrderTransition(existing.status, body.status)
+  if (!transition.valid) {
+    return NextResponse.json(
+      {
+        error: transition.reason ?? "Invalid status transition",
+        currentStatus: existing.status,
+        requestedStatus: body.status,
+      },
+      { status: 422 }
     )
   }
 

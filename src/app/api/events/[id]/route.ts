@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { isValidEventTransition, EVENT_VALID_STATUSES } from "@/lib/status-transitions"
 
 export const dynamic = "force-dynamic"
 
@@ -68,6 +69,27 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (body.guests !== undefined) data.guests = body.guests || null
   if (body.eventDate !== undefined) {
     data.eventDate = body.eventDate ? new Date(body.eventDate + "T00:00:00") : null
+  }
+
+  // Class 6 fix: validate status transition if body.status was set
+  if (data.status && typeof data.status === "string") {
+    if (!EVENT_VALID_STATUSES.includes(data.status as typeof EVENT_VALID_STATUSES[number])) {
+      return NextResponse.json(
+        { error: `Invalid status "${data.status}". Valid: ${EVENT_VALID_STATUSES.join(", ")}` },
+        { status: 400 },
+      )
+    }
+    const transition = isValidEventTransition(existing.status, data.status as string)
+    if (!transition.valid) {
+      return NextResponse.json(
+        {
+          error: transition.reason ?? "Invalid status transition",
+          currentStatus: existing.status,
+          requestedStatus: data.status,
+        },
+        { status: 422 },
+      )
+    }
   }
 
   if (Object.keys(data).length > 0) {
