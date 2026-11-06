@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { logChange } from "@/lib/audit"
 
 export const dynamic = "force-dynamic"
 
@@ -94,72 +93,91 @@ export async function POST(_request: Request, { params }: RouteParams) {
   const orderNumber = `ORD-${nextNum}`
 
   try {
-    // Create order + line items + link quote — all in one transaction
-    const order = await db.order.create({
-      data: {
-        orderNumber,
-        customerId,
-        eventId: quote.eventId,
-        status: "awaiting_payment",
-        paymentStatus: "not_started",
-        deliveryDate: quote.eventDate,
-        cardMessage: null,
-        deliveryNotes: null,
-        internalNotes: quote.notes,
-        deliveryFee: 100, // default
-        discount: 0,
-        lineItems: {
-          create: quote.lines.map((line) => {
-            const product = line.productSku ? productBySku.get(line.productSku) : null
-            return {
-              productSku: line.productSku ?? "",
-              productId: product?.id ?? null,
-              productName: line.description,
-              productSize: product?.size ?? null,
-              qty: line.qty,
-              unitPrice: line.unitPrice,
-            }
-          }),
+    // Class 1 fix: wrap the entire conversion in $transaction.
+    // Steps: create order + line items → link quote → promote customer → audit log.
+    // If any step fails, all are rolled back. Without this, a failure mid-way could
+    // leave an orphaned Order with no linked Quote, or a Quote marked "accepted"
+    // with no corresponding Order.
+    const result = await db.$transaction(async (tx) => {
+      // Create order + line items
+      const order = await tx.order.create({
+        data: {
+          orderNumber,
+          customerId,
+          eventId: quote.eventId,
+          status: "awaiting_payment",
+          paymentStatus: "not_started",
+          deliveryDate: quote.eventDate,
+          cardMessage: null,
+          deliveryNotes: null,
+          internalNotes: quote.notes,
+          deliveryFee: 100, // default
+          discount: 0,
+          lineItems: {
+            create: quote.lines.map((line) => {
+              const product = line.productSku ? productBySku.get(line.productSku) : null
+              return {
+                productSku: line.productSku ?? "",
+                productId: product?.id ?? null,
+                productName: line.description,
+                productSize: product?.size ?? null,
+                qty: line.qty,
+                unitPrice: line.unitPrice,
+              }
+            }),
+          },
         },
-      },
-      include: { lineItems: true },
-    })
+        include: { lineItems: true },
+      })
 
-    // Link quote → order + update status to accepted
-    const updatedQuote = await db.quote.update({
-      where: { id },
-      data: {
-        orderId: order.id,
-        status: "accepted",
-        // Keep legacy linkedOrderId in sync
-        linkedOrderId: order.orderNumber,
-      },
-    })
+      // Link quote → order + update status to accepted
+      const updatedQuote = await tx.quote.update({
+        where: { id },
+        data: {
+          orderId: order.id,
+          status: "accepted",
+          // Keep legacy linkedOrderId in sync
+          linkedOrderId: order.orderNumber,
+        },
+      })
 
-    // Auto-update customer status: prospect → customer
-    await db.customer.updateMany({
-      where: { id: customerId, status: "prospect" },
-      data: { status: "customer" },
-    })
+      // Auto-update customer status: prospect → customer
+      await tx.customer.updateMany({
+        where: { id: customerId, status: "prospect" },
+        data: { status: "customer" },
+      })
 
-    // Audit trail
-    await logChange({
-      entityType: "Quote", entityId: id,
-      action: "convert", fieldName: "orderId",
-      oldValue: null, newValue: order.id,
-    })
-    await logChange({
-      entityType: "Order", entityId: order.id,
-      action: "create", fieldName: "source",
-      newValue: `Converted from ${quote.quoteNumber}`,
+      // Audit trail (using tx instead of db — stays in the transaction)
+      try {
+        await tx.auditLog.create({
+          data: {
+            entityType: "Quote", entityId: id,
+            action: "convert", fieldName: "orderId",
+            oldValue: null, newValue: order.id,
+            changedBy: "Maria",
+          },
+        })
+        await tx.auditLog.create({
+          data: {
+            entityType: "Order", entityId: order.id,
+            action: "create", fieldName: "source",
+            newValue: `Converted from ${quote.quoteNumber}`,
+            changedBy: "Maria",
+          },
+        })
+      } catch {
+        // AuditLog table might not exist — silently skip (non-critical)
+      }
+
+      return { order, updatedQuote }
     })
 
     return NextResponse.json(
       {
-        order,
-        quote: updatedQuote,
+        order: result.order,
+        quote: result.updatedQuote,
         created: true,
-        message: `Converted to ${order.orderNumber}. Quote marked as accepted. Customer promoted to "customer".`,
+        message: `Converted to ${result.order.orderNumber}. Quote marked as accepted. Customer promoted to "customer".`,
       },
       { status: 201 }
     )

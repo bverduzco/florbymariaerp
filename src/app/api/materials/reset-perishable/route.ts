@@ -43,59 +43,72 @@ export async function POST() {
   const match = /^LOSS-(\d+)$/.exec(firstLossNumber)
   let lossNum = match ? parseInt(match[1], 10) : 1
 
+  // Class 1 fix: wrap the entire batch in $transaction. If any material's
+  // loss/stockMovement/update fails mid-loop, ALL changes are rolled back —
+  // no partial state where some perishables were zeroed and others weren't.
+  //
+  // Class 2 fix: stock zeroing now uses atomic update (set to 0 directly
+  // instead of computing from current — since we're zeroing regardless of
+  // what the current value is, this is equivalent and simpler).
   const created: Array<{ lossNumber: string; materialSku: string; materialName: string; qtyLost: number; costImpact: number }> = []
   let totalPacks = 0
   let totalValue = 0
 
-  for (const mat of perishables) {
-    const qty = mat.currentStockPacks ?? 0
-    const costImpact = (mat.packPrice ?? 0) * qty
-    const lossNumber = `LOSS-${String(lossNum).padStart(4, "0")}`
-    lossNum++
+  await db.$transaction(async (tx) => {
+    for (const mat of perishables) {
+      const qty = mat.currentStockPacks ?? 0
+      const costImpact = (mat.packPrice ?? 0) * qty
+      const lossNumber = `LOSS-${String(lossNum).padStart(4, "0")}`
+      lossNum++
 
-    // Create Loss record
-    await db.loss.create({
-      data: {
+      // Create Loss record
+      await tx.loss.create({
+        data: {
+          lossNumber,
+          date: new Date(),
+          materialSku: mat.sku,
+          qtyLostPacks: qty,
+          reason: "expired",
+          discoveredBy: "Maria",
+          costImpact,
+          notes: "Auto-created by Reset Perishable Stock",
+        },
+      })
+
+      // Create StockMovement (negative) — best-effort
+      try {
+        await tx.stockMovement.create({
+          data: {
+            date: new Date(),
+            materialSku: mat.sku,
+            packs: -qty,
+            reason: "loss",
+            reference: lossNumber,
+            notes: "Auto-created by Reset Perishable Stock",
+          },
+        })
+      } catch {
+        // StockMovement table might not exist — silently skip
+      }
+
+      // Zero out the material's stock
+      await tx.material.update({
+        where: { id: mat.id },
+        data: { currentStockPacks: 0 },
+      })
+
+      created.push({
         lossNumber,
-        date: new Date(),
         materialSku: mat.sku,
-        qtyLostPacks: qty,
-        reason: "expired",
-        discoveredBy: "Maria",
+        materialName: mat.name,
+        qtyLost: qty,
         costImpact,
-        notes: "Auto-created by Reset Perishable Stock",
-      },
-    })
+      })
 
-    // Create StockMovement (negative)
-    await db.stockMovement.create({
-      data: {
-        date: new Date(),
-        materialSku: mat.sku,
-        packs: -qty,
-        reason: "loss",
-        reference: lossNumber,
-        notes: "Auto-created by Reset Perishable Stock",
-      },
-    })
-
-    // Zero out the material's stock
-    await db.material.update({
-      where: { id: mat.id },
-      data: { currentStockPacks: 0 },
-    })
-
-    created.push({
-      lossNumber,
-      materialSku: mat.sku,
-      materialName: mat.name,
-      qtyLost: qty,
-      costImpact,
-    })
-
-    totalPacks += qty
-    totalValue += costImpact
-  }
+      totalPacks += qty
+      totalValue += costImpact
+    }
+  })
 
   return NextResponse.json({
     message: `${perishables.length} perishable materials reset.`,

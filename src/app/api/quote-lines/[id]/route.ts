@@ -50,10 +50,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   try {
-    const line = await db.quoteLine.update({ where: { id }, data })
+    // Class 1 fix: wrap line update + totals recompute in $transaction
+    const { line, totals } = await db.$transaction(async (tx) => {
+      const updated = await tx.quoteLine.update({ where: { id }, data })
 
-    // Class 3 fix: recompute the quote's totals via shared helper
-    const totals = await recomputeQuoteTotals(existing.quoteId)
+      // Class 3 fix: recompute the quote's totals via shared helper
+      const t = await recomputeQuoteTotals(existing.quoteId, tx)
+      return { line: updated, totals: t }
+    })
 
     return NextResponse.json({
       quoteLine: line,
@@ -80,10 +84,12 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   }
 
   try {
-    await db.quoteLine.delete({ where: { id } })
-
-    // Class 3 fix: recompute via shared helper
-    const totals = await recomputeQuoteTotals(existing.quoteId)
+    // Class 1 fix: wrap line deletion + totals recompute in $transaction
+    const totals = await db.$transaction(async (tx) => {
+      await tx.quoteLine.delete({ where: { id } })
+      // Class 3 fix: recompute via shared helper (inside the transaction)
+      return recomputeQuoteTotals(existing.quoteId, tx)
+    })
 
     return NextResponse.json({
       deleted: id,

@@ -51,48 +51,63 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   // If marking as received, update material stock for each line
   if (body.status === "received" && existing.status !== "received") {
-    for (const line of existing.lines) {
-      // Update Material.currentStockPacks
-      const material = await db.material.findUnique({
-        where: { sku: line.materialSku },
-        select: { sku: true, name: true, currentStockPacks: true },
-      })
-      if (material) {
-        const currentStock = material.currentStockPacks ?? 0
-        const newStock = currentStock + line.qtyPacks
-        await db.material.update({
+    // Class 1 fix: wrap all stock updates + PO status change in $transaction.
+    // If any material update fails mid-loop, the PO isn't marked as received
+    // and no stock changes are committed.
+    //
+    // Class 2 fix: atomic increment instead of read-then-write.
+    const updated = await db.$transaction(async (tx) => {
+      for (const line of existing.lines) {
+        // Atomic stock increment — translates to
+        // UPDATE Material SET currentStockPacks = currentStockPacks + N
+        await tx.material.update({
           where: { sku: line.materialSku },
-          data: { currentStockPacks: newStock },
+          data: { currentStockPacks: { increment: line.qtyPacks } },
         })
-        // Create StockMovement record for the audit trail
-        await db.stockMovement.create({
-          data: {
-            date: new Date(),
-            materialSku: line.materialSku,
-            packs: line.qtyPacks,
-            reason: "PO_received",
-            reference: existing.poNumber,
-            notes: `Received ${line.qtyPacks} packs of ${line.materialName}`,
-          },
-        }).catch(() => {
+
+        // StockMovement audit trail (best-effort)
+        try {
+          await tx.stockMovement.create({
+            data: {
+              date: new Date(),
+              materialSku: line.materialSku,
+              packs: line.qtyPacks,
+              reason: "PO_received",
+              reference: existing.poNumber,
+              notes: `Received ${line.qtyPacks} packs of ${line.materialName}`,
+            },
+          })
+        } catch {
           // StockMovement table might not exist — silently skip
-        })
+        }
+
+        // Also create StockAdjustment (legacy — some code may read this table)
+        try {
+          await tx.stockAdjustment.create({
+            data: {
+              materialSku: line.materialSku,
+              deltaPacks: line.qtyPacks,
+              reason: "receipt",
+              notes: `Received from PO ${existing.poNumber}`,
+            },
+          })
+        } catch {
+          // StockAdjustment table might not exist — silently skip
+        }
       }
 
-      // Also create StockAdjustment (legacy — some code may read this table)
-      await db.stockAdjustment.create({
-        data: {
-          materialSku: line.materialSku,
-          deltaPacks: line.qtyPacks,
-          reason: "receipt",
-          notes: `Received from PO ${existing.poNumber}`,
-        },
-      }).catch(() => {
-        // StockAdjustment table might not exist — silently skip
+      // Update the PO status itself (inside the transaction)
+      return tx.purchaseOrder.update({
+        where: { id },
+        data,
+        include: { lines: true },
       })
-    }
+    })
+
+    return NextResponse.json({ purchaseOrder: updated })
   }
 
+  // For non-receive updates (status changes, notes, etc.) — no stock mutation needed
   const updated = await db.purchaseOrder.update({
     where: { id },
     data,

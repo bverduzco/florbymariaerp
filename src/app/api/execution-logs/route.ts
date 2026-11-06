@@ -97,80 +97,93 @@ export async function POST(request: Request) {
   const executionNumber = await generateSequentialNumber(db, "executionLog", "executionNumber", "EXE-", 4)
 
   try {
-    const log = await db.executionLog.create({
-      data: {
-        executionNumber,
-        eventId: body.eventId || null,
-        orderId: body.orderId || null,
-        executedAt: new Date(body.executedAt),
-        executedBy: body.executedBy || "Maria",
-        status: body.status,
-        estimatedCost,
-        actualCost,
-        quotedPrice,
-        marginDollars,
-        marginPct,
-        notes: body.notes || null,
-        lines: {
-          create: body.lines.map((l: {
-            materialSku: string
-            materialName?: string
-            qtyUsed: number
-            unit: string
-            unitCost: number
-            lineCost: number
-            type: string
-            originalMaterialSku?: string
-            originalQty?: number
-            notes?: string
-          }) => ({
-            materialSku: l.materialSku,
-            materialName: l.materialName || materialMap.get(l.materialSku)?.name || "(unknown)",
-            qtyUsed: Number(l.qtyUsed),
-            unit: l.unit || materialMap.get(l.materialSku)?.unit || "pack",
-            unitCost: Number(l.unitCost),
-            lineCost: Number(l.lineCost),
-            type: l.type || "recipe",
-            originalMaterialSku: l.originalMaterialSku || null,
-            originalQty: l.originalQty ? Number(l.originalQty) : null,
-            notes: l.notes || null,
-          })),
-        },
-      },
-      include: { lines: true },
-    })
-
-    // v1.9: Deduct material stock for each line (except "removal" type)
-    for (const line of body.lines) {
-      if (line.type === "removal") continue
-
-      const material = materialMap.get(line.materialSku)
-      if (!material || !material.unitsPerPack || material.unitsPerPack <= 0) continue
-
-      const packsUsed = Number(line.qtyUsed) / material.unitsPerPack
-      if (packsUsed <= 0) continue
-
-      const currentStock = material.currentStockPacks ?? 0
-      const newStock = Math.max(0, currentStock - packsUsed)
-
-      await db.material.update({
-        where: { sku: line.materialSku },
-        data: { currentStockPacks: newStock },
-      })
-
-      await db.stockMovement.create({
+    // Class 1 fix: wrap the entire execution log creation + stock deductions
+    // in $transaction. If any stock update fails mid-loop, the execution log
+    // itself is rolled back too — no partial state.
+    //
+    // Class 2 fix: stock deductions now use atomic { decrement } instead of
+    // read-then-write. This prevents the stale-read race where two concurrent
+    // operations on the same material would overwrite each other.
+    const log = await db.$transaction(async (tx) => {
+      const created = await tx.executionLog.create({
         data: {
-          date: new Date(),
-          materialSku: line.materialSku,
-          packs: -packsUsed,
-          reason: "execution",
-          reference: executionNumber,
-          notes: `${line.type}: ${line.qtyUsed} ${line.unit} (${line.materialName || material.name})`,
+          executionNumber,
+          eventId: body.eventId || null,
+          orderId: body.orderId || null,
+          executedAt: new Date(body.executedAt),
+          executedBy: body.executedBy || "Maria",
+          status: body.status,
+          estimatedCost,
+          actualCost,
+          quotedPrice,
+          marginDollars,
+          marginPct,
+          notes: body.notes || null,
+          lines: {
+            create: body.lines.map((l: {
+              materialSku: string
+              materialName?: string
+              qtyUsed: number
+              unit: string
+              unitCost: number
+              lineCost: number
+              type: string
+              originalMaterialSku?: string
+              originalQty?: number
+              notes?: string
+            }) => ({
+              materialSku: l.materialSku,
+              materialName: l.materialName || materialMap.get(l.materialSku)?.name || "(unknown)",
+              qtyUsed: Number(l.qtyUsed),
+              unit: l.unit || materialMap.get(l.materialSku)?.unit || "pack",
+              unitCost: Number(l.unitCost),
+              lineCost: Number(l.lineCost),
+              type: l.type || "recipe",
+              originalMaterialSku: l.originalMaterialSku || null,
+              originalQty: l.originalQty ? Number(l.originalQty) : null,
+              notes: l.notes || null,
+            })),
+          },
         },
-      }).catch(() => {
-        // StockMovement table might not exist — silently skip
+        include: { lines: true },
       })
-    }
+
+      // Deduct material stock for each line (except "removal" type)
+      for (const line of body.lines) {
+        if (line.type === "removal") continue
+
+        const material = materialMap.get(line.materialSku)
+        if (!material || !material.unitsPerPack || material.unitsPerPack <= 0) continue
+
+        const packsUsed = Number(line.qtyUsed) / material.unitsPerPack
+        if (packsUsed <= 0) continue
+
+        // Class 2 fix: atomic decrement — translates to
+        // UPDATE Material SET currentStockPacks = currentStockPacks - N
+        await tx.material.update({
+          where: { sku: line.materialSku },
+          data: { currentStockPacks: { decrement: packsUsed } },
+        })
+
+        // StockMovement audit trail (best-effort — table might not exist)
+        try {
+          await tx.stockMovement.create({
+            data: {
+              date: new Date(),
+              materialSku: line.materialSku,
+              packs: -packsUsed,
+              reason: "execution",
+              reference: executionNumber,
+              notes: `${line.type}: ${line.qtyUsed} ${line.unit} (${line.materialName || material.name})`,
+            },
+          })
+        } catch {
+          // StockMovement table might not exist — silently skip
+        }
+      }
+
+      return created
+    })
 
     return NextResponse.json({ log }, { status: 201 })
   } catch (e) {

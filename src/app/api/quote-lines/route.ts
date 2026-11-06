@@ -42,23 +42,28 @@ export async function POST(request: Request) {
     const unitPrice = Number(body.unitPrice)
     const lineTotal = qty * unitPrice
 
-    const quoteLine = await db.quoteLine.create({
-      data: {
-        quoteId: body.quoteId,
-        lineNumber,
-        productSku: body.productSku ?? null,
-        productId: body.productId ?? null,
-        description: body.description,
-        qty,
-        unitPrice,
-        lineTotal,
-        notes: body.notes ?? null,
-      },
-    })
+    // Class 1 fix: wrap line creation + totals recompute in $transaction
+    const { quoteLine, totals } = await db.$transaction(async (tx) => {
+      const line = await tx.quoteLine.create({
+        data: {
+          quoteId: body.quoteId,
+          lineNumber,
+          productSku: body.productSku ?? null,
+          productId: body.productId ?? null,
+          description: body.description,
+          qty,
+          unitPrice,
+          lineTotal,
+          notes: body.notes ?? null,
+        },
+      })
 
-    // Class 3 fix: recompute the quote's totals using the shared helper
-    // (correctly handles discount + deliveryFee + IVA-on-discounted-subtotal)
-    const totals = await recomputeQuoteTotals(body.quoteId)
+      // Class 3 fix: recompute the quote's totals using the shared helper
+      // (correctly handles discount + deliveryFee + IVA-on-discounted-subtotal)
+      // Pass tx so the recompute happens inside the same transaction.
+      const t = await recomputeQuoteTotals(body.quoteId, tx)
+      return { quoteLine: line, totals: t }
+    })
 
     return NextResponse.json(
       {

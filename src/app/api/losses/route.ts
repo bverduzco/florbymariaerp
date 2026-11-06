@@ -36,42 +36,48 @@ export async function POST(request: Request) {
   const lossNumber = await generateSequentialNumber(db, "loss", "lossNumber", "LOSS-", 4)
 
   try {
-    const loss = await db.loss.create({
-      data: {
-        lossNumber,
-        date: new Date(),
-        materialSku: body.materialSku,
-        qtyLostPacks: qtyLost,
-        reason: body.reason,
-        discoveredBy: body.discoveredBy ?? "Maria",
-        costImpact,
-        notes: body.notes ?? null,
-      },
+    // Class 1 fix: wrap loss creation + stock deduction in $transaction.
+    // Class 2 fix: atomic decrement instead of read-then-write.
+    const loss = await db.$transaction(async (tx) => {
+      const created = await tx.loss.create({
+        data: {
+          lossNumber,
+          date: new Date(),
+          materialSku: body.materialSku,
+          qtyLostPacks: qtyLost,
+          reason: body.reason,
+          discoveredBy: body.discoveredBy ?? "Maria",
+          costImpact,
+          notes: body.notes ?? null,
+        },
+      })
+
+      // Atomic stock decrement
+      await tx.material.update({
+        where: { sku: body.materialSku },
+        data: { currentStockPacks: { decrement: qtyLost } },
+      })
+
+      // StockMovement audit trail (best-effort)
+      try {
+        await tx.stockMovement.create({
+          data: {
+            date: new Date(),
+            materialSku: body.materialSku,
+            packs: -qtyLost,
+            reason: "loss",
+            reference: lossNumber,
+            notes: body.notes ?? `Loss: ${body.reason}`,
+          },
+        })
+      } catch {
+        // StockMovement table might not exist — silently skip
+      }
+
+      return created
     })
 
-    // v1.9: Deduct from material stock
-    const currentStock = material.currentStockPacks ?? 0
-    const newStock = Math.max(0, currentStock - qtyLost)
-
-    await db.material.update({
-      where: { sku: body.materialSku },
-      data: { currentStockPacks: newStock },
-    })
-
-    await db.stockMovement.create({
-      data: {
-        date: new Date(),
-        materialSku: body.materialSku,
-        packs: -qtyLost,
-        reason: "loss",
-        reference: lossNumber,
-        notes: body.notes ?? `Loss: ${body.reason}`,
-      },
-    }).catch(() => {
-      // StockMovement table might not exist — silently skip
-    })
-
-    return NextResponse.json({ loss, stockAfter: newStock }, { status: 201 })
+    return NextResponse.json({ loss, stockAfter: (material.currentStockPacks ?? 0) - qtyLost }, { status: 201 })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     return NextResponse.json({ error: msg }, { status: 500 })

@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { logChange } from "@/lib/audit"
 import { generateSequentialNumber } from "@/lib/sequential-number"
 
 export const dynamic = "force-dynamic"
@@ -31,63 +30,80 @@ export async function POST(request: Request) {
   const paymentNumber = await generateSequentialNumber(db, "payment", "paymentNumber", "PAY-", 4)
 
   try {
-    const payment = await db.payment.create({
-      data: {
-        paymentNumber,
-        date: new Date(),
-        direction: body.direction,
-        type: body.type,
-        linkedId: body.linkedId ?? null,
-        linkedName: body.linkedName ?? null,
-        amount: Number(body.amount),
-        method: body.method ?? null,
-        reference: body.reference ?? null,
-        status: "confirmed",
-        recordedBy: "Maria",
-        notes: body.notes ?? null,
-      },
-    })
-
-    // v1.9: Auto-update order status if this is an incoming payment linked to an Order
-    if (body.direction === "in" && body.linkedId) {
-      const order = await db.order.findUnique({
-        where: { id: body.linkedId },
-        select: { id: true, status: true, paymentStatus: true, paymentConfirmedAt: true },
+    // Class 1 fix: wrap payment creation + order status update + audit log
+    // in $transaction. If the order update fails, the payment is rolled back
+    // too — no orphaned payment with no order status change.
+    const payment = await db.$transaction(async (tx) => {
+      const created = await tx.payment.create({
+        data: {
+          paymentNumber,
+          date: new Date(),
+          direction: body.direction,
+          type: body.type,
+          linkedId: body.linkedId ?? null,
+          linkedName: body.linkedName ?? null,
+          amount: Number(body.amount),
+          method: body.method ?? null,
+          reference: body.reference ?? null,
+          status: "confirmed",
+          recordedBy: "Maria",
+          notes: body.notes ?? null,
+        },
       })
 
-      if (order && order.status !== "fulfilled" && order.status !== "delivered" && order.status !== "cancelled") {
-        const updateData: Record<string, unknown> = {
-          paymentStatus: "confirmed",
-          paymentConfirmedAt: new Date(),
-          paymentAmount: Number(body.amount),
+      // Auto-update order status if this is an incoming payment linked to an Order
+      if (body.direction === "in" && body.linkedId) {
+        const order = await tx.order.findUnique({
+          where: { id: body.linkedId },
+          select: { id: true, status: true, paymentStatus: true, paymentConfirmedAt: true },
+        })
+
+        if (order && order.status !== "fulfilled" && order.status !== "delivered" && order.status !== "cancelled") {
+          const updateData: Record<string, unknown> = {
+            paymentStatus: "confirmed",
+            paymentConfirmedAt: new Date(),
+            paymentAmount: Number(body.amount),
+          }
+          if (body.method) updateData.paymentMethod = body.method
+          if (body.reference) updateData.paymentReference = body.reference
+
+          // Only update status if it's not already past payment_confirmed
+          if (!["procuring", "producing", "delivered", "fulfilled"].includes(order.status)) {
+            updateData.status = "payment_confirmed"
+          }
+
+          await tx.order.update({
+            where: { id: order.id },
+            data: updateData,
+          })
+
+          // Audit trail (using tx — stays in transaction)
+          try {
+            await tx.auditLog.create({
+              data: {
+                entityType: "Order", entityId: order.id,
+                action: "status_change", fieldName: "status",
+                oldValue: order.status,
+                newValue: String(updateData.status ?? order.status),
+                changedBy: "Maria",
+              },
+            })
+            await tx.auditLog.create({
+              data: {
+                entityType: "Payment", entityId: created.id,
+                action: "create", fieldName: "amount",
+                newValue: String(created.amount),
+                changedBy: "Maria",
+              },
+            })
+          } catch {
+            // AuditLog table might not exist — silently skip
+          }
         }
-        if (body.method) updateData.paymentMethod = body.method
-        if (body.reference) updateData.paymentReference = body.reference
-
-        // Only update status if it's not already past payment_confirmed
-        if (!["procuring", "producing", "delivered", "fulfilled"].includes(order.status)) {
-          updateData.status = "payment_confirmed"
-        }
-
-        await db.order.update({
-          where: { id: order.id },
-          data: updateData,
-        })
-
-        // Audit trail
-        await logChange({
-          entityType: "Order", entityId: order.id,
-          action: "status_change", fieldName: "status",
-          oldValue: order.status,
-          newValue: String(updateData.status ?? order.status),
-        })
-        await logChange({
-          entityType: "Payment", entityId: payment.id,
-          action: "create", fieldName: "amount",
-          newValue: String(payment.amount),
-        })
       }
-    }
+
+      return created
+    })
 
     return NextResponse.json({ payment }, { status: 201 })
   } catch (e) {

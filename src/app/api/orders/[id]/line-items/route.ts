@@ -65,39 +65,46 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   // Strategy: delete all existing line items, then create new ones.
   // This is simpler than tracking updates vs creates vs deletes individually.
   // SQLite handles this fine at our scale.
+  //
+  // Class 1 fix: wrapped in $transaction so that if createMany fails after
+  // deleteMany, the delete is rolled back. Without this, a failed createMany
+  // would leave the order with ZERO line items — pure data loss.
   try {
-    await db.orderLineItem.deleteMany({ where: { orderId: id } })
+    const updated = await db.$transaction(async (tx) => {
+      await tx.orderLineItem.deleteMany({ where: { orderId: id } })
 
-    const itemsToCreate = body.lineItems
-      .filter((li): li is { id?: string; productSku?: string; qty: number } =>
-        typeof li.qty === "number" && li.qty > 0
-      )
-      .map((li) => {
-        // For existing items being updated, find the original (to preserve productSku + unitPrice snapshot)
-        const existing = li.id ? order.lineItems.find((x) => x.id === li.id) : null
-        const product = li.productSku ? productBySku.get(li.productSku) : null
-        const productSku = existing?.productSku ?? li.productSku ?? ""
-        const productName = existing?.productName ?? product?.name ?? ""
-        const productSize = existing?.productSize ?? product?.size ?? null
-        const unitPrice = existing?.unitPrice ?? product?.actualPriceBeforeIva ?? 0
-        return {
-          orderId: id,
-          productSku,
-          productName,
-          productSize,
-          qty: li.qty,
-          unitPrice,
-        }
+      const itemsToCreate = body.lineItems!
+        .filter((li): li is { id?: string; productSku?: string; qty: number } =>
+          typeof li.qty === "number" && li.qty > 0
+        )
+        .map((li) => {
+          // For existing items being updated, find the original (to preserve productSku + unitPrice snapshot)
+          const existing = li.id ? order.lineItems.find((x) => x.id === li.id) : null
+          const product = li.productSku ? productBySku.get(li.productSku) : null
+          const productSku = existing?.productSku ?? li.productSku ?? ""
+          const productName = existing?.productName ?? product?.name ?? ""
+          const productSize = existing?.productSize ?? product?.size ?? null
+          const unitPrice = existing?.unitPrice ?? product?.actualPriceBeforeIva ?? 0
+          return {
+            orderId: id,
+            productSku,
+            productName,
+            productSize,
+            qty: li.qty,
+            unitPrice,
+          }
+        })
+
+      if (itemsToCreate.length > 0) {
+        await tx.orderLineItem.createMany({ data: itemsToCreate })
+      }
+
+      return tx.order.findUnique({
+        where: { id },
+        include: { customer: true, lineItems: true },
       })
-
-    if (itemsToCreate.length > 0) {
-      await db.orderLineItem.createMany({ data: itemsToCreate })
-    }
-
-    const updated = await db.order.findUnique({
-      where: { id },
-      include: { customer: true, lineItems: true },
     })
+
     // Serialize the same way as the main orders endpoint — compute lineTotal
     // (the raw Prisma object doesn't have lineTotal, which crashes the UI)
     const serialized = updated ? {

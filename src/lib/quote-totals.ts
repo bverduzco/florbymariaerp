@@ -52,39 +52,10 @@ export type QuoteTotals = {
 }
 
 /**
- * Compute (but don't persist) the correct totals for a Quote given its
- * lines + discount + deliveryFee + stored paymentRule.
- *
- * Pure function — no DB writes. Useful for previews (e.g. the New Quote
- * dialog's live deposit preview could use this in the future).
- *
- * Returns null if the quote doesn't exist or has no lines.
+ * Recompute totals for a quote and persist them back to the Quote row.
+ * (See below for the full implementation — accepts an optional `tx`
+ * parameter for use inside transactions.)
  */
-export async function computeQuoteTotals(quoteId: string): Promise<QuoteTotals | null> {
-  const quote = await db.quote.findUnique({
-    where: { id: quoteId },
-    select: {
-      discount: true,
-      discountType: true,
-      deliveryFee: true,
-      paymentRule: true,
-      lines: {
-        select: { lineTotal: true },
-        orderBy: { lineNumber: "asc" },
-      },
-    },
-  })
-
-  if (!quote) return null
-
-  return computeTotalsFromData({
-    lineTotals: quote.lines.map((l) => l.lineTotal),
-    discount: quote.discount,
-    discountType: quote.discountType,
-    deliveryFee: quote.deliveryFee,
-    paymentRule: quote.paymentRule,
-  })
-}
 
 /**
  * Compute totals from raw data — used by POST /api/quotes (which doesn't
@@ -158,13 +129,22 @@ export function computeTotalsFromData(params: {
  *   - DELETE /api/quote-lines/[id] (after removing a line)
  *   - PATCH /api/quotes/[id] (after changing discount or deliveryFee)
  *
+ * @param quoteId  The quote to recompute.
+ * @param tx       Optional Prisma transaction client. When provided, the
+ *                 read + write happen inside the caller's transaction.
+ *                 When omitted, uses the global `db` (no transaction).
  * @returns the computed totals, or null if the quote doesn't exist.
  */
-export async function recomputeQuoteTotals(quoteId: string): Promise<QuoteTotals | null> {
-  const totals = await computeQuoteTotals(quoteId)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function recomputeQuoteTotals(
+  quoteId: string,
+  tx?: any,
+): Promise<QuoteTotals | null> {
+  const client = tx ?? db
+  const totals = await computeQuoteTotals(quoteId, client)
   if (!totals) return null
 
-  await db.quote.update({
+  await client.quote.update({
     where: { id: quoteId },
     data: {
       subtotal: totals.subtotal,
@@ -175,6 +155,43 @@ export async function recomputeQuoteTotals(quoteId: string): Promise<QuoteTotals
   })
 
   return totals
+}
+
+/**
+ * Compute (but don't persist) the correct totals for a Quote given its
+ * lines + discount + deliveryFee + stored paymentRule.
+ *
+ * @param quoteId  The quote to compute totals for.
+ * @param client   Optional Prisma client (for use inside transactions).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function computeQuoteTotals(
+  quoteId: string,
+  client: any = db,
+): Promise<QuoteTotals | null> {
+  const quote = await client.quote.findUnique({
+    where: { id: quoteId },
+    select: {
+      discount: true,
+      discountType: true,
+      deliveryFee: true,
+      paymentRule: true,
+      lines: {
+        select: { lineTotal: true },
+        orderBy: { lineNumber: "asc" },
+      },
+    },
+  })
+
+  if (!quote) return null
+
+  return computeTotalsFromData({
+    lineTotals: quote.lines.map((l: { lineTotal: number }) => l.lineTotal),
+    discount: quote.discount,
+    discountType: quote.discountType,
+    deliveryFee: quote.deliveryFee,
+    paymentRule: quote.paymentRule,
+  })
 }
 
 /**
