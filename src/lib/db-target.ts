@@ -16,7 +16,7 @@
 // is implemented, this module will be extended to read the active target
 // from a request-scoped AsyncLocalStorage instead of just the env var.
 
-export type DbTarget = "prod" | "demo" | "local" | "unknown"
+export type DbTarget = "prod" | "demo" | "sandbox" | "local" | "unknown"
 
 export type DbTargetInfo = {
   target: DbTarget
@@ -84,10 +84,12 @@ export function getDbTarget(): DbTargetInfo {
 
   if (url.startsWith("libsql://") || url.startsWith("https://") || url.startsWith("http://")) {
     const hostname = parseHostname(url)
-    // Detect prod vs demo by hostname pattern.
-    // Common forms: florbymaria-prod-<org>.turso.io, florbymaria-demo-<org>.turso.io
+    // Detect prod vs demo vs sandbox by hostname pattern.
+    // Common forms: florbymaria-prod-<org>.turso.io, florbymaria-demo-<org>.turso.io,
+    // florbymaria-sandbox-<org>.turso.io
     const isProd = hostname.includes("florbymaria-prod") || hostname.includes("-prod")
     const isDemo = hostname.includes("florbymaria-demo") || hostname.includes("-demo")
+    const isSandbox = hostname.includes("florbymaria-sandbox") || hostname.includes("-sandbox")
 
     if (isProd) {
       return {
@@ -115,7 +117,20 @@ export function getDbTarget(): DbTargetInfo {
       }
     }
 
-    // Turso URL but doesn't match prod/demo pattern
+    if (isSandbox) {
+      return {
+        target: "sandbox",
+        label: "SANDBOX",
+        description: "Sandbox Turso (testing)",
+        color: "#7C3AED", // violet — distinct from prod (rose) and demo (amber)
+        textColor: "#ffffff",
+        hostname,
+        isTurso: true,
+        isReadOnly: false,
+      }
+    }
+
+    // Turso URL but doesn't match prod/demo/sandbox pattern
     return {
       target: "unknown",
       label: "TURSO",
