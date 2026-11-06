@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { recomputeQuoteTotals } from "@/lib/quote-totals"
 
 export const dynamic = "force-dynamic"
 
@@ -11,7 +12,12 @@ interface RouteParams {
  * PATCH /api/quote-lines/[id]
  * Body: { description?, qty?, unitPrice? }
  * Updates a quote line. Recomputes lineTotal = qty × unitPrice.
- * Also recomputes the quote's subtotal/iva/total/deposit after the update.
+ * Also recomputes the quote's totals after the update.
+ *
+ * v1.9.1 (Class 3 fix): the recompute now correctly handles
+ * discount + deliveryFee + IVA-on-discounted-subtotal via the shared
+ * recomputeQuoteTotals() helper. Previously used `total = subtotal + iva`
+ * which ignored both, causing wrong totals.
  */
 export async function PATCH(request: Request, { params }: RouteParams) {
   const { id } = await params
@@ -46,40 +52,12 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   try {
     const line = await db.quoteLine.update({ where: { id }, data })
 
-    // Recompute quote totals
-    const allLines = await db.quoteLine.findMany({
-      where: { quoteId: existing.quoteId },
-      select: { lineTotal: true },
-    })
-    const newSubtotal = allLines.reduce((s, l) => s + l.lineTotal, 0)
-    const newIva = newSubtotal * 0.16
-    const newTotal = newSubtotal + newIva
-    const rule = await db.quote.findUnique({
-      where: { id: existing.quoteId },
-      select: { paymentRule: true },
-    })
-    // Use stored paymentRule's depositPct (or 50% default)
-    const depositPct = 0.5 // simplified — lookupPaymentRule could be used
-    const newDeposit = newTotal * depositPct
-
-    await db.quote.update({
-      where: { id: existing.quoteId },
-      data: {
-        subtotal: newSubtotal,
-        iva: newIva,
-        total: newTotal,
-        depositRequired: newDeposit,
-      },
-    })
+    // Class 3 fix: recompute the quote's totals via shared helper
+    const totals = await recomputeQuoteTotals(existing.quoteId)
 
     return NextResponse.json({
       quoteLine: line,
-      quoteTotals: {
-        subtotal: newSubtotal,
-        iva: newIva,
-        total: newTotal,
-        depositRequired: newDeposit,
-      },
+      quoteTotals: totals,
     })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
@@ -90,6 +68,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 /**
  * DELETE /api/quote-lines/[id]
  * Removes a quote line. Recomputes the quote's totals after removal.
+ *
+ * v1.9.1 (Class 3 fix): same as PATCH — recompute uses the shared helper.
  */
 export async function DELETE(_request: Request, { params }: RouteParams) {
   const { id } = await params
@@ -102,35 +82,12 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   try {
     await db.quoteLine.delete({ where: { id } })
 
-    // Recompute quote totals
-    const allLines = await db.quoteLine.findMany({
-      where: { quoteId: existing.quoteId },
-      select: { lineTotal: true },
-    })
-    const newSubtotal = allLines.reduce((s, l) => s + l.lineTotal, 0)
-    const newIva = newSubtotal * 0.16
-    const newTotal = newSubtotal + newIva
-    const newDeposit = newTotal * 0.5 // simplified
-
-    await db.quote.update({
-      where: { id: existing.quoteId },
-      data: {
-        subtotal: newSubtotal,
-        iva: newIva,
-        total: newTotal,
-        depositRequired: newDeposit,
-      },
-    })
+    // Class 3 fix: recompute via shared helper
+    const totals = await recomputeQuoteTotals(existing.quoteId)
 
     return NextResponse.json({
       deleted: id,
-      quoteTotals: {
-        subtotal: newSubtotal,
-        iva: newIva,
-        total: newTotal,
-        depositRequired: newDeposit,
-        lineCount: allLines.length,
-      },
+      quoteTotals: totals,
     })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)

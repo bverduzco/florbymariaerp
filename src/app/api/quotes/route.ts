@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { computePaymentRule } from "@/lib/payment-rules"
 import { generateSequentialNumber } from "@/lib/sequential-number"
+import { computeTotalsFromData } from "@/lib/quote-totals"
 
 export const dynamic = "force-dynamic"
 
@@ -55,9 +56,11 @@ export async function POST(request: Request) {
     )
   }
 
-  // ── Compute totals ────────────────────────────────────────
-  // Priority: lineItems > explicit subtotal > 0
-  let subtotal: number
+  // ── Compute line items (if any) ────────────────────────────
+  // We collect line items into linesData[] but DON'T compute subtotal/iva/total here —
+  // that's now done by computeTotalsFromData() further down. The old inline math
+  // was wrong (it ignored discount + deliveryFee), so it's been centralized in
+  // src/lib/quote-totals.ts.
   let linesData: Array<{
     productSku: string | null
     productId: string | null
@@ -94,19 +97,24 @@ export async function POST(request: Request) {
           lineTotal: qty * unitPrice,
         }
       })
-    subtotal = linesData.reduce((s, l) => s + l.lineTotal, 0)
   } else if (body.subtotal !== undefined && body.subtotal !== null && !Number.isNaN(Number(body.subtotal))) {
-    // Legacy path — caller supplied a subtotal directly.
-    // Note: this stores subtotal=X on the Quote row without creating QuoteLine
-    // rows to back it. All v1.9 UI callers send lineItems[], so this path is
-    // only reachable by external API consumers using the old shape.
-    subtotal = Number(body.subtotal)
-  } else {
-    subtotal = 0
+    // Legacy path — caller supplied a subtotal directly without line items.
+    // Synthesize a single pseudo-line so computeTotalsFromData has something
+    // to sum. The line won't be persisted (no QuoteLine row created) — the
+    // subtotal just gets stored on the Quote row directly.
+    //
+    // All v1.9 UI callers send lineItems[], so this path is only reachable
+    // by external API consumers using the old shape.
+    const legacySubtotal = Number(body.subtotal)
+    linesData = [{
+      productSku: null,
+      productId: null,
+      description: "(legacy subtotal)",
+      qty: 1,
+      unitPrice: legacySubtotal,
+      lineTotal: legacySubtotal,
+    }]
   }
-
-  const iva = subtotal * 0.16
-  const total = subtotal + iva
 
   // ── Compute payment rule + deposit ────────────────────────
   // quoteMode defaults to "event" when not provided (preserves old behavior —
@@ -149,7 +157,25 @@ export async function POST(request: Request) {
     }
   }
 
-  const depositRequired = total * paymentRule.depositPct
+  // ── Compute totals (Class 3 fix — previously ignored discount + delivery) ──
+  // Use the shared helper to ensure the math is correct:
+  //   total = discountedSubtotal + IVA + deliveryFee
+  //
+  // The previous inline code did `total = subtotal + iva` which ignored both
+  // discount and delivery, causing customers to see wrong totals on the PDF
+  // + WhatsApp message. For a $1000 quote with $200 discount + $100 delivery,
+  // the old code reported $1160 total (should be $1028).
+  //
+  // For new quotes: discount defaults to 0, deliveryFee defaults to the
+  // schema default of $100. Caller can override either via body fields.
+  const totals = computeTotalsFromData({
+    lineTotals: linesData.map((l) => l.lineTotal),
+    discount: body.discount ? Number(body.discount) : 0,
+    discountType: body.discountType ?? "flat",
+    deliveryFee: body.deliveryFee ? Number(body.deliveryFee) : 100,
+    paymentRule: paymentRule.rule,
+  })
+  const { subtotal, iva, total, depositRequired } = totals
 
   // ── Generate next quote number ────────────────────────────
   // Find the MAX existing QTE-NNNN and increment it. This avoids

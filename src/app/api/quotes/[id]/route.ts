@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { recomputeQuoteTotals } from "@/lib/quote-totals"
 
 export const dynamic = "force-dynamic"
 
@@ -37,12 +38,13 @@ export async function PATCH(
       body.orderId === undefined &&
       body.linkedOrderId === undefined &&
       body.discount === undefined &&
-      body.discountType === undefined)
+      body.discountType === undefined &&
+      body.deliveryFee === undefined)
   ) {
     return NextResponse.json(
       {
         error:
-          "Nothing to update — provide status, lostReason, orderId, linkedOrderId, discount, or discountType",
+          "Nothing to update — provide status, lostReason, orderId, linkedOrderId, discount, discountType, or deliveryFee",
       },
       { status: 400 }
     )
@@ -54,6 +56,7 @@ export async function PATCH(
     if (body.lostReason !== undefined) data.lostReason = body.lostReason ?? null
     if (body.discount !== undefined) data.discount = Number(body.discount) || 0
     if (body.discountType !== undefined) data.discountType = body.discountType
+    if (body.deliveryFee !== undefined) data.deliveryFee = Number(body.deliveryFee) || 0
 
     // ── Resolve the linked order ────────────────────────────────
     // Priority: orderId > linkedOrderId (legacy)
@@ -109,7 +112,21 @@ export async function PATCH(
       where: { id },
       data,
     })
-    return NextResponse.json({ quote })
+
+    // Class 5 fix: if discount or discountType or deliveryFee changed, recompute
+    // the quote's totals. Previously the server stored the new discount value
+    // but left subtotal/iva/total/depositRequired stale — the quote detail page
+    // would show the OLD total below the NEW discount line.
+    const needsRecompute =
+      body.discount !== undefined ||
+      body.discountType !== undefined ||
+      body.deliveryFee !== undefined
+    const totals = needsRecompute ? await recomputeQuoteTotals(id) : null
+
+    return NextResponse.json({
+      quote: totals ? { ...quote, subtotal: totals.subtotal, iva: totals.iva, total: totals.total, depositRequired: totals.depositRequired } : quote,
+      quoteTotals: totals,
+    })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     return NextResponse.json({ error: msg }, { status: 500 })

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { lookupPaymentRule } from "@/lib/payment-rules"
+import { recomputeQuoteTotals, nextLineNumberForQuote } from "@/lib/quote-totals"
 
 export const dynamic = "force-dynamic"
 
@@ -10,12 +10,13 @@ export const dynamic = "force-dynamic"
  * Creates a new quote line. Auto-computes lineTotal = qty × unitPrice.
  * Auto-increments lineNumber within the quote.
  *
- * v1.9: When recomputing the quote's totals after adding a line, the deposit
- * is recomputed using the stored `Quote.paymentRule` (looked up via
- * lookupPaymentRule). This preserves the rule that was applied at creation —
- * editing lines doesn't silently change the deposit % on an already-sent quote.
- *
- * For legacy quotes with `paymentRule=null`, falls back to 50%.
+ * v1.9.1 (Class 3 + 4 fix):
+ *   - lineNumber now uses MAX(lineNumber) + 1 instead of count + 1
+ *     (avoids duplicate line numbers after a line is deleted)
+ *   - Quote totals recomputed via recomputeQuoteTotals(), which correctly
+ *     accounts for discount + deliveryFee + IVA-on-discounted-subtotal
+ *     (the old inline math did `total = subtotal + iva` which ignored
+ *     both, causing customers to see wrong totals on the PDF)
  */
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null)
@@ -33,9 +34,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Quote not found" }, { status: 404 })
     }
 
-    // Get next line number for this quote
-    const existingLines = await db.quoteLine.count({ where: { quoteId: body.quoteId } })
-    const lineNumber = existingLines + 1
+    // Class 4 fix: lineNumber = MAX(existing lineNumber) + 1
+    // (previously: count + 1, which produced duplicates after a line was deleted)
+    const lineNumber = await nextLineNumberForQuote(body.quoteId)
 
     const qty = Number(body.qty) || 1
     const unitPrice = Number(body.unitPrice)
@@ -55,41 +56,23 @@ export async function POST(request: Request) {
       },
     })
 
-    // Update the quote's subtotal + totals
-    const allLines = await db.quoteLine.findMany({
-      where: { quoteId: body.quoteId },
-      select: { lineTotal: true },
-    })
-    const newSubtotal = allLines.reduce((s, l) => s + l.lineTotal, 0)
-    const newIva = newSubtotal * 0.16
-    const newTotal = newSubtotal + newIva
-
-    // v1.9: Recompute deposit using the stored payment rule (preserves the rule
-    // applied at creation — editing lines doesn't change the deposit %).
-    const { depositPct } = lookupPaymentRule(quote.paymentRule)
-    const newDeposit = newTotal * depositPct
-
-    await db.quote.update({
-      where: { id: body.quoteId },
-      data: {
-        subtotal: newSubtotal,
-        iva: newIva,
-        total: newTotal,
-        depositRequired: newDeposit,
-      },
-    })
+    // Class 3 fix: recompute the quote's totals using the shared helper
+    // (correctly handles discount + deliveryFee + IVA-on-discounted-subtotal)
+    const totals = await recomputeQuoteTotals(body.quoteId)
 
     return NextResponse.json(
       {
         quoteLine,
-        quoteTotals: {
-          subtotal: newSubtotal,
-          iva: newIva,
-          total: newTotal,
-          depositRequired: newDeposit,
-          paymentRule: quote.paymentRule,
-          depositPct,
-        },
+        quoteTotals: totals
+          ? {
+              subtotal: totals.subtotal,
+              iva: totals.iva,
+              total: totals.total,
+              depositRequired: totals.depositRequired,
+              paymentRule: quote.paymentRule,
+              depositPct: totals.depositPct,
+            }
+          : null,
       },
       { status: 201 }
     )
