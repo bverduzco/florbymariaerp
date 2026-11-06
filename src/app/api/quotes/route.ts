@@ -236,6 +236,11 @@ export async function POST(request: Request) {
         iva,
         total,
         depositRequired,
+        // v1.9.1: persist discount + deliveryFee so they survive a re-fetch
+        // (previously only used for the initial totals calculation, never stored)
+        discount: body.discount ? Number(body.discount) : 0,
+        discountType: body.discountType ?? "flat",
+        deliveryFee: body.deliveryFee ? Number(body.deliveryFee) : 100,
         paymentRule: paymentRule.rule, // v1.9: store the rule applied
         leadSource: body.leadSource ?? null,
         leadSourceDetail: body.leadSourceDetail ?? null,

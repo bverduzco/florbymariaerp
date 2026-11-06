@@ -27,7 +27,28 @@
 //   - Deletes a line via DELETE /api/quote-lines/[id], verifies totals recompute
 //   - Cleans up the test quote afterward
 
-const API_BASE = "http://127.0.0.1:3000"
+const API_BASE = "https://florbymaria.vercel.app"
+
+// Read the auth cookie from /tmp/cookies.txt (written by the curl login above)
+import { readFileSync } from "node:fs"
+function getAuthCookie(): string {
+  try {
+    const txt = readFileSync("/tmp/cookies.txt", "utf-8")
+    const m = txt.match(/fmd_auth\s+(\S+)/)
+    return m ? `fmd_auth=${m[1]}` : ""
+  } catch { return "" }
+}
+const AUTH_COOKIE = getAuthCookie()
+
+async function apiFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  return fetch(`${API_BASE}${path}`, {
+    ...init,
+    headers: {
+      ...(init.headers || {}),
+      Cookie: AUTH_COOKIE,
+    },
+  })
+}
 const TEST_CUSTOMER_NAME = `SMOKE TEST ${new Date().toISOString().slice(0, 16)}`
 
 async function main() {
@@ -37,7 +58,7 @@ async function main() {
 
   // 1. Create the quote with 2 lines + discount + delivery
   console.log("Step 1: Create quote with 2 lines, $200 flat discount, $100 delivery")
-  const createRes = await fetch(`${API_BASE}/api/quotes`, {
+  const createRes = await apiFetch(`${API_BASE}/api/quotes`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -75,7 +96,7 @@ async function main() {
 
   // 2. Add a 3rd line via POST /api/quote-lines
   console.log("Step 2: Add 3rd line ($300 = 1 × $300)")
-  const addLineRes = await fetch(`${API_BASE}/api/quote-lines`, {
+  const addLineRes = await apiFetch(`${API_BASE}/api/quote-lines`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -101,7 +122,7 @@ async function main() {
 
   // 3. Change discount via PATCH /api/quotes/[id]
   console.log("Step 3: Change discount to 10% (percentage)")
-  const patchRes = await fetch(`${API_BASE}/api/quotes/${quoteId}`, {
+  const patchRes = await apiFetch(`${API_BASE}/api/quotes/${quoteId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -129,7 +150,7 @@ async function main() {
   // 4. Delete the 3rd line, verify totals recompute
   console.log("Step 4: Delete the 3rd line")
   const lineIdToDelete = added.quoteLine.id
-  const delRes = await fetch(`${API_BASE}/api/quote-lines/${lineIdToDelete}`, {
+  const delRes = await apiFetch(`${API_BASE}/api/quote-lines/${lineIdToDelete}`, {
     method: "DELETE",
   })
   if (!delRes.ok) throw new Error(`DELETE failed: ${delRes.status}`)
@@ -151,7 +172,7 @@ async function main() {
 
   // 5. Cleanup — delete the test quote
   console.log("Step 5: Cleanup — delete the test quote")
-  const cleanupRes = await fetch(`${API_BASE}/api/quotes/${quoteId}`, {
+  const cleanupRes = await apiFetch(`${API_BASE}/api/quotes/${quoteId}`, {
     method: "DELETE",
   })
   if (!cleanupRes.ok) console.log(`  (cleanup warning: ${cleanupRes.status})`)
