@@ -65,6 +65,7 @@ model Material {
   stockMovements     StockMovement[]
   losses             Loss[]
   adHocPurchases     AdHocPurchase[]
+  missingPurchaseLogs MissingPurchaseLog[]
   materialAvailabilities MaterialAvailability[]
   substitutionsAsPrimary   MaterialSubstitution[] @relation("PrimaryMaterial")
   substitutionsAsSubstitute MaterialSubstitution[] @relation("SubstituteMaterial")
@@ -642,6 +643,7 @@ model ExecutionLog {
   notes           String?
   sourceRowKey    String?  @unique
   lines           ExecutionLogLine[]
+  loans           LoanRecord[]
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -663,6 +665,7 @@ model ExecutionLogLine {
   unitCost        Float    // snapshot at execution time
   lineCost        Float    // qtyUsed × unitCost
   type            String   // recipe | addition | substitution | removal
+  source          String   @default("inventory") // inventory | donation | loan
   originalMaterialSku String?  // when type=substitution, the SKU being replaced
   originalQty     Float?   // when type=substitution or removal, the qty in recipe
   notes           String?
@@ -923,5 +926,62 @@ model AuditLog {
 
   @@index([entityType, entityId])
   @@index([changedAt])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// v1.9.2: INVENTORY RECONCILIATION
+// ────────────────────────────────────────────────────────────────────────────
+
+// Created when a loss or execution tries to deduct more stock than available.
+// The discrepancy (requested - available) is flagged here so Maria can
+// resolve it: either by logging the missing purchase (ad-hoc purchase with
+// real price + supplier) or marking it as a donation.
+model MissingPurchaseLog {
+  id              String   @id @default(cuid())
+  materialSku     String
+  material        Material @relation(fields: [materialSku], references: [sku], onDelete: Cascade)
+  materialName    String   // denormalized for display
+  qtyShort        Float    // how many packs were short (requested - available)
+  estCost         Float    // qtyShort × packPrice (estimated)
+  triggerType     String   // "loss" | "execution"
+  triggerRef      String?  // LOSS-0001 or EXE-0001 — the record that found the gap
+  triggerLineId   String?  // ExecutionLogLine ID (for execution triggers)
+  resolutionType   String?  // null = pending | "purchase" | "donation" | "ignored"
+  resolvedAt      DateTime?
+  resolvedByPo    String?  // ADHOC-0001 — the ad-hoc purchase that resolved it
+  resolvedNotes   String?  // auto-filled when resolved (e.g. "Resolving discrepancy for LOSS-0003")
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  @@index([materialSku])
+  @@index([resolutionType])
+  @@index([createdAt])
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// v1.9.2: LOANS — borrowed items (vases, bases, equipment) that aren't Maria's
+// ────────────────────────────────────────────────────────────────────────────
+
+// Tracks non-perishable items borrowed from other florists or venues.
+// These items are NOT in Maria's inventory — they don't affect stock counts
+// or cost calculations. But they should be logged in execution (recipe accuracy)
+// and tracked for return.
+model LoanRecord {
+  id              String   @id @default(cuid())
+  itemName        String   // "Large glass vase" (free-text, may not have a SKU)
+  description     String?  // additional details (size, color, etc.)
+  owner           String   // who Maria borrowed from ("Florería González")
+  qty             Float    @default(1) // how many (e.g. 3 vases)
+  dateBorrowed    DateTime @default(now())
+  datePromised    DateTime? // when Maria promised to return it
+  dateReturned    DateTime? // null = still on loan
+  executionId     String?  // which execution used it (nullable)
+  execution       ExecutionLog? @relation(fields: [executionId], references: [id], onDelete: SetNull)
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([dateReturned]) // filter: WHERE dateReturned IS NULL = active loans
+  @@index([owner])
 }
 

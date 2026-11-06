@@ -19,33 +19,38 @@ async function getDashboardData() {
     prisma.executionLog.findMany({ select: { actualCost: true, executedAt: true } }),
   ])
 
-  const monthStart = new Date("2026-10-01")
-  const monthEnd = new Date("2026-10-31")
+  // Current month range (dynamic — Class B fix)
+  // Previously hardcoded to October 2026, which meant the dashboard showed
+  // stale data for every other month.
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1) // first day of next month (exclusive upper bound)
+  const monthLabel = now.toLocaleDateString("es-MX", { month: "short" })
 
   const inThisMonth = payments
-    .filter((p) => p.direction === "inbound" && p.date >= monthStart && p.date <= monthEnd)
+    .filter((p) => p.direction === "inbound" && p.date >= monthStart && p.date < monthEnd)
     .reduce((sum, p) => sum + p.amount, 0)
   const outThisMonth = payments
-    .filter((p) => p.direction === "outbound" && p.date >= monthStart && p.date <= monthEnd)
+    .filter((p) => p.direction === "outbound" && p.date >= monthStart && p.date < monthEnd)
     .reduce((sum, p) => sum + p.amount, 0)
 
   // Money Out breakdown — matching wireframe
   const formalPOs = purchaseOrders
-    .filter((p) => p.createdAt >= monthStart && p.createdAt <= monthEnd)
+    .filter((p) => p.createdAt >= monthStart && p.createdAt < monthEnd)
   const formalPOsTotal = formalPOs.reduce((s, p) => s + p.totalCost, 0)
 
   const adHocThisMonth = adHocPurchases
-    .filter((a) => a.date >= monthStart && a.date <= monthEnd)
+    .filter((a) => a.date >= monthStart && a.date < monthEnd)
   const adHocTotal = adHocThisMonth.reduce((s, a) => s + a.total, 0)
 
   const expensesThisMonth = expenses
-    .filter((e) => e.date >= monthStart && e.date <= monthEnd)
+    .filter((e) => e.date >= monthStart && e.date < monthEnd)
   const expensesTotal = expensesThisMonth.reduce((s, e) => s + e.amount, 0)
 
   const totalMoneyOut = formalPOsTotal + adHocTotal + expensesTotal
 
   // Losses this month
-  const lossesThisMonth = losses.filter((l) => l.date >= monthStart && l.date <= monthEnd)
+  const lossesThisMonth = losses.filter((l) => l.date >= monthStart && l.date < monthEnd)
   const lossesTotal = lossesThisMonth.reduce((s, l) => s + (l.costImpact ?? 0), 0)
 
   return {
@@ -58,6 +63,7 @@ async function getDashboardData() {
     expensesTotal, expensesCount: expensesThisMonth.length,
     totalMoneyOut,
     lossesTotal, lossesCount: lossesThisMonth.length,
+    monthLabel,
   }
 }
 
@@ -71,7 +77,7 @@ export default async function DashboardPage() {
           <h1>Dashboard</h1>
           <div className="fmd-subtitle">Live snapshot — pulls from every tab automatically</div>
         </div>
-        <button className="fmd-btn outline">This Month ▾</button>
+        <button className="fmd-btn outline">This Month ({data.monthLabel}) ▾</button>
       </div>
 
       {/* Top KPI stats */}
@@ -92,13 +98,13 @@ export default async function DashboardPage() {
           <div className="fmd-stat-value" style={{ color: "#047857" }}>
             +${data.paymentsIn.toLocaleString("es-MX", { maximumFractionDigits: 0 })}
           </div>
-          <div className="fmd-stat-label">Money in (Oct)</div>
+          <div className="fmd-stat-label">Money in ({data.monthLabel})</div>
         </div>
         <div className="fmd-stat">
           <div className="fmd-stat-value" style={{ color: "#991B1B" }}>
             -${data.totalMoneyOut.toLocaleString("es-MX", { maximumFractionDigits: 0 })}
           </div>
-          <div className="fmd-stat-label">Money out (Oct)</div>
+          <div className="fmd-stat-label">Money out ({data.monthLabel})</div>
         </div>
         <div className="fmd-stat">
           <div className="fmd-stat-value" style={{ color: data.netCashFlow >= 0 ? "#047857" : "#991B1B" }}>

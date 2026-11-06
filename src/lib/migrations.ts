@@ -26,7 +26,7 @@ export type Migration = {
 
 // Update this whenever you add a new `model X { ... }` to prisma/schema.prisma.
 // The Settings page compares it against the live table count to flag drift.
-export const EXPECTED_PRISMA_MODEL_COUNT = 43
+export const EXPECTED_PRISMA_MODEL_COUNT = 45
 
 // All migrations, oldest first. Each is applied once and tracked in the
 // __turso_migrations table.
@@ -105,6 +105,57 @@ export const MIGRATIONS: Migration[] = [
       )`,
       'CREATE INDEX IF NOT EXISTS "AuditLog_entityType_entityId_idx" ON "AuditLog"("entityType", "entityId")',
       'CREATE INDEX IF NOT EXISTS "AuditLog_changedAt_idx" ON "AuditLog"("changedAt")',
+    ],
+  },
+  {
+    name: "20261106_add_reconciliation_and_loans",
+    description:
+      "Adds MissingPurchaseLog (inventory discrepancy tracking), LoanRecord (borrowed items tracker), and ExecutionLogLine.source field (inventory | donation | loan). Part of the stock floor check + missing purchase resolution feature.",
+    addedAt: "2026-11-06",
+    statements: [
+      // ExecutionLogLine: add source column (default 'inventory')
+      'ALTER TABLE "ExecutionLogLine" ADD COLUMN "source" TEXT NOT NULL DEFAULT \'inventory\'',
+
+      // MissingPurchaseLog table
+      `CREATE TABLE IF NOT EXISTS "MissingPurchaseLog" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "materialSku" TEXT NOT NULL,
+        "materialName" TEXT NOT NULL,
+        "qtyShort" REAL NOT NULL,
+        "estCost" REAL NOT NULL,
+        "triggerType" TEXT NOT NULL,
+        "triggerRef" TEXT,
+        "triggerLineId" TEXT,
+        "resolutionType" TEXT,
+        "resolvedAt" DATETIME,
+        "resolvedByPo" TEXT,
+        "resolvedNotes" TEXT,
+        "notes" TEXT,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY ("materialSku") REFERENCES "Material"("sku") ON DELETE CASCADE
+      )`,
+      'CREATE INDEX IF NOT EXISTS "MissingPurchaseLog_materialSku_idx" ON "MissingPurchaseLog"("materialSku")',
+      'CREATE INDEX IF NOT EXISTS "MissingPurchaseLog_resolutionType_idx" ON "MissingPurchaseLog"("resolutionType")',
+      'CREATE INDEX IF NOT EXISTS "MissingPurchaseLog_createdAt_idx" ON "MissingPurchaseLog"("createdAt")',
+
+      // LoanRecord table
+      `CREATE TABLE IF NOT EXISTS "LoanRecord" (
+        "id" TEXT NOT NULL PRIMARY KEY,
+        "itemName" TEXT NOT NULL,
+        "description" TEXT,
+        "owner" TEXT NOT NULL,
+        "qty" REAL NOT NULL DEFAULT 1,
+        "dateBorrowed" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "datePromised" DATETIME,
+        "dateReturned" DATETIME,
+        "executionId" TEXT,
+        "notes" TEXT,
+        "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" DATETIME NOT NULL,
+        FOREIGN KEY ("executionId") REFERENCES "ExecutionLog"("id") ON DELETE SET NULL
+      )`,
+      'CREATE INDEX IF NOT EXISTS "LoanRecord_dateReturned_idx" ON "LoanRecord"("dateReturned")',
+      'CREATE INDEX IF NOT EXISTS "LoanRecord_owner_idx" ON "LoanRecord"("owner")',
     ],
   },
 ]

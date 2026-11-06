@@ -118,7 +118,8 @@ export async function POST(_request: Request, { params }: RouteParams) {
               const product = line.productSku ? productBySku.get(line.productSku) : null
               return {
                 productSku: line.productSku ?? "",
-                productId: product?.id ?? null,
+                // Note: OrderLineItem does NOT have a productId field (unlike QuoteLine).
+                // We snapshot the SKU + name + size + price instead.
                 productName: line.description,
                 productSize: product?.size ?? null,
                 qty: line.qty,
