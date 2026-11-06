@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { parseDateAsGMTMinus6 } from "@/lib/date-helpers"
 import { db } from "@/lib/db"
 import { isValidEventTransition, EVENT_VALID_STATUSES } from "@/lib/status-transitions"
 
@@ -68,7 +69,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   if (body.customerId !== undefined) data.customerId = body.customerId || null
   if (body.guests !== undefined) data.guests = body.guests || null
   if (body.eventDate !== undefined) {
-    data.eventDate = body.eventDate ? new Date(body.eventDate + "T00:00:00") : null
+    data.eventDate = body.eventDate ? parseDateAsGMTMinus6(body.eventDate as string) as Date : null
   }
 
   // Class 6 fix: validate status transition if body.status was set
@@ -106,12 +107,51 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
 /**
  * DELETE /api/events/[id]
+ *
+ * Class 8 fix: checks for dependent records before deleting.
+ * Pass ?force=true to delete anyway (unlinks orders first, then deletes).
  */
-export async function DELETE(_request: Request, { params }: RouteParams) {
+export async function DELETE(request: Request, { params }: RouteParams) {
   const { id } = await params
+  const url = new URL(request.url)
+  const force = url.searchParams.get("force") === "true"
+
+  const existing = await db.event.findUnique({ where: { id }, select: { id: true } })
+  if (!existing) {
+    return NextResponse.json({ error: "Event not found" }, { status: 404 })
+  }
+
+  // Check for dependent records
+  const [orderCount, eventLineItemCount, quoteCount] = await Promise.all([
+    db.order.count({ where: { eventId: id } }),
+    db.eventLineItem.count({ where: { eventId: id } }),
+    db.quote.count({ where: { eventId: id } }),
+  ])
+
+  const dependents: string[] = []
+  if (orderCount > 0) dependents.push(`${orderCount} Order(s)`)
+  if (eventLineItemCount > 0) dependents.push(`${eventLineItemCount} EventLineItem(s)`)
+  if (quoteCount > 0) dependents.push(`${quoteCount} Quote(s)`)
+
+  if (dependents.length > 0 && !force) {
+    return NextResponse.json(
+      {
+        error: `Cannot delete event: ${dependents.join(", ")} reference it.`,
+        dependents,
+        hint: "Pass ?force=true to unlink orders/quotes and delete anyway.",
+      },
+      { status: 422 }
+    )
+  }
+
   try {
-    // Unlink orders first
-    await db.order.updateMany({ where: { eventId: id }, data: { eventId: null } })
+    // Unlink orders and quotes first (both have eventId as FK with SetNull)
+    if (force || orderCount > 0) {
+      await db.order.updateMany({ where: { eventId: id }, data: { eventId: null } })
+    }
+    if (force || quoteCount > 0) {
+      await db.quote.updateMany({ where: { eventId: id }, data: { eventId: null } })
+    }
     await db.event.delete({ where: { id } })
     return NextResponse.json({ success: true, id })
   } catch {

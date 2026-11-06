@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import { computePaymentRule } from "@/lib/payment-rules"
 import { generateSequentialNumber } from "@/lib/sequential-number"
 import { computeTotalsFromData } from "@/lib/quote-totals"
+import { parseDateAsGMTMinus6 } from "@/lib/date-helpers"
 
 export const dynamic = "force-dynamic"
 
@@ -139,7 +140,7 @@ export async function POST(request: Request) {
 
   // v1.9: Check if the delivery/event date falls on a blocked date
   if (body.eventDate) {
-    const eventDateObj = new Date(body.eventDate)
+    const eventDateObj = parseDateAsGMTMinus6(body.eventDate) as Date
     const dateKey = eventDateObj.toISOString().slice(0, 10)
     const blocked = await db.blockedDate.findUnique({ where: { date: eventDateObj } })
     if (blocked) {
@@ -229,7 +230,7 @@ export async function POST(request: Request) {
         customerName: body.customerName,
         eventId,
         eventType: body.eventType ?? null,
-        eventDate: body.eventDate ? new Date(body.eventDate) : null,
+        eventDate: body.eventDate ? parseDateAsGMTMinus6(body.eventDate) as Date : null,
         status: "draft",
         validUntil: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // 15 days
         subtotal,

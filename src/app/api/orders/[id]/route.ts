@@ -175,17 +175,57 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 /**
  * DELETE /api/orders/[id]
  * Permanently deletes the order and its line items (cascade).
+ *
+ * Class 8 fix: checks for dependent records before deleting.
+ * If the order has Payments, ExecutionLogs, or linked Quotes, returns 422
+ * with a list of what's blocking the delete.
+ * Pass ?force=true to delete anyway (clears links first, then deletes).
  */
-export async function DELETE(_request: Request, { params }: RouteParams) {
+export async function DELETE(request: Request, { params }: RouteParams) {
   const { id } = await params
+  const url = new URL(request.url)
+  const force = url.searchParams.get("force") === "true"
+
+  const existing = await db.order.findUnique({ where: { id }, select: { id: true } })
+  if (!existing) {
+    return NextResponse.json({ error: "Order not found" }, { status: 404 })
+  }
+
+  // Check for dependent records
+  const [paymentCount, executionLogCount, quoteCount] = await Promise.all([
+    db.payment.count({ where: { linkedId: id } }),
+    db.executionLog.count({ where: { orderId: id } }),
+    db.quote.count({ where: { orderId: id } }),
+  ])
+
+  const dependents: string[] = []
+  if (paymentCount > 0) dependents.push(`${paymentCount} Payment(s)`)
+  if (executionLogCount > 0) dependents.push(`${executionLogCount} ExecutionLog(s)`)
+  if (quoteCount > 0) dependents.push(`${quoteCount} Quote(s)`)
+
+  if (dependents.length > 0 && !force) {
+    return NextResponse.json(
+      {
+        error: `Cannot delete order: ${dependents.join(", ")} reference it.`,
+        dependents,
+        hint: "Pass ?force=true to clear links and delete anyway.",
+      },
+      { status: 422 }
+    )
+  }
+
   try {
+    // If force, clear links first
+    if (force) {
+      await db.payment.updateMany({ where: { linkedId: id }, data: { linkedId: null } })
+      await db.executionLog.updateMany({ where: { orderId: id }, data: { orderId: null } })
+      await db.quote.updateMany({ where: { orderId: id }, data: { orderId: null } })
+    }
+
     await db.order.delete({ where: { id } })
     return NextResponse.json({ success: true, id })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    if (msg.includes("Record to delete does not exist")) {
-      return NextResponse.json({ error: "Order not found" }, { status: 404 })
-    }
     return NextResponse.json({ error: "Failed to delete order", detail: msg }, { status: 500 })
   }
 }

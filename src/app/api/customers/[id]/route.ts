@@ -102,17 +102,73 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
 /**
  * DELETE /api/customers/[id]
- * Permanently deletes the customer.
+ *
+ * Class 8 fix: checks for dependent records before deleting.
+ * Schema uses onDelete: Restrict on Order.customerId, so Prisma will
+ * throw a FK constraint error if the customer has orders. But we catch
+ * it early with a friendly 422 instead of letting Prisma throw.
+ *
+ * Also checks for Quotes, Events, CustomerNotes that reference the customer.
+ * Pass ?force=true to delete anyway (clears links first, then deletes).
  */
-export async function DELETE(_request: Request, { params }: RouteParams) {
+export async function DELETE(request: Request, { params }: RouteParams) {
   const { id } = await params
+  const url = new URL(request.url)
+  const force = url.searchParams.get("force") === "true"
+
+  const existing = await db.customer.findUnique({ where: { id }, select: { id: true, name: true } })
+  if (!existing) {
+    return NextResponse.json({ error: "Customer not found" }, { status: 404 })
+  }
+
+  // Check for dependent records
+  const [orderCount, quoteCount, eventCount, noteCount] = await Promise.all([
+    db.order.count({ where: { customerId: id } }),
+    db.quote.count({ where: { customerId: id } }),
+    db.event.count({ where: { customerId: id } }),
+    db.customerNote.count({ where: { customerId: id } }),
+  ])
+
+  const dependents: string[] = []
+  if (orderCount > 0) dependents.push(`${orderCount} Order(s)`)
+  if (quoteCount > 0) dependents.push(`${quoteCount} Quote(s)`)
+  if (eventCount > 0) dependents.push(`${eventCount} Event(s)`)
+  if (noteCount > 0) dependents.push(`${noteCount} CustomerNote(s)`)
+
+  if (dependents.length > 0 && !force) {
+    return NextResponse.json(
+      {
+        error: `Cannot delete customer "${existing.name}": ${dependents.join(", ")} reference it.`,
+        dependents,
+        hint: "Pass ?force=true to null out links and delete anyway. Orders have onDelete: Restrict — they cannot be force-cleared.",
+      },
+      { status: 422 }
+    )
+  }
+
   try {
+    // If force, clear links (except Orders — those have Restrict and will block)
+    if (force) {
+      await db.quote.updateMany({ where: { customerId: id }, data: { customerId: null } })
+      await db.event.updateMany({ where: { customerId: id }, data: { customerId: null } })
+      await db.customerNote.deleteMany({ where: { customerId: id } })
+    }
+
     await db.customer.delete({ where: { id } })
     return NextResponse.json({ success: true, id })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     if (msg.includes("Record to delete does not exist")) {
       return NextResponse.json({ error: "Customer not found" }, { status: 404 })
+    }
+    // FK constraint from Order.customerId (onDelete: Restrict)
+    if (msg.includes("FOREIGN KEY constraint failed")) {
+      return NextResponse.json(
+        {
+          error: `Cannot delete customer "${existing.name}": they still have Orders. Orders must be deleted or re-assigned first (Order.customerId has onDelete: Restrict).`,
+        },
+        { status: 422 }
+      )
     }
     return NextResponse.json({ error: "Failed to delete customer", detail: msg }, { status: 500 })
   }

@@ -15,6 +15,7 @@
 export const dynamic = "force-dynamic"
 
 import { db as prisma } from "@/lib/db"
+import { todayInGMTMinus6 } from "@/lib/date-helpers"
 import { CalendarGrid } from "./calendar-grid"
 import { MarkersToggle } from "./markers-toggle"
 import { BlockDateDialog } from "./block-date-dialog"
@@ -52,10 +53,13 @@ export default async function CalendarPage({
 }) {
   const params = await searchParams
 
-  // Parse month from URL (default = current month)
-  const now = new Date()
-  let month = now.getMonth() + 1
-  let year = now.getFullYear()
+  // Parse month from URL (default = current month in Mexico City timezone)
+  // Class 7 fix: previously used new Date() which gives UTC. On Vercel (UTC),
+  // this could show the wrong month near midnight Mexico City time.
+  const todayStr = todayInGMTMinus6() // "2026-11-06"
+  const [defaultYear, defaultMonth] = todayStr.split("-").map(Number)
+  let month = defaultMonth
+  let year = defaultYear
   if (params.month) {
     const [y, m] = params.month.split("-").map(Number)
     if (y && m) { year = y; month = m }

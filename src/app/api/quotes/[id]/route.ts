@@ -138,9 +138,14 @@ export async function PATCH(
  * Permanently deletes a quote and its lines (cascade). Use with caution.
  * If the quote is linked to an Order, the Order is NOT deleted (only the
  * quote.orderId link is cleared).
+ *
+ * Class 8 fix: checks for dependent records (QuoteReminders, AuditLog
+ * entries) before deleting. Pass ?force=true to delete anyway.
  */
-export async function DELETE(_request: Request, { params }: RouteParams) {
+export async function DELETE(request: Request, { params }: RouteParams) {
   const { id } = await params
+  const url = new URL(request.url)
+  const force = url.searchParams.get("force") === "true"
 
   const existing = await db.quote.findUnique({
     where: { id },
@@ -148,6 +153,27 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   })
   if (!existing) {
     return NextResponse.json({ error: "Quote not found" }, { status: 404 })
+  }
+
+  // Check for dependent records
+  const [reminderCount, auditCount] = await Promise.all([
+    db.quoteReminder.count({ where: { quoteId: id } }),
+    db.auditLog.count({ where: { entityType: "Quote", entityId: id } }),
+  ])
+
+  const dependents: string[] = []
+  if (reminderCount > 0) dependents.push(`${reminderCount} QuoteReminder(s)`)
+  if (auditCount > 0) dependents.push(`${auditCount} AuditLog entry/entries`)
+
+  if (dependents.length > 0 && !force) {
+    return NextResponse.json(
+      {
+        error: `Cannot delete quote: ${dependents.join(", ")} reference it.`,
+        dependents,
+        hint: "Pass ?force=true to delete anyway (reminders and audit entries will be cascade-deleted).",
+      },
+      { status: 422 }
+    )
   }
 
   try {

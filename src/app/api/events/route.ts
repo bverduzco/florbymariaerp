@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { parseDateAsGMTMinus6 } from "@/lib/date-helpers"
 import { db } from "@/lib/db"
 
 export const dynamic = "force-dynamic"
@@ -91,7 +92,7 @@ export async function POST(request: Request) {
       eventNumber,
       name: body.name.trim(),
       customerId: body.customerId || null,
-      eventDate: body.eventDate ? new Date(body.eventDate + "T00:00:00") : null,
+      eventDate: body.eventDate ? parseDateAsGMTMinus6(body.eventDate) as Date : null,
       guests: body.guests ?? null,
       notes: body.notes ?? null,
     },

@@ -1,0 +1,73 @@
+Hotfix #4: Date timezone fixes (Class 7) + DELETE endpoint protection (Class 8)
+
+Fixes the last two classes from FIXES.md.
+
+Class 7 — Date timezone bugs
+  Previously, date-only strings like "2026-11-26" were parsed as
+  new Date("2026-11-26T00:00:00") which creates a Date at UTC midnight.
+  On Vercel (UTC timezone), this means "Nov 26" stored as
+  2026-11-26T00:00:00Z — which is Nov 25 at 18:00 in Mexico City.
+  Events could appear on the wrong day in the calendar, and date
+  comparisons against "now" were off by up to 6 hours.
+
+  New module: src/lib/date-helpers.ts
+    - parseDateAsGMTMinus6(input): parses "2026-11-26" as Mexico City
+      midnight (2026-11-26T06:00:00Z = Nov 26 00:00 CST). If the input
+      already contains a 'T' (full ISO timestamp), passes through unchanged.
+    - toGMTMinus6DateString(date): inverse — converts a stored Date back
+      to a Mexico City date string "2026-11-26"
+    - todayInGMTMinus6(): returns today's date in Mexico City timezone
+
+  5 routes updated to use parseDateAsGMTMinus6:
+    1. POST /api/quotes (body.eventDate)
+    2. POST /api/orders (body.deliveryDate)
+    3. POST /api/events (body.eventDate)
+    4. PATCH /api/events/[id] (body.eventDate)
+    5. POST /api/custom-recipes/create-order (body.deliveryDate)
+
+  Calendar page updated:
+    - Uses todayInGMTMinus6() instead of new Date() for the default month
+      determination. Previously, on Vercel (UTC), the calendar could
+      show the wrong month near midnight Mexico City time.
+
+  All "new Date(body.X + 'T00:00:00')" patterns eliminated from the
+  API surface (verified via grep — 0 remaining).
+
+Class 8 — DELETE endpoints don't protect downstream references
+  Previously, DELETE endpoints would either silently cascade-delete
+  dependent records (Materials → RecipeLines, etc.) or throw an
+  opaque Prisma FK error (Customers with Orders). No warning, no
+  friendly error message, no way to know what you're about to destroy.
+
+  4 DELETE endpoints now check for dependent records before deleting:
+
+  1. DELETE /api/orders/[id]
+     Checks: Payments, ExecutionLogs, Quotes
+     Returns 422 with list if any found. Pass ?force=true to clear
+     links and delete anyway.
+
+  2. DELETE /api/quotes/[id]
+     Checks: QuoteReminders, AuditLog entries
+     Returns 422 with list if any found. Pass ?force=true to delete
+     anyway (cascade deletes reminders + audit entries).
+
+  3. DELETE /api/events/[id]
+     Checks: Orders, EventLineItems, Quotes
+     Returns 422 with list if any found. Pass ?force=true to unlink
+     orders/quotes and delete anyway.
+
+  4. DELETE /api/customers/[id]
+     Checks: Orders (onDelete: Restrict — can't force-delete), Quotes,
+     Events, CustomerNotes
+     Returns 422 with customer name + dependent list. Pass ?force=true
+     to null out links (except Orders — those have Restrict and will
+     still block). Catches FK constraint errors and returns a friendly
+     message explaining why.
+
+  Materials endpoint doesn't have a DELETE (only PATCH) — no change needed.
+
+  The ?force=true query parameter is the escape hatch for when Maria
+  genuinely wants to delete something with dependents. It clears links
+  (sets FKs to null) before deleting the parent record.
+
+Build verified green. TypeScript: 0 errors in modified files.

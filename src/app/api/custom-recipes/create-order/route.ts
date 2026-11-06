@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { parseDateAsGMTMinus6 } from "@/lib/date-helpers"
 import { db } from "@/lib/db"
 
 export const dynamic = "force-dynamic"
@@ -182,7 +183,7 @@ export async function POST(request: Request) {
       orderNumber,
       status: "draft",
       customerId: body.customerId,
-      deliveryDate: body.deliveryDate ? new Date(body.deliveryDate + "T00:00:00") : null,
+      deliveryDate: body.deliveryDate ? parseDateAsGMTMinus6(body.deliveryDate) as Date : null,
       deliveryAddress: body.deliveryAddress || null,
       cardMessage: body.cardMessage || null,
       deliveryNotes: body.deliveryNotes || null,
