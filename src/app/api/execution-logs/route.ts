@@ -7,33 +7,36 @@ export const dynamic = "force-dynamic"
 /**
  * POST /api/execution-logs
  * Body: {
- *   eventId?: string,            // optional — links to Event
- *   orderId?: string,           // optional — links to Order (mutually exclusive with eventId in practice)
+ *   eventId?: string,
+ *   orderId?: string,
  *   executedAt: string (ISO),
  *   executedBy?: string,
- *   status: string,                  // planned | executed | partial | redone | cancelled
+ *   status: string,
  *   quotedPrice?: number,
  *   notes?: string,
  *   lines: Array<{
  *     materialSku: string,
- *     materialName: string,          // denormalized snapshot
+ *     materialName?: string,
  *     qtyUsed: number,
  *     unit: string,
- *     unitCost: number,              // snapshot
- *     lineCost: number,             // qtyUsed × unitCost
- *     type: string,                  // recipe | addition | substitution | removal
- *     originalMaterialSku?: string,  // for substitutions
- *     originalQty?: number,          // for substitutions/removals
+ *     unitCost: number,
+ *     lineCost: number,
+ *     type: string,                   // recipe | addition | substitution | removal
+ *     source?: string,                 // inventory (default) | donation | loan
+ *     originalMaterialSku?: string,
+ *     originalQty?: number,
  *     notes?: string,
  *   }>,
  * }
  *
- * Computes:
- *  - executionNumber EXE-NNNN
- *  - estimatedCost = sum of lineCost where type in [recipe, substitution]  (proxy for "planned")
- *  - actualCost    = sum of lineCost where type != removal
- *  - marginDollars = quotedPrice - actualCost (when quotedPrice present)
- *  - marginPct     = marginDollars / quotedPrice (when quotedPrice > 0)
+ * v1.9.2 Stock floor check + source handling:
+ *   - Lines with source="donation" or source="loan" do NOT deduct stock.
+ *     They're recorded for recipe accuracy + cost tracking ($0 for donations/loans).
+ *   - Lines with source="inventory" (default) deduct stock, capped at currentStock.
+ *     If qtyUsed > available stock, the deduction is capped and a MissingPurchaseLog
+ *     is created for the difference.
+ *   - Stock NEVER goes negative.
+ *   - "removal" type lines don't deduct stock regardless of source.
  */
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null)
@@ -50,7 +53,7 @@ export async function POST(request: Request) {
     )
   }
 
-  // Validate every line has a real material
+  // Validate every line has required fields
   for (const line of body.lines) {
     if (!line.materialSku || !line.qtyUsed || !line.unitCost) {
       return NextResponse.json(
@@ -60,13 +63,10 @@ export async function POST(request: Request) {
     }
   }
 
-  // Snapshot material names + costs from DB so client can't lie about prices silently.
-  // (We trust client-supplied unitCost because real cost may differ from catalog cost;
-  //  but we DO verify the material exists and use its current name as fallback.)
-  // v1.9: include unitsPerPack + currentStockPacks so we can deduct stock
+  // Snapshot material data from DB
   const materials = await db.material.findMany({
     where: { sku: { in: body.lines.map((l: { materialSku: string }) => l.materialSku) } },
-    select: { sku: true, name: true, unit: true, unitCost: true, unitsPerPack: true, currentStockPacks: true },
+    select: { sku: true, name: true, unit: true, unitCost: true, unitsPerPack: true, currentStockPacks: true, packPrice: true },
   })
   const materialMap = new Map(materials.map((m) => [m.sku, m]))
 
@@ -96,14 +96,10 @@ export async function POST(request: Request) {
   // EXE-NNNN
   const executionNumber = await generateSequentialNumber(db, "executionLog", "executionNumber", "EXE-", 4)
 
+  // Track warnings for the response
+  const warnings: string[] = []
+
   try {
-    // Class 1 fix: wrap the entire execution log creation + stock deductions
-    // in $transaction. If any stock update fails mid-loop, the execution log
-    // itself is rolled back too — no partial state.
-    //
-    // Class 2 fix: stock deductions now use atomic { decrement } instead of
-    // read-then-write. This prevents the stale-read race where two concurrent
-    // operations on the same material would overwrite each other.
     const log = await db.$transaction(async (tx) => {
       const created = await tx.executionLog.create({
         data: {
@@ -128,6 +124,7 @@ export async function POST(request: Request) {
               unitCost: number
               lineCost: number
               type: string
+              source?: string
               originalMaterialSku?: string
               originalQty?: number
               notes?: string
@@ -139,6 +136,7 @@ export async function POST(request: Request) {
               unitCost: Number(l.unitCost),
               lineCost: Number(l.lineCost),
               type: l.type || "recipe",
+              source: l.source || "inventory",
               originalMaterialSku: l.originalMaterialSku || null,
               originalQty: l.originalQty ? Number(l.originalQty) : null,
               notes: l.notes || null,
@@ -148,44 +146,90 @@ export async function POST(request: Request) {
         include: { lines: true },
       })
 
-      // Deduct material stock for each line (except "removal" type)
+      // Deduct material stock for each line
       for (const line of body.lines) {
+        // "removal" type lines never deduct stock
         if (line.type === "removal") continue
+
+        // donation/loan source lines never deduct stock — materials weren't from inventory
+        const lineSource = line.source || "inventory"
+        if (lineSource === "donation" || lineSource === "loan") continue
 
         const material = materialMap.get(line.materialSku)
         if (!material || !material.unitsPerPack || material.unitsPerPack <= 0) continue
 
-        const packsUsed = Number(line.qtyUsed) / material.unitsPerPack
-        if (packsUsed <= 0) continue
+        const packsRequested = Number(line.qtyUsed) / material.unitsPerPack
+        if (packsRequested <= 0) continue
 
-        // Class 2 fix: atomic decrement — translates to
-        // UPDATE Material SET currentStockPacks = currentStockPacks - N
-        await tx.material.update({
-          where: { sku: line.materialSku },
-          data: { currentStockPacks: { decrement: packsUsed } },
-        })
+        // Stock floor check: cap at current stock
+        const currentStock = material.currentStockPacks ?? 0
+        const packsToDeduct = Math.min(packsRequested, Math.max(0, currentStock))
+        const packsShort = Math.max(0, packsRequested - currentStock)
 
-        // StockMovement audit trail (best-effort — table might not exist)
+        // Deduct (capped — never goes negative)
+        if (packsToDeduct > 0) {
+          await tx.material.update({
+            where: { sku: line.materialSku },
+            data: { currentStockPacks: { decrement: packsToDeduct } },
+          })
+        }
+
+        // StockMovement: records the ACTUAL deduction (capped)
         try {
           await tx.stockMovement.create({
             data: {
               date: new Date(),
               materialSku: line.materialSku,
-              packs: -packsUsed,
+              packs: -packsToDeduct,
               reason: "execution",
               reference: executionNumber,
-              notes: `${line.type}: ${line.qtyUsed} ${line.unit} (${line.materialName || material.name})`,
+              notes: packsShort > 0
+                ? `${line.type}: ${line.qtyUsed} ${line.unit} (${line.materialName || material.name}). CAPPED: requested ${packsRequested.toFixed(2)} packs, only ${packsToDeduct.toFixed(2)} in stock — deducted all available.`
+                : `${line.type}: ${line.qtyUsed} ${line.unit} (${line.materialName || material.name})`,
             },
           })
         } catch {
           // StockMovement table might not exist — silently skip
+        }
+
+        // If there's a discrepancy, create a MissingPurchaseLog
+        if (packsShort > 0) {
+          const estCost = packsShort * (material.packPrice ?? 0)
+          const lineId = created.lines.find((l) => l.materialSku === line.materialSku)?.id
+
+          try {
+            await tx.missingPurchaseLog.create({
+              data: {
+                materialSku: line.materialSku,
+                materialName: material.name,
+                qtyShort: packsShort,
+                estCost,
+                triggerType: "execution",
+                triggerRef: executionNumber,
+                triggerLineId: lineId ?? null,
+                notes: `Discovered via ${executionNumber}: used ${line.qtyUsed} ${line.unit} of ${line.materialSku}, but only ${packsToDeduct.toFixed(2)} packs were in stock. ${packsShort.toFixed(2)} packs unaccounted — possible unlogged purchase.`,
+              },
+            })
+          } catch {
+            // MissingPurchaseLog table might not exist — silently skip
+          }
+
+          warnings.push(
+            `${line.materialSku}: used ${line.qtyUsed} ${line.unit} but only ${packsToDeduct.toFixed(2)} packs were in stock. ` +
+            `${packsShort.toFixed(2)} packs unaccounted — a missing purchase log was created. Check the Procurement tab.`
+          )
         }
       }
 
       return created
     })
 
-    return NextResponse.json({ log }, { status: 201 })
+    const response: Record<string, unknown> = { log }
+    if (warnings.length > 0) {
+      response.warnings = warnings
+    }
+
+    return NextResponse.json(response, { status: 201 })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     return NextResponse.json({ error: msg }, { status: 500 })

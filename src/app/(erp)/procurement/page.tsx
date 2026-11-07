@@ -40,8 +40,19 @@ async function getSupplierComparison() {
   return comparison
 }
 
+async function getMissingPurchases() {
+  try {
+    return await prisma.missingPurchaseLog.findMany({
+      where: { resolvedAt: null },
+      orderBy: { createdAt: "desc" },
+    })
+  } catch {
+    return []
+  }
+}
+
 export default async function ProcurementPage() {
-  const [pos, suppliers, adHocs, comparison, materials] = await Promise.all([
+  const [pos, suppliers, adHocs, comparison, materials, missingPurchases] = await Promise.all([
     getPurchaseOrders(),
     getSuppliers(),
     getAdHocPurchases(),
@@ -51,6 +62,7 @@ export default async function ProcurementPage() {
       select: { sku: true, name: true, unit: true, packPrice: true },
       orderBy: { name: "asc" },
     }),
+    getMissingPurchases(),
   ])
   const received = pos.filter((p) => p.status === "received").length
   const totalCost = pos.reduce((s, p) => s + p.totalCost, 0)
@@ -72,6 +84,29 @@ export default async function ProcurementPage() {
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#BE185D" }}>${totalCost.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</div><div className="fmd-kpi-label">PO total spent</div></div>
         <div className="fmd-kpi-cell"><div className="fmd-kpi-value" style={{ color: "#D97706" }}>${adHocTotal.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</div><div className="fmd-kpi-label">Ad-hoc total</div></div>
       </div>
+
+      {/* Missing Purchase Warnings */}
+      {missingPurchases.length > 0 && (
+        <div className="fmd-box" style={{ borderColor: "#FCA5A5", background: "#FEF2F2", marginBottom: "16px" }}>
+          <div className="fmd-box-label" style={{ color: "#991B1B" }}>
+            ⚠ Missing Purchase Logs ({missingPurchases.length}) — these purchases are missing, create Ad-hoc purchase
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+            {missingPurchases.map((mp) => (
+              <div key={mp.id} style={{ display: "flex", alignItems: "center", gap: "8px", padding: "8px 12px", background: "#fff", border: "1px solid #FECACA", borderRadius: "6px", fontSize: "12px" }}>
+                <span style={{ fontFamily: "monospace", fontSize: "10px", color: "#78716C" }}>{mp.materialSku}</span>
+                <span style={{ fontWeight: 600, color: "#44403C" }}>{mp.materialName}</span>
+                <span style={{ color: "#991B1B" }}>— {mp.qtyShort} packs needed · est. ${mp.estCost.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</span>
+                <span style={{ color: "#9CA3AF", fontSize: "10px" }}>via {mp.triggerRef}</span>
+                <MissingPurchaseActions id={mp.id} materialSku={mp.materialSku} materialName={mp.materialName} qtyShort={mp.qtyShort} estCost={mp.estCost} triggerRef={mp.triggerRef} />
+              </div>
+            ))}
+          </div>
+          <div className="fmd-note" style={{ marginTop: "8px", background: "#fff", borderColor: "#FECACA", color: "#991B1B" }}>
+            These materials were used in a loss or execution but weren't in inventory. Log the missing purchase (with real price + supplier) or mark as donation if the materials were gifted.
+          </div>
+        </div>
+      )}
 
       {/* Two-column: POs + Ad-hoc Purchases */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "16px", marginBottom: "16px" }}>

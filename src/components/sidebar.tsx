@@ -24,6 +24,7 @@ const NAV_SECTIONS = [
       { href: "/procurement", icon: "🚚", label: "Procurement" },
       { href: "/execution", icon: "🔨", label: "Execution Logs" },
       { href: "/losses", icon: "⚠️", label: "Losses" },
+      { href: "/loans", icon: "🔄", label: "Loans" },
       { href: "/recipes", icon: "📖", label: "Recipes" },
     ],
   },

@@ -6,8 +6,16 @@ export const dynamic = "force-dynamic"
 
 /**
  * POST /api/ad-hoc-purchases
- * Body: { vendor, materialSku, qtyPacks, unitCost, ticketNumber?, paymentMethod?, notes? }
- * Creates a new ad-hoc purchase record.
+ * Body: {
+ *   vendor, materialSku, qtyPacks, unitCost, ticketNumber?, paymentMethod?, notes?,
+ *   resolveMissingPurchaseId?: string  // when resolving a MissingPurchaseLog
+ * }
+ *
+ * Creates a new ad-hoc purchase record. When resolveMissingPurchaseId is
+ * provided, the purchase is treated as resolving an inventory discrepancy
+ * (materials already consumed by execution/loss). The notes are auto-filled
+ * with the discrepancy reference, and the MissingPurchaseLog is resolved.
+ * No stock bump occurs — the materials were already used.
  */
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null)
@@ -29,6 +37,25 @@ export async function POST(request: Request) {
 
   const adhocNumber = await generateSequentialNumber(db, "adHocPurchase", "adhocNumber", "ADHOC-", 4)
 
+  // If resolving a missing purchase, auto-fill notes
+  let notes = body.notes?.trim() || null
+  let missingPurchaseLog: { id: string; triggerRef: string | null; materialName: string; qtyShort: number } | null = null
+
+  if (body.resolveMissingPurchaseId) {
+    try {
+      missingPurchaseLog = await db.missingPurchaseLog.findUnique({
+        where: { id: body.resolveMissingPurchaseId },
+        select: { id: true, triggerRef: true, materialName: true, qtyShort: true },
+      })
+      if (missingPurchaseLog) {
+        const resolutionNote = `Resolving inventory discrepancy for ${missingPurchaseLog.triggerRef ?? "execution"}: ${qtyPacks} packs of ${body.materialSku} were used but not in inventory.`
+        notes = notes ? `${notes}\n\n${resolutionNote}` : resolutionNote
+      }
+    } catch {
+      // MissingPurchaseLog table might not exist — proceed without resolution
+    }
+  }
+
   try {
     const purchase = await db.adHocPurchase.create({
       data: {
@@ -41,10 +68,28 @@ export async function POST(request: Request) {
         total,
         ticketNumber: body.ticketNumber?.trim() || null,
         paymentMethod: body.paymentMethod || null,
-        notes: body.notes?.trim() || null,
+        notes,
       },
     })
-    return NextResponse.json({ purchase }, { status: 201 })
+
+    // If resolving a missing purchase, mark it as resolved
+    if (missingPurchaseLog) {
+      try {
+        await db.missingPurchaseLog.update({
+          where: { id: missingPurchaseLog.id },
+          data: {
+            resolutionType: "purchase",
+            resolvedAt: new Date(),
+            resolvedByPo: adhocNumber,
+            resolvedNotes: `Resolved via ${adhocNumber}. Materials were already consumed — purchase recorded for financial accuracy.`,
+          },
+        })
+      } catch {
+        // Best-effort — the purchase was created, resolution tracking is secondary
+      }
+    }
+
+    return NextResponse.json({ purchase, resolvedMissingPurchase: !!missingPurchaseLog }, { status: 201 })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     return NextResponse.json({ error: msg }, { status: 500 })
