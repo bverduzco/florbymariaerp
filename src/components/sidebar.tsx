@@ -38,6 +38,7 @@ const NAV_SECTIONS = [
       { href: "/seasons", icon: "🗓️", label: "Seasons" },
       { href: "/suppliers", icon: "🏪", label: "Suppliers" },
       { href: "/legal", icon: "📄", label: "Legal Templates" },
+      { href: "/audit", icon: "🔍", label: "Audit Trail" },
       { href: "/settings", icon: "⚙️", label: "Settings" },
     ],
   },
