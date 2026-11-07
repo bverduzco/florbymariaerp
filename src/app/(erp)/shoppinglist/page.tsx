@@ -51,7 +51,21 @@ async function getShoppingListData() {
   const productBySku = new Map(products.map((p) => [p.sku, p]))
   const materialNeeds = new Map<string, { sku: string; name: string; category: string; supplier: string | null; currentStockPacks: number | null; packPrice: number | null; unitsPerPack: number | null; totalStemsNeeded: number; orders: string[] }>()
   for (const order of activeOrders) { for (const lineItem of order.lineItems) { const product = productBySku.get(lineItem.productSku); if (!product) continue; for (const recipeLine of product.recipeLines) { const mat = recipeLine.material; if (!mat) continue; const existing = materialNeeds.get(mat.sku) ?? { sku: mat.sku, name: mat.name, category: mat.category, supplier: mat.supplier, currentStockPacks: mat.currentStockPacks, packPrice: mat.packPrice, unitsPerPack: mat.unitsPerPack, totalStemsNeeded: 0, orders: [] }; existing.totalStemsNeeded += recipeLine.qty * lineItem.qty; if (!existing.orders.includes(order.orderNumber)) existing.orders.push(order.orderNumber); materialNeeds.set(mat.sku, existing) } } }
-  const materials = Array.from(materialNeeds.values()).map((m) => { const upp = m.unitsPerPack ?? 12; const packsNeeded = Math.ceil(m.totalStemsNeeded / upp); const stock = m.currentStockPacks ?? 0; const packsToBuy = Math.max(0, packsNeeded - stock); return { ...m, packsNeeded, packsToBuy, estimatedCost: packsToBuy * (m.packPrice ?? 0), unitsPerPack: upp } })
+  const materials = Array.from(materialNeeds.values()).map((m) => {
+    // IMPORTANT: must use the `> 0` fallback pattern, not `?? 12`.
+    // `unitsPerPack ?? 12` only falls back to 12 when the value is
+    // null/undefined. But the DB also has materials with unitsPerPack = 0
+    // (legacy / not-set), and `totalStemsNeeded / 0` returns Infinity,
+    // which JSON.stringify converts to null, which Prisma rejects with
+    // "Argument qtyPacks is missing" downstream in the create-POs flow.
+    // Same pattern as /api/losses/route.ts line 57.
+    const upp = m.unitsPerPack && m.unitsPerPack > 0 ? m.unitsPerPack : 12;
+    const packsNeeded = Math.ceil(m.totalStemsNeeded / upp);
+    const stock = m.currentStockPacks ?? 0;
+    const packsToBuy = Math.max(0, packsNeeded - stock);
+    const unitsPerPackMissing = !m.unitsPerPack || m.unitsPerPack <= 0;
+    return { ...m, packsNeeded, packsToBuy, estimatedCost: packsToBuy * (m.packPrice ?? 0), unitsPerPack: upp, unitsPerPackMissing }
+  })
   const bySupplier = materials.reduce((acc, m) => { const sup = m.supplier ?? "Unassigned"; if (!acc[sup]) acc[sup] = { materials: [], totalCost: 0, packsToBuy: 0 }; acc[sup].materials.push(m); acc[sup].totalCost += m.estimatedCost; acc[sup].packsToBuy += m.packsToBuy; return acc }, {} as Record<string, { materials: typeof materials; totalCost: number; packsToBuy: number }>)
   return { activeOrders, materials, bySupplier }
 }
@@ -115,7 +129,7 @@ export default async function ShoppingListPage() {
               <div style={{ overflowX: "auto" }}>
                 <table className="fmd-table">
                   <thead><tr><th>SKU</th><th>Material</th><th style={{ textAlign: "right" }}>Stems</th><th style={{ textAlign: "right" }}>Packs</th><th style={{ textAlign: "right" }}>Stock</th><th style={{ textAlign: "right" }}>To buy</th><th style={{ textAlign: "right" }}>Cost</th></tr></thead>
-                  <tbody>{data.materials.map((m) => (<tr key={m.sku}><td style={{ fontFamily: "monospace", fontSize: "10px" }}>{m.sku}</td><td style={{ fontWeight: 600, color: "#44403C" }}>{m.name}</td><td style={{ textAlign: "right" }}>{m.totalStemsNeeded}</td><td style={{ textAlign: "right" }}>{m.packsNeeded}</td><td style={{ textAlign: "right", color: "#78716C" }}>{m.currentStockPacks ?? 0}</td><td style={{ textAlign: "right", fontWeight: 700, color: m.packsToBuy > 0 ? "#D97706" : "#047857" }}>{m.packsToBuy > 0 ? m.packsToBuy : "✓"}</td><td style={{ textAlign: "right" }}>${m.estimatedCost.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</td></tr>))}</tbody>
+                  <tbody>{data.materials.map((m) => (<tr key={m.sku}><td style={{ fontFamily: "monospace", fontSize: "10px" }}>{m.sku}</td><td style={{ fontWeight: 600, color: "#44403C" }}>{m.name}{m.unitsPerPackMissing && <span style={{ marginLeft: "6px", fontSize: "9px", color: "#B45309", background: "#FEF3C7", border: "1px solid #FCD34D", borderRadius: "3px", padding: "1px 4px", fontWeight: 600, verticalAlign: "middle" }} title={`unitsPerPack is missing or 0 — using fallback of 12. Update the material to get accurate pack counts.`}>⚠ units/pack missing</span>}</td><td style={{ textAlign: "right" }}>{m.totalStemsNeeded}</td><td style={{ textAlign: "right" }}>{m.packsNeeded}</td><td style={{ textAlign: "right", color: "#78716C" }}>{m.currentStockPacks ?? 0}</td><td style={{ textAlign: "right", fontWeight: 700, color: m.packsToBuy > 0 ? "#D97706" : "#047857" }}>{m.packsToBuy > 0 ? m.packsToBuy : "✓"}</td><td style={{ textAlign: "right" }}>${m.estimatedCost.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</td></tr>))}</tbody>
                 </table>
               </div>
             </div>

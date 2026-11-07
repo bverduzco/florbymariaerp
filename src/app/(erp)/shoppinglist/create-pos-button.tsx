@@ -21,12 +21,17 @@ export function CreatePosButton({ supplierGroups }: { supplierGroups: SupplierGr
   const router = useRouter()
 
   async function handleCreate() {
-    // Filter to only suppliers with items to buy
+    // Filter to only suppliers with items to buy.
+    // Also guard against non-finite packsToBuy (NaN / Infinity) — those
+    // can slip through if a material's unitsPerPack=0 in the DB, which
+    // produces Infinity that JSON.stringify converts to null. The
+    // shopping list page now falls back to 12 in that case, but this
+    // guard prevents the broken API payload from ever being sent.
     const itemsToBuy = supplierGroups
-      .filter((g) => g.materials.some((m) => m.packsToBuy > 0))
+      .filter((g) => g.materials.some((m) => Number.isFinite(m.packsToBuy) && m.packsToBuy > 0))
       .flatMap((g) =>
         g.materials
-          .filter((m) => m.packsToBuy > 0)
+          .filter((m) => Number.isFinite(m.packsToBuy) && m.packsToBuy > 0)
           .map((m) => ({
             materialSku: m.sku,
             materialName: m.name,
@@ -37,7 +42,7 @@ export function CreatePosButton({ supplierGroups }: { supplierGroups: SupplierGr
       )
 
     if (itemsToBuy.length === 0) {
-      toast.error("Nothing to buy", { description: "All materials are covered by current stock." })
+      toast.error("Nothing to buy", { description: "All materials are covered by current stock, or have invalid pack counts (check unitsPerPack on Materials page)." })
       return
     }
 
@@ -69,7 +74,7 @@ export function CreatePosButton({ supplierGroups }: { supplierGroups: SupplierGr
     }
   }
 
-  const hasItems = supplierGroups.some((g) => g.materials.some((m) => m.packsToBuy > 0))
+  const hasItems = supplierGroups.some((g) => g.materials.some((m) => Number.isFinite(m.packsToBuy) && m.packsToBuy > 0))
 
   return (
     <button
