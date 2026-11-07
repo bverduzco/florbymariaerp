@@ -63,9 +63,10 @@ export async function POST(request: Request) {
   if (!body.supplier) {
     return NextResponse.json({ error: "Supplier is required" }, { status: 400 })
   }
-  if (!body.lines || body.lines.length === 0) {
-    return NextResponse.json({ error: "At least one line item is required" }, { status: 400 })
-  }
+  // Allow empty `lines` — the New PO dialog creates a draft PO first and
+  // adds line items later via PATCH /api/purchase-orders/[id]. Lines can
+  // also be omitted entirely (treated as []).
+  const lines = Array.isArray(body.lines) ? body.lines : []
 
   // Generate next PO number
   const lastPO = await db.purchaseOrder.findFirst({ orderBy: { poNumber: "desc" } })
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
   const poNumber = `PO-${nextNum}`
 
   // Compute total
-  const totalCost = body.lines.reduce((s, l) => s + l.qtyPacks * l.costPerPack, 0)
+  const totalCost = lines.reduce((s, l) => s + l.qtyPacks * l.costPerPack, 0)
 
   try {
     const po = await db.purchaseOrder.create({
@@ -88,7 +89,7 @@ export async function POST(request: Request) {
         totalCost,
         notes: body.notes ?? null,
         lines: {
-          create: body.lines.map((l) => ({
+          create: lines.map((l) => ({
             materialSku: l.materialSku,
             materialName: l.materialName,
             qtyPacks: l.qtyPacks,

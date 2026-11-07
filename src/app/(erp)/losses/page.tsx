@@ -31,7 +31,7 @@ export default async function LossesPage() {
             <thead><tr><th>Loss #</th><th>Date</th><th>Material</th><th style={{ textAlign: "right" }}>Qty</th><th>Reason</th><th>By</th><th style={{ textAlign: "right" }}>Cost</th><th>Notes</th></tr></thead>
             <tbody>
               {losses.length === 0 && (
-                <tr><td colSpan={6} style={{ textAlign: "center", padding: "24px", color: "#9CA3AF" }}>No losses recorded yet.</td></tr>
+                <tr><td colSpan={8} style={{ textAlign: "center", padding: "24px", color: "#9CA3AF" }}>No losses recorded yet.</td></tr>
               )}
               {losses.map((l) => (
                 <tr key={l.id}>

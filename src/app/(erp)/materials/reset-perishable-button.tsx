@@ -71,37 +71,48 @@ export function ResetPerishableButton({ perishables }: { perishables: Perishable
 
     setLoading(true)
     try {
-      // Create losses for each selected item
-      let created = 0
-      let packsLost = 0
-      let valueLost = 0
+      // Single atomic POST to the dedicated reset-perishable endpoint.
+      // This route wraps everything in $transaction: if any material's
+      // Loss / StockMovement / update fails, ALL changes roll back —
+      // no partial state where some items were written off and others weren't.
+      const res = await fetch("/api/materials/reset-perishable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: selectedItems.map((it) => ({ sku: it.sku, qty: it.qty })),
+          reason: "expired",
+          notes: "From Reset Perishable Stock (Materials tab)",
+        }),
+      })
 
-      for (const item of selectedItems) {
-        const res = await fetch("/api/losses", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            materialSku: item.sku,
-            qtyLostPacks: item.qty,
-            reason: "expired",
-            notes: "From Reset Perishable Stock (Materials tab)",
-          }),
-        })
-        if (res.ok) {
-          const data = await res.json()
-          created++
-          packsLost += item.qty
-          valueLost += item.packPrice * item.qty
-        }
+      const data = await res.json().catch(() => null)
+
+      if (!res.ok) {
+        const errMsg = data?.error ?? `HTTP ${res.status}`
+        throw new Error(errMsg)
       }
 
-      setResults({ affected: created, totalPacks: packsLost, totalValue: valueLost })
-      toast.success("Perishable stock written off", {
-        description: `${created} materials · ${packsLost} packs · $${valueLost.toLocaleString("es-MX", { maximumFractionDigits: 0 })} as losses`,
-      })
-      router.refresh()
+      const affected = Number(data?.affected ?? 0)
+      const packs = Number(data?.totalPacks ?? 0)
+      const value = Number(data?.totalValue ?? 0)
+
+      if (affected === 0) {
+        // All selected items had zero stock or qty=0 — no work done.
+        toast.warning("Nothing was written off", {
+          description: "All selected materials already have 0 stock.",
+        })
+      } else {
+        setResults({ affected, totalPacks: packs, totalValue: value })
+        toast.success("Perishable stock written off", {
+          description: `${affected} materials · ${packs} packs · $${value.toLocaleString("es-MX", { maximumFractionDigits: 0 })} as losses`,
+        })
+        router.refresh()
+      }
     } catch (e) {
-      toast.error("Failed to reset", { description: e instanceof Error ? e.message : String(e) })
+      // Surface the error — never silently swallow it again.
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error("[ResetPerishableButton] reset failed:", msg)
+      toast.error("Failed to reset perishable stock", { description: msg })
     } finally {
       setLoading(false)
     }
