@@ -6,6 +6,13 @@ Information; the Wishlist tracks *features* under consideration, while
 this file tracks *bugs to fix* (broken logic, data-integrity risks,
 billing-correctness issues).
 
+**Status as of 2026-11-07:** Classes 1–8 from the original audit are
+all **resolved** (Hotfixes #1–#4, commits `d406688` → `97f1c70`). A
+post-audit Class 9 was added on 2026-11-07 for four regression bugs
+introduced by the v1.9.2 stem-level loss feature (commit `76d83a7`);
+those are also resolved in commit `9767531`. See the [Status summary](#status-summary)
+table below for the per-class breakdown.
+
 Each class is independent and can be fixed in isolation, but the
 priority order at the bottom reflects what to fix first based on
 severity (billing correctness > data loss > silent drift > UX nits).
@@ -13,6 +20,13 @@ severity (billing correctness > data loss > silent drift > UX nits).
 ---
 
 ## Class 1 — Missing `$transaction` on multi-write operations
+
+> ✅ **RESOLVED** in Hotfix #2 (commit `84f055d`, 2026-11-04).
+> All 12 affected routes now wrap their multi-write blocks in
+> `db.$transaction(async (tx) => { ... })` and use `tx.x.create()`
+> instead of `db.x.create()`. The `PATCH /api/orders/[id]/line-items`
+> delete-then-recreate data-loss path was the highest-risk item and
+> is now transactional.
 
 Every "do multiple DB writes as one logical operation" route has this
 bug. Prisma's `db.x.create()` / `db.x.update()` are committed
@@ -52,6 +66,17 @@ supports transactions natively, so this is safe.
 ---
 
 ## Class 2 — Stale-read race conditions on stock updates
+
+> ✅ **RESOLVED** in Hotfix #2 (commit `84f055d`, 2026-11-04).
+> All 4 affected routes now use Prisma's atomic
+> `{ decrement: qtyLost }` / `{ increment: qty }` operators inside
+> `$transaction`. Stock floors are enforced via
+> `Math.min(qtyRequested, currentStock)` followed by atomic decrement.
+>
+> The v1.9.2 stem-level loss feature (commit `76d83a7`) extended this
+> with a `MissingPurchaseLog` auto-creation when there's a stock
+> discrepancy — see `/api/losses` and `/api/execution-logs` for the
+> capped-deduction + missing-purchase-log pattern.
 
 This is the same anti-pattern as the original `count + 1` bug we fixed
 in commit `324f836`, just for stock quantities:
@@ -105,6 +130,21 @@ which is atomic. Combined with Class 1's `$transaction`, fully safe.
 ---
 
 ## Class 3 — Quote total calculation ignores discount + delivery fee
+
+> ✅ **RESOLVED** in Hotfix #1 (commit `d406688`, 2026-11-04).
+> Created `src/lib/quote-totals.ts` with a single
+> `recomputeQuoteTotals(quoteId)` helper that handles discount
+> (flat or percentage), delivery fee, IVA on the discounted subtotal,
+> and deposit via `lookupPaymentRule`. Called from `POST /api/quotes`,
+> `POST /api/quote-lines`, `PATCH /api/quote-lines/[id]`,
+> `DELETE /api/quote-lines/[id]`, and `PATCH /api/quotes/[id]`.
+> A follow-up commit `0a6d7a6` also persists `discount` + `deliveryFee`
+> at quote creation time (not just on PATCH).
+>
+> The PDF (`src/lib/pdf/quote.ts`) and WhatsApp message
+> (`src/lib/quote-message.ts`) both consume the corrected stored
+> totals. The concrete $1000/$200/$100 example now correctly produces
+> $1028 total / $514 deposit / $514 balance.
 
 **This is a billing-correctness bug.** Customers see wrong numbers on
 their quotes (PDF + WhatsApp message).
@@ -168,6 +208,12 @@ Call this from every site that mutates quote lines or discount:
 
 ## Class 4 — QuoteLine lineNumber uses the same broken `count + 1` pattern
 
+> ✅ **RESOLVED** in Hotfix #1 (commit `d406688`, 2026-11-04).
+> `POST /api/quote-lines` now uses `findFirst({ orderBy: { lineNumber:
+> "desc" } })` to compute `MAX(lineNumber) + 1`. Cosmetic only (no
+> unique constraint on `(quoteId, lineNumber)`), but eliminates the
+> duplicate-number drift after deletes.
+
 In `POST /api/quote-lines` (lines 37-38):
 
 ```ts
@@ -197,6 +243,13 @@ const lineNumber = (lastLine?.lineNumber ?? 0) + 1
 
 ## Class 5 — PATCH /api/quotes/[id] doesn't recompute totals after discount change
 
+> ✅ **RESOLVED** in Hotfix #1 (commit `d406688`, 2026-11-04).
+> The `PATCH /api/quotes/[id]` handler now calls
+> `recomputeQuoteTotals(quoteId)` whenever `body.discount` or
+> `body.discountType` is present. The misleading comment in
+> `discount-section.tsx` ("IVA + total + deposit recompute automatically
+> on the server") is now accurate.
+
 Already mentioned in Class 3 but worth isolating because the user-visible
 symptom is confusing.
 
@@ -225,6 +278,14 @@ Same as Class 3: call `recomputeQuoteTotals(quoteId)` from the
 ---
 
 ## Class 6 — No status-transition validation
+
+> ✅ **RESOLVED** in Hotfix #3 (commit `e058d1d`, 2026-11-05).
+> Added `src/lib/status-transitions.ts` with the canonical pipeline +
+> `isValidTransition(from, to)` map. Both `PATCH /api/orders/[id]/status`
+> and the `status:` branch of `PATCH /api/orders/[id]` validate via the
+> same helper. Event status also validated through
+> `/api/events/[id]/status`; the duplicate `status` branch on
+> `PATCH /api/events/[id]` was made consistent.
 
 Both `PATCH /api/orders/[id]/status` and `PATCH /api/orders/[id]`
 (which also accepts `status` in body) allow any-to-any status
@@ -263,6 +324,15 @@ Call from both status endpoints.
 
 ## Class 7 — Date timezone bugs
 
+> ✅ **RESOLVED** in Hotfix #4 (commit `97f1c70`, 2026-11-05).
+> Took Option 1 from the fix pattern: dates that represent calendar
+> days (event dates, delivery dates) are now stored and compared as
+> `YYYY-MM-DD` strings via the helpers in `src/lib/date-helpers.ts`,
+> not as `Date` objects. The calendar grid's existing
+> `toISOString().slice(0, 10)` convention is preserved. Comparisons
+> against "now" use a `todayMexicoCity()` helper that resolves in
+> America/Monterrey regardless of server TZ.
+
 Several routes do `new Date(body.eventDate + "T00:00:00")`. On Vercel
 (UTC), this creates a Date at local-midnight-of-the-server, which is
 **UTC midnight**, not Mexico City midnight. A date picked as "Nov 26"
@@ -296,6 +366,18 @@ Option 1 is simpler and matches what calendar-grid.ts already does.
 
 ## Class 8 — DELETE endpoints don't protect downstream references
 
+> ✅ **RESOLVED** in Hotfix #4 (commit `97f1c70`, 2026-11-05).
+> All 5 affected DELETE endpoints now run a `_count` query on every
+> related model before deleting. If any dependent count > 0, the
+> endpoint returns `422` with the list of dependent records
+> (e.g. `Cannot delete: 3 Payments, 2 ExecutionLogs reference this
+> Order`). `?force=true` proceeds with documented cascade behavior.
+>
+> The soft-delete pattern (Wishlist "next up" item) is still pending —
+> once shipped, `?force=true` deletes become unnecessary for the
+> common case because "delete" becomes `set deletedAt = now()` and
+> downstream references remain intact.
+
 | Endpoint | Issue |
 |---|---|
 | `DELETE /api/orders/[id]` | Doesn't check if the order has Payments, ExecutionLogs, or linked Quotes. Deletion orphans those records (their `linkedId` / `orderId` fields still reference the deleted order). |
@@ -315,31 +397,134 @@ Also: implement the **soft-delete pattern** from the Wishlist — once that's do
 
 ---
 
-## Recommended priority for fixing
+## Class 9 — Post-audit regressions from v1.9.2 stem-level loss feature
 
-In order of severity:
+> ✅ **RESOLVED** in commit `9767531` (2026-11-07).
+> Three regression bugs introduced by commit `76d83a7` (v1.9.2:
+> stem-level loss reporting + Loans improvements). All shipped in
+> the same fix bundle on 2026-11-07.
 
-1. **Class 3** — quote total wrong. Billing correctness bug, customers see wrong numbers. **Fix first.**
-2. **Class 1 (`PATCH /api/orders/[id]/line-items` deletes-then-recreates without transaction)** — direct data loss risk. Fix immediately.
-3. **Class 1 (`POST /api/quotes/[id]/convert-to-order`)** — quote→order conversion is half-atomic; can leave quotes unlinked to orders that exist.
-4. **Class 2 (stale-read stock deductions)** — silent inventory drift, especially bad during concurrent PO receipts.
-5. **Class 5 (discount PATCH doesn't recompute)** — visible UX bug + billing bug.
-6. **Class 1 (other multi-write routes)** — lower frequency but same class.
-7. **Class 8 (delete endpoints orphan references)** — usually silent, only matters when someone deletes the wrong thing.
-8. **Class 6 (status transitions)** — annoyance, not data loss.
-9. **Class 7 (timezone)** — edge case, only matters near midnight.
-10. **Class 4 (lineNumber collision)** — cosmetic.
+The v1.9.2 feature in commit `76d83a7` renamed the `/api/losses`
+POST body field from `qtyLostPacks` to `qtyLost` (now accepts
+`qtyLost` + `unit`, does stem→pack conversion internally). Two
+existing UI callers were never updated, and a third regression
+slipped into the procurement page during the same deploy window.
 
-### Suggested bundled fix
+### Bug A — Procurement tab 500 (missing import)
 
-Classes 1, 2, 3, 5 are all in the same files (the API routes), they're
-related (data integrity + billing correctness), and fixing them
-together means we can write a single regression test that covers all
-of them rather than re-touching the same routes 4 times. ~3-4 hours
-estimated for the bundle.
+`src/app/(erp)/procurement/page.tsx` references `<MissingPurchaseActions />`
+in JSX but never imports it. Commit `9253124` added the JSX usage but
+forgot the `import { MissingPurchaseActions } from "./missing-purchase-actions"`
+statement. The build passed because `next.config.ts` has
+`typescript.ignoreBuildErrors = true` (the legacy v1.7 escape hatch).
+At runtime, the page throws `ReferenceError: MissingPurchaseActions is
+not defined` → HTTP 500 the moment any pending `MissingPurchaseLog`
+exists in the DB (which the new stock-floor-check feature creates
+automatically). The whole /procurement tab was dead.
 
-Class 3 alone (just the billing-correctness fix) is ~1 hour if you
-want to ship that first as a hotfix.
+**Fix:** added the missing import.
+
+### Bug B — "New PO" dialog always failed with 400
+
+`NewPoDialog` POSTs `lines: []` (the dialog explicitly says "Creates a
+draft PO with no line items. You can add materials to the PO after
+it's created"), but the API rejected with `400 "At least one line
+item is required"`. Every "✓ Create PO" click failed.
+
+**Fix:** removed the empty-array rejection in `POST /api/purchase-orders`.
+Empty POs are now allowed as drafts (matching the dialog's stated intent).
+
+### Bug C — "Log Purchase" button did nothing (link + no prefill)
+
+`MissingPurchaseActions`'s "Log Purchase" button was a plain
+`<a href="/procurement?resolve=...&sku=...&name=...&qty=...">` but the
+page is a server component that doesn't read `searchParams`, and
+`AdHocPurchaseDialog` doesn't accept prefill props. Clicking just
+reloaded the page with no effect.
+
+**Fix:** rewrote `MissingPurchaseActions` so "Log Purchase" opens its
+own inline ad-hoc purchase dialog pre-filled with the missing
+purchase's SKU, qty, and estimated cost. It POSTs to
+`/api/ad-hoc-purchases` with `resolveMissingPurchaseId` in the body
+(which the API already supports). The log auto-resolves when the
+purchase is logged.
+
+### Bug D — Reset Perishable Stock silently did nothing
+
+The Materials tab's `ResetPerishableButton` POSTed
+`{ materialSku, qtyLostPacks, reason }` to `/api/losses`, but the API
+now requires `qtyLost` (renamed in v1.9.2). Every POST returned
+`400 "Missing required fields: materialSku, qtyLost, reason"`. Zero
+losses created. Zero stock deducted. The button silently swallowed
+the errors with `if (res.ok) { created++ }` — no `else`, no
+`toast.error`, no console log — and showed a fake success toast
+("0 materials · 0 packs · $0 as losses").
+
+**Fix:** rewrote `ResetPerishableButton` to call the dedicated
+`/api/materials/reset-perishable` endpoint (single atomic POST,
+replaces the broken N-loop). Extended that endpoint to accept an
+optional `{ items: [{sku, qty}], reason, notes }` body so per-item
+selection in the dialog still works. Errors now surface via
+`toast.error` and `console.error`.
+
+### Why these slipped through
+
+1. `next.config.ts` has `typescript.ignoreBuildErrors = true` — Bug A
+   produced a real `tsc` error (`Cannot find name 'MissingPurchaseActions'`)
+   that was silently dropped at build time. Worth flipping off once the
+   remaining pre-existing type errors in `scripts/import-erp-workbook.ts`
+   and `src/components/floristry/*` are cleaned up.
+2. No smoke test covers the Materials reset-perishable flow or the
+   Procurement tab's missing-purchase-actions render path.
+3. Field renames (`qtyLostPacks` → `qtyLost`) need a grep-and-update
+   pass across all callers, not just the one feature's primary dialog.
+
+### Bonus nit — Losses page empty-state colSpan
+
+The empty-state row in `/losses` used `colSpan={6}` but the table
+has 8 columns (Loss #, Date, Material, Qty, Reason, By, Cost, Notes),
+leaving a thin gray sliver at the right of the empty row. Fixed to
+`colSpan={8}` in the same bundle.
+
+---
+
+<a id="status-summary"></a>
+
+## Status summary
+
+| Class | Title | Status | Commit | Date |
+|---|---|---|---|---|
+| 1 | Missing `$transaction` on multi-write ops | ✅ Resolved | `84f055d` (Hotfix #2) | 2026-11-04 |
+| 2 | Stale-read race conditions on stock updates | ✅ Resolved | `84f055d` (Hotfix #2) | 2026-11-04 |
+| 3 | Quote total ignores discount + delivery fee | ✅ Resolved | `d406688` (Hotfix #1) | 2026-11-04 |
+| 4 | QuoteLine `count + 1` lineNumber | ✅ Resolved | `d406688` (Hotfix #1) | 2026-11-04 |
+| 5 | PATCH /api/quotes/[id] doesn't recompute after discount | ✅ Resolved | `d406688` (Hotfix #1) | 2026-11-04 |
+| 6 | No status-transition validation | ✅ Resolved | `e058d1d` (Hotfix #3) | 2026-11-05 |
+| 7 | Date timezone bugs | ✅ Resolved | `97f1c70` (Hotfix #4) | 2026-11-05 |
+| 8 | DELETE endpoints don't protect downstream references | ✅ Resolved | `97f1c70` (Hotfix #4) | 2026-11-05 |
+| 9 | v1.9.2 regressions (procurement 500 + reset-perishable silent fail + New PO 400 + Log Purchase no-op) | ✅ Resolved | `9767531` | 2026-11-07 |
+
+### Original priority order (for reference)
+
+The original priority order from the audit, retained here for context —
+Class 3 was correctly identified as the highest-severity item and was
+the first to ship:
+
+1. Class 3 (quote total wrong — billing correctness)
+2. Class 1 (`PATCH /api/orders/[id]/line-items` — data loss risk)
+3. Class 1 (`POST /api/quotes/[id]/convert-to-order`)
+4. Class 2 (stale-read stock deductions)
+5. Class 5 (discount PATCH doesn't recompute)
+6. Class 1 (other multi-write routes)
+7. Class 8 (delete endpoints orphan references)
+8. Class 6 (status transitions)
+9. Class 7 (timezone)
+10. Class 4 (lineNumber collision)
+
+The bundled fix recommendation (Classes 1+2+3+5 together, ~3-4 hours)
+was partially followed: Hotfix #1 covered Classes 3+4+5 in one bundle,
+Hotfix #2 added Class 2 to the same set of files, and Hotfixes #3 and
+#4 took Classes 6+7+8 separately.
 
 ---
 
@@ -348,3 +533,24 @@ want to ship that first as a hotfix.
 - 2026-11-03: Created from the audit done after the `count + 1`
   collision fix (commit `324f836`). The collision fix uncovered
   related patterns of broken logic across the rest of the API surface.
+- 2026-11-04: Hotfix #1 (commit `d406688`) resolves Classes 3, 4, 5.
+  Created `src/lib/quote-totals.ts` with `recomputeQuoteTotals()`, fixed
+  QuoteLine lineNumber, recompute-on-discount-PATCH. Follow-up
+  commit `0a6d7a6` persists `discount` + `deliveryFee` at quote creation.
+- 2026-11-04: Hotfix #2 (commit `84f055d`) resolves Classes 1, 2.
+  All 12 multi-write routes wrapped in `$transaction`. Stock-mutating
+  routes switched to atomic `{ decrement }` / `{ increment }`.
+- 2026-11-05: Hotfix #3 (commit `e058d1d`) resolves Class 6.
+  Added `src/lib/status-transitions.ts` with `isValidTransition()`.
+- 2026-11-05: Hotfix #4 (commit `97f1c70`) resolves Classes 7, 8.
+  Date helpers in `src/lib/date-helpers.ts`, DELETE endpoint protection
+  with `?force=true` override.
+- 2026-11-07: Commit `76d83a7` ships v1.9.2 stem-level loss feature +
+  Loans + ExecutionLogLine.source + Audit logging for 15 routes.
+  Introduces Class 9 regressions (field rename `qtyLostPacks` →
+  `qtyLost` not propagated to existing callers; procurement page
+  missing-import 500).
+- 2026-11-07: Commit `9767531` resolves Class 9. Procurement tab
+  import fix, New PO empty-lines allowed, Log Purchase inline dialog,
+  Reset Perishable rewired to atomic `/api/materials/reset-perishable`.
+  Losses page empty-state `colSpan` nit also fixed in the same bundle.
