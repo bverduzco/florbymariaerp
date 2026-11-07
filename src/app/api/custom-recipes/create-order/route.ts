@@ -10,8 +10,17 @@ export const dynamic = "force-dynamic"
  * Saves a custom recipe as HIDDEN (not visible in Catalogue) + creates an Order
  * with a single line item whose description contains the full material breakdown.
  *
+ * This is the "Create Order" flow from the Custom Bouquet Builder — every
+ * custom bouquet that becomes an order gets its recipe preserved here for
+ * audit-trail purposes (you can always look up what went into a past order),
+ * but the recipe does NOT pollute the Catalogue or Recipes tabs.
+ *
+ * The "Save as Recipe" button (POST /api/custom-recipes) is the OTHER flow —
+ * it creates a visible Product so Maria can promote a custom design to her
+ * permanent catalogue. Use that one sparingly.
+ *
  * Body: {
- *   name: string,                    // recipe name (e.g. "Garden Romance")
+ *   name?: string,                    // recipe name; defaults to "Custom Bouquet CBQ-NNNN"
  *   size?: string,
  *   description?: string,
  *   actualPrice?: number,            // pre-IVA; defaults to suggested
@@ -27,6 +36,10 @@ export const dynamic = "force-dynamic"
  * }
  *
  * Returns: { order: {...}, recipe: {...} }
+ *
+ * SKU convention: CBQ-NNNN (Custom Bouquet). Distinct from PRD-CUSTOM-NNNN
+ * used by the visible "Save as Recipe" flow — visually tells you at a glance
+ * whether a recipe is a hidden order-attached one or a promoted catalogue one.
  */
 export async function POST(request: Request) {
   let body: {
@@ -50,10 +63,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 })
   }
 
-  // Validate required fields
-  if (!body.name?.trim()) {
-    return NextResponse.json({ error: "Recipe name is required" }, { status: 400 })
-  }
+  // Validate required fields. NOTE: `name` is now OPTIONAL — if Maria leaves
+  // it blank, we default to "Custom Bouquet CBQ-NNNN" using the next
+  // consecutive number. That way every recipe has a meaningful identifier
+  // instead of "Custom Bouquet (Medium)" (the previous generic default).
   if (!body.customerId) {
     return NextResponse.json({ error: "customerId is required" }, { status: 400 })
   }
@@ -119,17 +132,24 @@ export async function POST(request: Request) {
     ? body.actualPrice
     : Math.round(suggestedPrice / 5) * 5
 
-  // Generate consecutive SKU: PRD-CUSTOM-0001, PRD-CUSTOM-0002, ...
+  // Generate consecutive SKU: CBQ-0001, CBQ-0002, ...
+  // (CBQ = Custom Bouquet — distinct from PRD-CUSTOM-NNNN used by the
+  // visible "Save as Recipe" flow. Visually tells you at a glance whether
+  // a recipe is a hidden order-attached one or a promoted catalogue one.)
   const lastCustom = await db.customRecipe.findFirst({
-    where: { erpProductSku: { startsWith: "PRD-CUSTOM-" } },
+    where: { erpProductSku: { startsWith: "CBQ-" } },
     orderBy: { erpProductSku: "desc" },
   })
   let nextNum = 1
   if (lastCustom?.erpProductSku) {
-    const match = /^PRD-CUSTOM-(\d+)$/.exec(lastCustom.erpProductSku)
+    const match = /^CBQ-(\d+)$/.exec(lastCustom.erpProductSku)
     if (match) nextNum = parseInt(match[1]) + 1
   }
-  const sku = `PRD-CUSTOM-${String(nextNum).padStart(4, "0")}`
+  const sku = `CBQ-${String(nextNum).padStart(4, "0")}`
+
+  // If Maria didn't name the bouquet, default to "Custom Bouquet CBQ-NNNN"
+  // so the recipe has a meaningful identifier instead of generic "Custom Bouquet (Medium)".
+  const recipeName = body.name?.trim() || `Custom Bouquet ${sku}`
 
   // Build the line item description string
   // e.g. "Custom Bouquet: 5× Alstroemeria Amarilla, 3× Lisianthus Morado, 2× Ruscus"
@@ -145,7 +165,7 @@ export async function POST(request: Request) {
   // 1. Create the CustomRecipe (hidden = true — NOT visible in Catalogue)
   const recipe = await db.customRecipe.create({
     data: {
-      name: body.name.trim(),
+      name: recipeName,
       size: body.size ?? null,
       description: body.description ?? lineItemDescription,
       flowersCost,

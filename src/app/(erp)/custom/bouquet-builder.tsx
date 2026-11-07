@@ -3,6 +3,12 @@
 import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 
 type Material = {
   id: string
@@ -14,6 +20,12 @@ type Material = {
   erpSku: string | null
   erpName: string | null
   matchConfidence: string | null
+}
+
+type CustomerOption = {
+  id: string
+  name: string
+  phone: string | null
 }
 
 type SelectedItem = {
@@ -33,7 +45,7 @@ const IVA_RATE = 0.16
 const TYPE_EMOJI: Record<string, string> = { flower: "🌹", foliage: "🌿" }
 const TYPE_COLOR: Record<string, string> = { flower: "#FCE7F3:#BE185D", foliage: "#D1FAE5:#065F46" }
 
-export function CustomBouquetBuilder({ materials }: { materials: Material[] }) {
+export function CustomBouquetBuilder({ materials, customers }: { materials: Material[]; customers: CustomerOption[] }) {
   const [query, setQuery] = useState("")
   const [typeFilter, setTypeFilter] = useState("all")
   const [sortBy, setSortBy] = useState("name")
@@ -41,6 +53,17 @@ export function CustomBouquetBuilder({ materials }: { materials: Material[] }) {
   const [bouquetName, setBouquetName] = useState("")
   const [bouquetSize, setBouquetSize] = useState("Medium")
   const [saving, setSaving] = useState(false)
+  // "Create Order" dialog state
+  const [orderDialogOpen, setOrderDialogOpen] = useState(false)
+  const [orderSaving, setOrderSaving] = useState(false)
+  const [orderForm, setOrderForm] = useState({
+    name: "",        // recipe name (pre-filled from bouquetName; left blank → server defaults to "Custom Bouquet CBQ-NNNN")
+    customerId: "",
+    deliveryDate: "",
+    deliveryAddress: "",
+    cardMessage: "",
+    internalNotes: "",
+  })
   const router = useRouter()
 
   // Filtered + sorted materials
@@ -145,14 +168,68 @@ export function CustomBouquetBuilder({ materials }: { materials: Material[] }) {
     }
   }
 
-  function handleCreateOrder() {
+  function handleCreateOrderClick() {
     if (selected.size === 0) {
       toast.error("No materials selected", { description: "Add materials first." })
       return
     }
-    // Navigate to orders page with query params for the new order dialog
-    // For now, just save as recipe first, then redirect
-    toast.info("Create Order", { description: "Save the recipe first, then convert to an order from the Orders page." })
+    if (customers.length === 0) {
+      toast.error("No customers", { description: "Add a customer on the Customers page first." })
+      return
+    }
+    // Pre-fill the recipe name with whatever was typed in the Live Preview panel.
+    // Maria can leave it blank — the server will default to "Custom Bouquet CBQ-NNNN".
+    setOrderForm((prev) => ({ ...prev, name: bouquetName }))
+    setOrderDialogOpen(true)
+  }
+
+  async function handleCreateOrderSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!orderForm.customerId) {
+      toast.error("Customer is required")
+      return
+    }
+    if (selected.size === 0) return
+    setOrderSaving(true)
+    try {
+      const items = Array.from(selected.values())
+      const res = await fetch("/api/custom-recipes/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: orderForm.name.trim() || undefined,  // undefined → server defaults to "Custom Bouquet CBQ-NNNN"
+          size: bouquetSize,
+          actualPrice: suggestedPrice,  // pre-IVA
+          customerId: orderForm.customerId,
+          deliveryDate: orderForm.deliveryDate || undefined,
+          deliveryAddress: orderForm.deliveryAddress || undefined,
+          cardMessage: orderForm.cardMessage || undefined,
+          internalNotes: orderForm.internalNotes || undefined,
+          lines: items.map((i) => ({
+            customMaterialId: i.materialId,
+            qty: i.qty,
+          })),
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error ?? "Failed")
+      }
+      const data = await res.json()
+      toast.success("Order created", {
+        description: `${data.order?.orderNumber ?? "Order"} · ${data.recipe?.name ?? "Custom Bouquet"} · ${data.order?.customerName ?? ""} · $${data.order?.actualPrice?.toFixed(0) ?? suggestedPrice.toFixed(0)}`,
+      })
+      // Reset everything
+      setOrderDialogOpen(false)
+      setSelected(new Map())
+      setBouquetName("")
+      setOrderForm({ name: "", customerId: "", deliveryDate: "", deliveryAddress: "", cardMessage: "", internalNotes: "" })
+      router.refresh()
+    } catch (e) {
+      toast.error("Failed to create order", { description: e instanceof Error ? e.message : String(e) })
+    } finally {
+      setOrderSaving(false)
+    }
   }
 
   const selectedItems = Array.from(selected.values())
@@ -323,22 +400,135 @@ export function CustomBouquetBuilder({ materials }: { materials: Material[] }) {
               disabled={saving || selected.size === 0}
               className="fmd-btn primary"
               style={{ width: "100%", opacity: saving || selected.size === 0 ? 0.5 : 1, cursor: saving || selected.size === 0 ? "not-allowed" : "pointer" }}
+              title="Save as a visible Product in the Catalogue. Use this when Maria designs a new signature bouquet she wants to sell again."
             >
-              {saving ? "Saving..." : "💾 Save as Recipe"}
+              {saving ? "Saving..." : "💾 Save as Recipe (visible)"}
             </button>
             <button
-              onClick={handleCreateOrder}
+              onClick={handleCreateOrderClick}
               disabled={selected.size === 0}
               className="fmd-btn success"
               style={{ width: "100%", opacity: selected.size === 0 ? 0.5 : 1, cursor: selected.size === 0 ? "not-allowed" : "pointer" }}
+              title="Save as a hidden recipe (audit trail) + create an Order for a customer. Recipe does NOT appear in Catalogue."
             >
               📦 Create Order
             </button>
           </div>
+
+          {/* ─── Create Order Dialog ─────────────────────────────────── */}
+          <Dialog open={orderDialogOpen} onOpenChange={setOrderDialogOpen}>
+            <DialogContent className="sm:max-w-[520px] max-h-[92vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create Order from Custom Bouquet</DialogTitle>
+              </DialogHeader>
+              <div style={{ fontSize: "11px", color: "#78716C", background: "#F5F5F4", border: "1px solid #E7E5E4", borderRadius: "6px", padding: "6px 10px", marginBottom: "8px" }}>
+                📦 Will save this design as a <strong>hidden recipe (CBQ-NNNN)</strong> for the audit trail
+                and create an <strong>Order</strong> for the chosen customer. The recipe will NOT appear in
+                the Catalogue or Recipes tabs.
+              </div>
+              <form onSubmit={handleCreateOrderSubmit} className="space-y-3 pt-1">
+                {/* Bouquet composition preview (read-only) */}
+                <div style={{ background: "#FAFAF9", border: "1px solid #E7E5E4", borderRadius: "6px", padding: "8px 10px", fontSize: "12px" }}>
+                  <div style={{ fontWeight: 600, color: "#44403C", marginBottom: "4px" }}>
+                    {selectedItems.length} materials · {stemsCount} stems · cost ${totalCost.toFixed(2)} · suggested ${suggestedPrice.toFixed(0)}
+                  </div>
+                  <div style={{ color: "#78716C", fontSize: "11px", lineHeight: 1.5 }}>
+                    {selectedItems.map((i) => `${i.qty}× ${i.name}`).join(", ")}
+                  </div>
+                </div>
+
+                {/* Bouquet name (optional) */}
+                <div className="space-y-2">
+                  <Label htmlFor="ord-name">Bouquet name (optional)</Label>
+                  <Input
+                    id="ord-name"
+                    value={orderForm.name}
+                    onChange={(e) => setOrderForm({ ...orderForm, name: e.target.value })}
+                    placeholder="e.g. Garden Romance (leave blank → auto-named CBQ-0001)"
+                  />
+                </div>
+
+                {/* Customer */}
+                <div className="space-y-2">
+                  <Label>Customer *</Label>
+                  <Select value={orderForm.customerId} onValueChange={(v) => setOrderForm({ ...orderForm, customerId: v })} required>
+                    <SelectTrigger><SelectValue placeholder="Select customer..." /></SelectTrigger>
+                    <SelectContent className="max-h-[260px]">
+                      {customers.length === 0 ? (
+                        <SelectItem value="_none" disabled>No customers yet — add one on the Customers page first</SelectItem>
+                      ) : (
+                        customers.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}{c.phone ? ` · ${c.phone}` : ""}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Delivery date + address */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="ord-date">Delivery date</Label>
+                    <Input
+                      id="ord-date"
+                      type="date"
+                      value={orderForm.deliveryDate}
+                      onChange={(e) => setOrderForm({ ...orderForm, deliveryDate: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="ord-addr">Delivery address</Label>
+                    <Input
+                      id="ord-addr"
+                      value={orderForm.deliveryAddress}
+                      onChange={(e) => setOrderForm({ ...orderForm, deliveryAddress: e.target.value })}
+                      placeholder="Optional"
+                    />
+                  </div>
+                </div>
+
+                {/* Card message */}
+                <div className="space-y-2">
+                  <Label htmlFor="ord-card">Card message</Label>
+                  <Textarea
+                    id="ord-card"
+                    value={orderForm.cardMessage}
+                    onChange={(e) => setOrderForm({ ...orderForm, cardMessage: e.target.value })}
+                    rows={2}
+                    placeholder="What should the card say? Optional."
+                  />
+                </div>
+
+                {/* Internal notes */}
+                <div className="space-y-2">
+                  <Label htmlFor="ord-notes">Internal notes</Label>
+                  <Textarea
+                    id="ord-notes"
+                    value={orderForm.internalNotes}
+                    onChange={(e) => setOrderForm({ ...orderForm, internalNotes: e.target.value })}
+                    rows={2}
+                    placeholder="Optional — automatically prefixed with [Custom]"
+                  />
+                </div>
+
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setOrderDialogOpen(false)}>Cancel</Button>
+                  <Button type="submit" disabled={orderSaving || !orderForm.customerId}>
+                    {orderSaving ? "Creating..." : "✓ Create Order"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
 
         <div className="fmd-note blue" style={{ marginTop: "8px" }}>
-          🎨 When saved as recipe, appears in Catalogue tab following ERP pricing rules. When "Create Order" clicked, creates order with custom bouquet + breakdown.
+          🎨 <strong>Save as Recipe (visible)</strong>: promotes this design to your permanent Catalogue as a Product
+          (rare — only for new signature bouquets). <strong>Create Order</strong>: saves the design as a hidden recipe
+          (CBQ-NNNN) for the audit trail and immediately creates an Order for a customer. Hidden recipes don&apos;t
+          appear in Catalogue or Recipes — view them in the <em>Custom Bouquet History</em> section below.
         </div>
       </div>
     </div>

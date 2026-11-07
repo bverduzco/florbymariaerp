@@ -6,6 +6,13 @@ import { RecipeFilter } from "./recipe-filter"
 
 async function getRecipes() {
   return prisma.product.findMany({
+    // Exclude "Custom" category products — these are legacy visible custom
+    // recipes created by the "Save as Recipe" button on the Custom Bouquet
+    // Builder. They don't belong in the Recipes tab (the bill-of-materials
+    // reference page); they show up in the Catalogue tab instead. New custom
+    // orders go through the "Create Order" flow which creates hidden recipes
+    // with the CBQ-NNNN SKU prefix that never create Product rows at all.
+    where: { category: { not: "Custom" } },
     include: {
       recipeLines: {
         include: {
