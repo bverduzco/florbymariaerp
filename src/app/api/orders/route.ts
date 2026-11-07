@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { parseDateAsGMTMinus6 } from "@/lib/date-helpers"
 import { db } from "@/lib/db"
+import { logChange } from "@/lib/audit"
 
 export const dynamic = "force-dynamic"
 
@@ -152,6 +153,13 @@ export async function POST(request: Request) {
         },
       },
       include: { customer: true, event: true, lineItems: true },
+    })
+
+    await logChange({
+      entityType: "Order",
+      entityId: created.id,
+      action: "create",
+      newValue: `${created.orderNumber} for ${created.customer?.name ?? "—"} — $${created.lineItems.reduce((s, l) => s + l.unitPrice * l.qty, 0) + created.deliveryFee}`,
     })
 
     return NextResponse.json(

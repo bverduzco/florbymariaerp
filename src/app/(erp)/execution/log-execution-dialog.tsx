@@ -80,6 +80,8 @@ type OrderOption = {
 // ───────────────────────────────────────────────────────────────────────────
 // Internal line shape (editable)
 // ───────────────────────────────────────────────────────────────────────────
+type LineSource = "inventory" | "donation" | "loan"
+
 type EditLine = {
   key: string
   materialSku: string
@@ -89,10 +91,17 @@ type EditLine = {
   unitCost: number
   lineCost: number
   type: "recipe" | "addition" | "substitution" | "removal"
+  source: LineSource
   originalMaterialSku?: string
   originalQty?: number
   notes?: string
 }
+
+const LINE_SOURCES = [
+  { value: "inventory", label: "📦 Inventory" },
+  { value: "donation", label: "🎁 Donation" },
+  { value: "loan", label: "🔄 Loan" },
+]
 
 const STATUSES = [
   { value: "executed", label: "✓ Executed" },
@@ -197,6 +206,7 @@ export function LogExecutionDialog({
           unitCost: rl.unitCost,
           lineCost: Number((qtyUsed * rl.unitCost).toFixed(2)),
           type: "recipe",
+          source: "inventory",
         })
       })
     })
@@ -215,6 +225,7 @@ export function LogExecutionDialog({
         unitCost: 0,
         lineCost: 0,
         type: "addition",
+        source: "inventory",
       },
     ])
   }
@@ -287,6 +298,7 @@ export function LogExecutionDialog({
           unitCost: l.unitCost,
           lineCost: l.lineCost,
           type: l.type,
+          source: l.source,
           originalMaterialSku: l.originalMaterialSku || null,
           originalQty: l.originalQty || null,
           notes: l.notes || null,
@@ -305,6 +317,21 @@ export function LogExecutionDialog({
       toast.success("Execution logged", {
         description: `${data.log.executionNumber} — ${lines.length} line(s) · actual $${actualCost.toLocaleString("es-MX", { maximumFractionDigits: 2 })}`,
       })
+
+      // Bug fix: display stock discrepancy warnings if any were returned
+      if (data.warnings && data.warnings.length > 0) {
+        data.warnings.forEach((w: string) => {
+          toast.warning("⚠ Stock discrepancy", {
+            description: w,
+            duration: 8000,
+          })
+        })
+        toast.info("Check Procurement tab", {
+          description: "Missing purchase logs have been created for the items above.",
+          duration: 8000,
+        })
+      }
+
       setOpen(false)
       setJobSelection("_none")
       setExecutedAt(today)
@@ -509,6 +536,7 @@ export function LogExecutionDialog({
                       <th className="text-right px-2 py-2 font-medium w-20">Cost/u</th>
                       <th className="text-right px-2 py-2 font-medium w-20">Line $</th>
                       <th className="text-left px-2 py-2 font-medium w-28">Type</th>
+                      <th className="text-left px-2 py-2 font-medium w-28">Source</th>
                       <th className="px-2 py-2 w-8"></th>
                     </tr>
                   </thead>
@@ -585,6 +613,25 @@ export function LogExecutionDialog({
                             </SelectContent>
                           </Select>
                         </td>
+                        <td className="px-2 py-1">
+                          <Select
+                            value={l.source}
+                            onValueChange={(v) =>
+                              updateLine(l.key, { source: v as LineSource })
+                            }
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {LINE_SOURCES.map((s) => (
+                                <SelectItem key={s.value} value={s.value}>
+                                  {s.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
                         <td className="px-2 py-1 text-center">
                           <button
                             type="button"
@@ -644,23 +691,40 @@ export function LogExecutionDialog({
                       />
                       <span className="text-xs text-stone-500">{l.unit}</span>
                     </div>
-                    {/* Line total + type + remove */}
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-stone-200">
-                      <Select
-                        value={l.type}
-                        onValueChange={(v) => updateLine(l.key, { type: v as EditLine["type"] })}
-                      >
-                        <SelectTrigger className="h-7 text-[10px] w-auto min-w-[100px]">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {LINE_TYPES.map((t) => (
-                            <SelectItem key={t.value} value={t.value}>
-                              {t.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    {/* Line total + type + source + remove */}
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-stone-200 gap-2">
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={l.type}
+                          onValueChange={(v) => updateLine(l.key, { type: v as EditLine["type"] })}
+                        >
+                          <SelectTrigger className="h-7 text-[10px] w-auto min-w-[90px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {LINE_TYPES.map((t) => (
+                              <SelectItem key={t.value} value={t.value}>
+                                {t.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={l.source}
+                          onValueChange={(v) => updateLine(l.key, { source: v as LineSource })}
+                        >
+                          <SelectTrigger className="h-7 text-[10px] w-auto min-w-[90px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {LINE_SOURCES.map((s) => (
+                              <SelectItem key={s.value} value={s.value}>
+                                {s.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold tabular-nums">
                           ${l.lineCost.toFixed(2)}

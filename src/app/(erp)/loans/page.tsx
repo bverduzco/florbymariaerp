@@ -43,6 +43,7 @@ export default async function LoansPage() {
             <table className="fmd-table">
               <thead>
                 <tr>
+                  <th>Loan #</th>
                   <th>Item</th>
                   <th>Description</th>
                   <th>Owner</th>
@@ -59,6 +60,7 @@ export default async function LoansPage() {
                   const isOverdue = !loan.dateReturned && loan.datePromised && new Date(loan.datePromised) < new Date()
                   return (
                     <tr key={loan.id} style={{ opacity: loan.dateReturned ? 0.6 : 1 }}>
+                      <td style={{ fontFamily: "monospace", fontSize: "11px", fontWeight: 600, color: "#78716C" }}>{loan.loanNumber ?? "—"}</td>
                       <td style={{ fontWeight: 600, color: "#44403C" }}>{loan.itemName}</td>
                       <td style={{ fontSize: "11px", color: "#78716C" }}>{loan.description ?? "—"}</td>
                       <td>{loan.owner}</td>

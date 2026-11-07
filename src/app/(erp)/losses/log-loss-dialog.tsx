@@ -19,11 +19,21 @@ const REASONS = [
   { value: "other", label: "📦 Other" },
 ]
 
+const UNIT_OPTIONS = [
+  { value: "stem", label: "stems" },
+  { value: "pack", label: "packs" },
+  { value: "piece", label: "pieces" },
+  { value: "meter", label: "meters" },
+  { value: "wrap", label: "wraps" },
+]
+
 type MaterialOption = {
   sku: string
   name: string
   packPrice: number | null
   currentStockPacks: number | null
+  unitsPerPack: number | null
+  unit: string | null
 }
 
 export function LogLossDialog({ materials }: { materials: MaterialOption[] }) {
@@ -31,35 +41,74 @@ export function LogLossDialog({ materials }: { materials: MaterialOption[] }) {
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
     materialSku: "",
-    qtyLostPacks: "",
+    qtyLost: "",
+    unit: "",
     reason: "",
     notes: "",
   })
   const router = useRouter()
 
-  // Find selected material to show price preview
+  // Find selected material
   const selected = materials.find((m) => m.sku === form.materialSku)
-  const estCostImpact = selected?.packPrice
-    ? selected.packPrice * (Number(form.qtyLostPacks) || 0)
-    : 0
+
+  // Default the unit to the material's native unit when material changes
+  function handleMaterialChange(sku: string) {
+    const mat = materials.find((m) => m.sku === sku)
+    const defaultUnit = mat?.unit || "pack"
+    setForm({ ...form, materialSku: sku, unit: defaultUnit })
+  }
+
+  // Compute cost preview
+  const qtyNum = Number(form.qtyLost) || 0
+  const upp = selected?.unitsPerPack && selected.unitsPerPack > 0 ? selected.unitsPerPack : 1
+  const perUnitCost = form.unit === "pack"
+    ? (selected?.packPrice ?? 0)
+    : (selected?.packPrice ?? 0) / upp
+  const estCostImpact = qtyNum * perUnitCost
+
+  // Compute equivalent packs for display
+  const packsEquivalent = form.unit === "pack"
+    ? qtyNum
+    : qtyNum / upp
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.materialSku || !form.qtyLostPacks || !form.reason) return
+    if (!form.materialSku || !form.qtyLost || !form.reason || !form.unit) return
     setLoading(true)
     try {
       const res = await fetch("/api/losses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          materialSku: form.materialSku,
+          qtyLost: Number(form.qtyLost),
+          unit: form.unit,
+          reason: form.reason,
+          notes: form.notes || undefined,
+        }),
       })
       if (!res.ok) throw new Error((await res.json()).error ?? "Failed")
       const data = await res.json()
+
+      // Show success toast
       toast.success("Loss logged", {
-        description: `${data.loss?.lossNumber} — ${form.qtyLostPacks} pack(s) of ${selected?.name ?? form.materialSku}`,
+        description: `${data.loss?.lossNumber} — ${form.qtyLost} ${form.unit} of ${selected?.name ?? form.materialSku} ($${estCostImpact.toFixed(2)})`,
       })
+
+      // Show warning if stock discrepancy
+      if (data.warning) {
+        toast.warning("⚠ Stock discrepancy", {
+          description: data.warning,
+          duration: 8000,
+        })
+        toast.info("Check Procurement tab", {
+          description: "A missing purchase log was created.",
+          duration: 8000,
+        })
+      }
+
       setOpen(false)
-      setForm({ materialSku: "", qtyLostPacks: "", reason: "", notes: "" })
+      setForm({ materialSku: "", qtyLost: "", unit: "", reason: "", notes: "" })
       router.refresh()
     } catch (e) {
       toast.error("Failed to log loss", { description: e instanceof Error ? e.message : String(e) })
@@ -82,7 +131,7 @@ export function LogLossDialog({ materials }: { materials: MaterialOption[] }) {
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-2">
             <Label>Material *</Label>
-            <Select value={form.materialSku} onValueChange={(v) => setForm({ ...form, materialSku: v })} required>
+            <Select value={form.materialSku} onValueChange={handleMaterialChange} required>
               <SelectTrigger><SelectValue placeholder="Select material..." /></SelectTrigger>
               <SelectContent className="max-h-[300px]">
                 {materials.length === 0 ? (
@@ -91,47 +140,67 @@ export function LogLossDialog({ materials }: { materials: MaterialOption[] }) {
                   materials.map((m) => (
                     <SelectItem key={m.sku} value={m.sku}>
                       {m.name} — {m.currentStockPacks ?? 0} packs · ${m.packPrice ?? 0}/pack
+                      {m.unitsPerPack ? ` (${m.unitsPerPack}/pack)` : ""}
                     </SelectItem>
                   ))
                 )}
               </SelectContent>
             </Select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+
+          {/* Qty + Unit + Reason row */}
+          <div className="grid grid-cols-3 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="qtyLostPacks">Qty lost (packs) *</Label>
+              <Label htmlFor="qtyLost">Qty lost *</Label>
               <Input
-                id="qtyLostPacks"
+                id="qtyLost"
                 type="number"
-                step="0.5"
-                min="0.5"
-                value={form.qtyLostPacks}
-                onChange={(e) => setForm({ ...form, qtyLostPacks: e.target.value })}
-                placeholder="e.g. 1"
+                step="1"
+                min="1"
+                value={form.qtyLost}
+                onChange={(e) => setForm({ ...form, qtyLost: e.target.value })}
+                placeholder="e.g. 3"
                 required
               />
             </div>
             <div className="space-y-2">
+              <Label>Unit *</Label>
+              <Select value={form.unit} onValueChange={(v) => setForm({ ...form, unit: v })} required>
+                <SelectTrigger><SelectValue placeholder="..." /></SelectTrigger>
+                <SelectContent>
+                  {UNIT_OPTIONS.map((u) => (
+                    <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label>Reason *</Label>
               <Select value={form.reason} onValueChange={(v) => setForm({ ...form, reason: v })} required>
-                <SelectTrigger><SelectValue placeholder="Select reason..." /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="..." /></SelectTrigger>
                 <SelectContent>
                   {REASONS.map((r) => (<SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
           </div>
-          {selected && Number(form.qtyLostPacks) > 0 && (
+
+          {/* Cost preview + packs equivalent */}
+          {selected && qtyNum > 0 && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-800">
               <div className="text-xs uppercase tracking-wider">Estimated cost impact</div>
               <div className="text-lg font-bold">
                 -${estCostImpact.toLocaleString("es-MX", { maximumFractionDigits: 2 })} MXN
               </div>
               <div className="text-xs mt-1">
-                {form.qtyLostPacks} pack(s) × ${selected.packPrice ?? 0}/pack
+                {qtyNum} {form.unit} × ${perUnitCost.toFixed(2)}/{form.unit === "pack" ? "pack" : "stem"}
+                {form.unit !== "pack" && (
+                  <> · {packsEquivalent.toFixed(2)} packs deducted from stock</>
+                )}
               </div>
             </div>
           )}
+
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>
             <Textarea
@@ -142,9 +211,10 @@ export function LogLossDialog({ materials }: { materials: MaterialOption[] }) {
               rows={2}
             />
           </div>
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={loading || !form.materialSku || !form.qtyLostPacks || !form.reason}>
+            <Button type="submit" disabled={loading || !form.materialSku || !form.qtyLost || !form.reason || !form.unit}>
               {loading ? "Logging..." : "✓ Log Loss"}
             </Button>
           </DialogFooter>

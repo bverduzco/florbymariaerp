@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { recomputeQuoteTotals } from "@/lib/quote-totals"
+import { logChange } from "@/lib/audit"
 
 export const dynamic = "force-dynamic"
 
@@ -123,6 +124,29 @@ export async function PATCH(
       body.deliveryFee !== undefined
     const totals = needsRecompute ? await recomputeQuoteTotals(id) : null
 
+    // Tier 1 audit: log status changes
+    if (body.status) {
+      await logChange({
+        entityType: "Quote",
+        entityId: id,
+        action: "status_change",
+        fieldName: "status",
+        oldValue: null, // we don't have the old status here (didn't fetch before update)
+        newValue: body.status,
+      })
+    }
+
+    // Tier 1 audit: log discount changes
+    if (body.discount !== undefined) {
+      await logChange({
+        entityType: "Quote",
+        entityId: id,
+        action: "update",
+        fieldName: "discount",
+        newValue: `${body.discount} (${body.discountType ?? "flat"})`,
+      })
+    }
+
     return NextResponse.json({
       quote: totals ? { ...quote, subtotal: totals.subtotal, iva: totals.iva, total: totals.total, depositRequired: totals.depositRequired } : quote,
       quoteTotals: totals,
@@ -184,6 +208,15 @@ export async function DELETE(request: Request, { params }: RouteParams) {
         data: { orderId: null },
       })
     }
+
+    // Tier 2 audit: log the deletion BEFORE the quote is deleted
+    // (after delete, the quote won't exist to reference)
+    await logChange({
+      entityType: "Quote",
+      entityId: id,
+      action: "delete",
+      oldValue: existing.quoteNumber,
+    })
 
     await db.quote.delete({ where: { id } })
     return NextResponse.json({ deleted: id, quoteNumber: existing.quoteNumber })

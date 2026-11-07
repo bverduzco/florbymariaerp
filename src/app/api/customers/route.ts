@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { logChange } from "@/lib/audit"
 
 export const dynamic = "force-dynamic"
 
@@ -58,6 +59,14 @@ export async function POST(request: Request) {
         notes: body.notes?.trim() || null,
       },
     })
+
+    await logChange({
+      entityType: "Customer",
+      entityId: created.id,
+      action: "create",
+      newValue: created.name,
+    })
+
     return NextResponse.json(
       {
         customer: {

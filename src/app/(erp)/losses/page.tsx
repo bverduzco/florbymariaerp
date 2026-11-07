@@ -4,7 +4,7 @@ import { db as prisma } from "@/lib/db"
 import { LogLossDialog } from "./log-loss-dialog"
 
 async function getLosses() { return prisma.loss.findMany({ orderBy: { date: "desc" } }) }
-async function getMaterials() { return prisma.material.findMany({ where: { currentStockPacks: { gt: 0 } }, select: { id: true, sku: true, name: true, packPrice: true, currentStockPacks: true }, orderBy: { name: "asc" } }) }
+async function getMaterials() { return prisma.material.findMany({ where: { currentStockPacks: { gt: 0 } }, select: { id: true, sku: true, name: true, packPrice: true, currentStockPacks: true, unitsPerPack: true, unit: true }, orderBy: { name: "asc" } }) }
 
 const REASON_EMOJI: Record<string, string> = { damaged: "🔧", spoiled: "🥀", broken: "💔", expired: "⏰", lost: "❓", stolen: "🚨", other: "📦" }
 
@@ -38,7 +38,12 @@ export default async function LossesPage() {
                   <td style={{ fontFamily: "monospace", fontSize: "11px" }}>{l.lossNumber}</td>
                   <td>{l.date.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</td>
                   <td style={{ fontFamily: "monospace", fontSize: "11px" }}>{l.materialSku}</td>
-                  <td style={{ textAlign: "right", fontWeight: 700, color: "#991B1B" }}>-{l.qtyLostPacks}</td>
+                  <td style={{ textAlign: "right", fontWeight: 700, color: "#991B1B" }}>
+                    {l.qtyLostUnits != null
+                      ? `-${l.qtyLostUnits} ${l.unit ?? "pcs"}`
+                      : `-${l.qtyLostPacks} packs`
+                    }
+                  </td>
                   <td><span className="fmd-status" style={{ background: "#F3F4F6", color: "#44403C" }}>{REASON_EMOJI[l.reason] ?? "📦"} {l.reason}</span></td>
                   <td>{l.discoveredBy ?? "—"}</td>
                   <td style={{ textAlign: "right", fontWeight: 600, color: "#991B1B" }}>${l.costImpact?.toLocaleString("es-MX", { maximumFractionDigits: 0 }) ?? "—"}</td>

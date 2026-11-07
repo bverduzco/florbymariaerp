@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { generateSequentialNumber } from "@/lib/sequential-number"
 
 export const dynamic = "force-dynamic"
 
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic"
  * Query params:
  *   ?active=true  → only unreturned loans (dateReturned IS NULL)
  *   ?active=false → only returned loans
- *   (no param)   → all loans
+ *   (no param)   → all loans (history preserved — returned loans are NOT deleted)
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -33,7 +34,8 @@ export async function GET(request: Request) {
 /**
  * POST /api/loans
  * Body: { itemName, description?, owner, qty?, dateBorrowed?, datePromised?, executionId?, notes? }
- * Creates a new loan record.
+ * Creates a new loan record with a consecutive LOAN-NNNN number.
+ * History is permanent — returned loans remain in the table for audit.
  */
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null)
@@ -44,9 +46,12 @@ export async function POST(request: Request) {
     )
   }
 
+  const loanNumber = await generateSequentialNumber(db, "loanRecord", "loanNumber", "LOAN-", 4)
+
   try {
     const loan = await db.loanRecord.create({
       data: {
+        loanNumber,
         itemName: String(body.itemName).trim(),
         description: body.description?.trim() || null,
         owner: String(body.owner).trim(),

@@ -575,13 +575,22 @@ model StockMovement {
 
 // Tracks damaged, broken, spoiled, or otherwise lost inventory.
 // Auto-feeds Stock Movements with negative packs (reason='loss').
+//
+// v1.9.2: qtyLostUnits + unit added for stem-level loss reporting.
+// Maria logs "3 stems damaged" — the system converts to packs internally
+// (3 stems / 20 per pack = 0.15 packs) for stock deduction.
+// qtyLostPacks is always the packs value (for stock).
+// qtyLostUnits is what Maria reported (3 stems, 1 pack, etc.) — nullable
+// for backward compat with pre-v1.9.2 records.
 model Loss {
   id              String   @id @default(cuid())
   lossNumber      String   @unique  // LOSS-0001
   date            DateTime
   materialSku     String
   material        Material @relation(fields: [materialSku], references: [sku], onDelete: Cascade)
-  qtyLostPacks    Float
+  qtyLostPacks    Float    // packs deducted from stock (converted from units if needed)
+  qtyLostUnits    Float?   // v1.9.2: the actual qty Maria reported (e.g. 3 stems)
+  unit            String?  // v1.9.2: the unit Maria used ("stem" | "pack" | "piece")
   reason          String   // damaged | spoiled | broken | expired | lost | stolen | other
   discoveredBy    String?  // free-text name or STAFF-NNNN (future FK)
   costImpact      Float?   // computed: qtyLostPacks × packPrice
@@ -968,6 +977,7 @@ model MissingPurchaseLog {
 // and tracked for return.
 model LoanRecord {
   id              String   @id @default(cuid())
+  loanNumber      String   @unique  // LOAN-0001
   itemName        String   // "Large glass vase" (free-text, may not have a SKU)
   description     String?  // additional details (size, color, etc.)
   owner           String   // who Maria borrowed from ("Florería González")

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { isValidOrderTransition, ORDER_VALID_STATUSES } from "@/lib/status-transitions"
+import { logChange } from "@/lib/audit"
 
 export const dynamic = "force-dynamic"
 
@@ -70,6 +71,16 @@ export async function PATCH(
     if (body.status === "payment_confirmed") data.paymentConfirmedAt = new Date()
 
     const order = await db.order.update({ where: { id }, data })
+
+    await logChange({
+      entityType: "Order",
+      entityId: id,
+      action: "status_change",
+      fieldName: "status",
+      oldValue: existing.status,
+      newValue: body.status,
+    })
+
     return NextResponse.json({ order })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)

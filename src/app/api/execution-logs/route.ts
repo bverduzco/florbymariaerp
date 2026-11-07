@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { generateSequentialNumber } from "@/lib/sequential-number"
+import { logChange } from "@/lib/audit"
 
 export const dynamic = "force-dynamic"
 
@@ -156,9 +157,21 @@ export async function POST(request: Request) {
         if (lineSource === "donation" || lineSource === "loan") continue
 
         const material = materialMap.get(line.materialSku)
-        if (!material || !material.unitsPerPack || material.unitsPerPack <= 0) continue
+        if (!material) continue
 
-        const packsRequested = Number(line.qtyUsed) / material.unitsPerPack
+        // Bug fix: previously, materials with unitsPerPack=0 or null were
+        // SKIPPED entirely — no stock check, no deduction, no MissingPurchaseLog.
+        // This silently bypassed the stock floor check for 4 of 6 materials
+        // in the database (most foliage + packaging have unitsPerPack=0).
+        //
+        // Fix: when unitsPerPack is 0/null, treat as 1:1 ratio
+        // (1 unit used = 1 pack deducted). This is correct for most
+        // foliage and packaging materials where "1 stem" or "1 base" = "1 pack."
+        const upp = material.unitsPerPack && material.unitsPerPack > 0
+          ? material.unitsPerPack
+          : 1  // default 1:1 when unknown
+
+        const packsRequested = Number(line.qtyUsed) / upp
         if (packsRequested <= 0) continue
 
         // Stock floor check: cap at current stock
@@ -228,6 +241,13 @@ export async function POST(request: Request) {
     if (warnings.length > 0) {
       response.warnings = warnings
     }
+
+    await logChange({
+      entityType: "ExecutionLog",
+      entityId: log.id,
+      action: "create",
+      newValue: `${executionNumber}: ${body.lines.length} line(s) · actual $${actualCost.toFixed(2)}`,
+    })
 
     return NextResponse.json(response, { status: 201 })
   } catch (e) {

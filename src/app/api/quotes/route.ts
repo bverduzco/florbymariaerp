@@ -4,6 +4,7 @@ import { computePaymentRule } from "@/lib/payment-rules"
 import { generateSequentialNumber } from "@/lib/sequential-number"
 import { computeTotalsFromData } from "@/lib/quote-totals"
 import { parseDateAsGMTMinus6 } from "@/lib/date-helpers"
+import { logChange } from "@/lib/audit"
 
 export const dynamic = "force-dynamic"
 
@@ -261,6 +262,12 @@ export async function POST(request: Request) {
           : undefined,
       },
       include: { lines: true },
+    })
+    await logChange({
+      entityType: "Quote",
+      entityId: quote.id,
+      action: "create",
+      newValue: `${quote.quoteNumber} for ${body.customerName} — $${quote.total}`,
     })
     return NextResponse.json(
       {

@@ -158,6 +158,17 @@ export const MIGRATIONS: Migration[] = [
       'CREATE INDEX IF NOT EXISTS "LoanRecord_owner_idx" ON "LoanRecord"("owner")',
     ],
   },
+  {
+    name: "20261107_add_loss_units",
+    description:
+      "Adds qtyLostUnits + unit columns to Loss table for stem-level loss reporting. Adds loanNumber to LoanRecord for consecutive numbering. Maria can now log '3 stems damaged' instead of having to convert to packs manually. Existing records are unaffected (new columns are nullable).",
+    addedAt: "2026-11-07",
+    statements: [
+      'ALTER TABLE "Loss" ADD COLUMN "qtyLostUnits" REAL',
+      'ALTER TABLE "Loss" ADD COLUMN "unit" TEXT',
+      'ALTER TABLE "LoanRecord" ADD COLUMN "loanNumber" TEXT',
+    ],
+  },
 ]
 
 /**

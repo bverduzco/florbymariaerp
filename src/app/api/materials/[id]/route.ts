@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { logChange } from "@/lib/audit"
 
 export const dynamic = "force-dynamic"
 
@@ -43,6 +44,18 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
   try {
     const material = await db.material.update({ where: { id }, data })
+
+    // Tier 2 audit: log which fields were changed
+    const changedFields = Object.keys(data)
+    await logChange({
+      entityType: "Material",
+      entityId: id,
+      action: "update",
+      fieldName: changedFields.join(", "),
+      oldValue: existing.name,
+      newValue: material.name,
+    })
+
     return NextResponse.json({ material })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)

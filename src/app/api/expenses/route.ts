@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { generateSequentialNumber } from "@/lib/sequential-number"
+import { logChange } from "@/lib/audit"
 
 export const dynamic = "force-dynamic"
 
@@ -33,6 +34,14 @@ export async function POST(request: Request) {
         notes: body.notes ?? null,
       },
     })
+
+    await logChange({
+      entityType: "Expense",
+      entityId: expense.id,
+      action: "create",
+      newValue: `${expense.expenseNumber}: ${body.category} — $${body.amount}`,
+    })
+
     return NextResponse.json({ expense }, { status: 201 })
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
