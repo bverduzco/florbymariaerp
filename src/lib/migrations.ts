@@ -169,6 +169,63 @@ export const MIGRATIONS: Migration[] = [
       'ALTER TABLE "LoanRecord" ADD COLUMN "loanNumber" TEXT',
     ],
   },
+  {
+    name: "20261109_add_execution_workflow_fields",
+    description:
+      "v1.9.3 execution workflow improvements. (1) AdHocPurchase.materialSku becomes nullable + new materialName + materialType columns — supports no-SKU ad-hoc purchases like the Costco foliage mix. Existing rows get materialName denormalized from Material.name. (2) ExecutionLog gets paymentStatus (paid | unpaid, default unpaid) replacing the implicit quotedPrice-based inference. (3) ExecutionLog gets startedAt + completedAt + durationMinutes for time tracking. (4) ExecutionLogLine gets costBasis (list | linked-purchase | manual) + linkedAdhocPurchaseId for per-line cost basis control. Existing records are unaffected (new columns are nullable or have defaults).",
+    addedAt: "2026-11-09",
+    statements: [
+      // AdHocPurchase: make materialSku nullable by recreating the table
+      // (SQLite doesn't support ALTER COLUMN for nullability changes).
+      'ALTER TABLE "AdHocPurchase" RENAME TO "AdHocPurchase_old"',
+      `CREATE TABLE "AdHocPurchase" (
+        "id"              TEXT PRIMARY KEY NOT NULL,
+        "adhocNumber"     TEXT NOT NULL UNIQUE,
+        "date"            DATETIME NOT NULL,
+        "vendor"          TEXT NOT NULL,
+        "materialSku"     TEXT,
+        "materialName"    TEXT NOT NULL,
+        "materialType"    TEXT,
+        "qtyPacks"        REAL NOT NULL,
+        "unitCost"        REAL NOT NULL,
+        "total"           REAL NOT NULL,
+        "ticketNumber"    TEXT,
+        "paymentMethod"   TEXT,
+        "notes"           TEXT,
+        "sourceRowKey"    TEXT UNIQUE,
+        "createdAt"       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )`,
+      `INSERT INTO "AdHocPurchase" (
+        "id", "adhocNumber", "date", "vendor",
+        "materialSku", "materialName", "materialType",
+        "qtyPacks", "unitCost", "total",
+        "ticketNumber", "paymentMethod", "notes", "sourceRowKey", "createdAt"
+      )
+      SELECT
+        o."id", o."adhocNumber", o."date", o."vendor",
+        o."materialSku",
+        COALESCE(m."name", o."materialSku") AS "materialName",
+        m."category" AS "materialType",
+        o."qtyPacks", o."unitCost", o."total",
+        o."ticketNumber", o."paymentMethod", o."notes", o."sourceRowKey", o."createdAt"
+      FROM "AdHocPurchase_old" o
+      LEFT JOIN "Material" m ON m."sku" = o."materialSku"`,
+      'DROP TABLE "AdHocPurchase_old"',
+      'CREATE INDEX IF NOT EXISTS "AdHocPurchase_date_idx" ON "AdHocPurchase"("date")',
+      'CREATE INDEX IF NOT EXISTS "AdHocPurchase_vendor_idx" ON "AdHocPurchase"("vendor")',
+      'CREATE INDEX IF NOT EXISTS "AdHocPurchase_materialSku_idx" ON "AdHocPurchase"("materialSku")',
+      // ExecutionLog: payment status + time tracking
+      'ALTER TABLE "ExecutionLog" ADD COLUMN "paymentStatus" TEXT NOT NULL DEFAULT \'unpaid\'',
+      'ALTER TABLE "ExecutionLog" ADD COLUMN "startedAt" DATETIME',
+      'ALTER TABLE "ExecutionLog" ADD COLUMN "completedAt" DATETIME',
+      'ALTER TABLE "ExecutionLog" ADD COLUMN "durationMinutes" INTEGER',
+      'CREATE INDEX IF NOT EXISTS "ExecutionLog_paymentStatus_idx" ON "ExecutionLog"("paymentStatus")',
+      // ExecutionLogLine: cost basis + linked ad-hoc purchase
+      'ALTER TABLE "ExecutionLogLine" ADD COLUMN "costBasis" TEXT NOT NULL DEFAULT \'list\'',
+      'ALTER TABLE "ExecutionLogLine" ADD COLUMN "linkedAdhocPurchaseId" TEXT',
+      'CREATE INDEX IF NOT EXISTS "ExecutionLogLine_costBasis_idx" ON "ExecutionLogLine"("costBasis")',
+    ],
+  },
 ]
 
 /**

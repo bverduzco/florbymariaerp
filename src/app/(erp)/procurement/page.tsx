@@ -175,7 +175,16 @@ export default async function ProcurementPage() {
                         <td style={{ fontFamily: "monospace", fontSize: "10px" }}>{a.adhocNumber}</td>
                         <td>{a.date.toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</td>
                         <td style={{ color: "#44403C" }}>{a.vendor}</td>
-                        <td>{a.materialSku}</td>
+                        <td>
+                          <div style={{ fontWeight: 600, color: "#44403C" }}>
+                            {a.materialName ?? a.materialSku ?? "—"}
+                          </div>
+                          {a.materialSku ? (
+                            <div style={{ fontSize: "10px", color: "#78716C", fontFamily: "monospace" }}>{a.materialSku}</div>
+                          ) : (
+                            <div style={{ fontSize: "10px", color: "#D97706" }}>no SKU · {a.materialType ?? "—"}</div>
+                          )}
+                        </td>
                         <td style={{ textAlign: "right" }}>{a.qtyPacks}</td>
                         <td style={{ textAlign: "right", fontWeight: 600, color: "#44403C" }}>${a.total.toLocaleString("es-MX", { maximumFractionDigits: 0 })}</td>
                       </tr>

@@ -608,17 +608,26 @@ model AdHocPurchase {
   id              String   @id @default(cuid())
   adhocNumber     String   @unique  // ADHOC-0001
   date            DateTime
-  vendor          String   // Maxi Home García, Mercado Estrella, etc.
-  materialSku     String
-  material        Material @relation(fields: [materialSku], references: [sku], onDelete: Cascade)
+  vendor          String   // Maxi Home García, Mercado Estrella, Costco, etc.
+  // v1.9.3: materialSku is now OPTIONAL — supports first-time purchases from
+  // vendors where the item has no SKU yet (e.g. Costco foliage mix). When null,
+  // materialName + materialType are required (free-text) and stock is NOT
+  // bumped (we don't know which Material to bump).
+  materialSku     String?
+  material        Material? @relation(fields: [materialSku], references: [sku], onDelete: Cascade)
+  materialName    String   // always populated — denormalized from Material if SKU set, else free-text
+  materialType    String?  // flower | foliage | packaging | other — for reporting when no SKU
   qtyPacks        Float
   unitCost        Float
   total           Float
   ticketNumber    String?
-  paymentMethod   String?  // cash | card
+  paymentMethod   String?  // cash | card | transfer
   notes           String?
   sourceRowKey    String?  @unique
   createdAt       DateTime @default(now())
+
+  // v1.9.3: back-relation for execution lines linked to this purchase
+  executionLines  ExecutionLogLine[]
 
   @@index([date])
   @@index([vendor])
@@ -653,12 +662,30 @@ model ExecutionLog {
   sourceRowKey    String?  @unique
   lines           ExecutionLogLine[]
   loans           LoanRecord[]
+  // v1.9.3: explicit payment classification. Replaces the previous logic that
+  // inferred "paid" from `quotedPrice !== null` — that conflated "this is a
+  // real sale" with "this execution has a quote price field set." The new
+  // field is set explicitly by the user (with auto-default based on whether
+  // an Order is linked: paid if yes, unpaid if no — overridable).
+  paymentStatus   String   @default("unpaid")  // paid | unpaid
+  // v1.9.3: time tracking for personal KPI ("how much time did I spend
+  // executing?"). Three fields to support different input modes:
+  //   - Timer mode: user clicks Start (sets startedAt), clicks Stop (sets
+  //     completedAt), system computes durationMinutes from the delta.
+  //   - Manual mode: user just types durationMinutes after the fact;
+  //     startedAt/completedAt stay null.
+  //   - Hybrid: timer runs, user overrides durationMinutes at the end.
+  // Reports use durationMinutes if set, else compute from start/end.
+  startedAt       DateTime?
+  completedAt     DateTime?
+  durationMinutes Int?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
   @@index([eventId])
   @@index([orderId])
   @@index([executedAt])
+  @@index([paymentStatus])
 }
 
 // One row per material used per execution. Captures substitutions, additions,
@@ -674,15 +701,28 @@ model ExecutionLogLine {
   unitCost        Float    // snapshot at execution time
   lineCost        Float    // qtyUsed × unitCost
   type            String   // recipe | addition | substitution | removal
-  source          String   @default("inventory") // inventory | donation | loan
+  source          String   @default("inventory") // inventory | donation | loan | ad-hoc-purchase
   originalMaterialSku String?  // when type=substitution, the SKU being replaced
   originalQty     Float?   // when type=substitution or removal, the qty in recipe
   notes           String?
   sourceRowKey    String?  @unique
+  // v1.9.3: cost basis — how was the unit cost on this line determined?
+  //   - list (default): uses material.unitCost (preferred supplier price).
+  //     Fast, imprecise when items were bought at a different vendor.
+  //   - linked-purchase: cost comes from a specific AdHocPurchase. The
+  //     linkedAdhocPurchaseId field is set, unitCost/lineCost snapshotted
+  //     from that purchase's unitCost.
+  //   - manual: user typed the actual unit cost (no formal purchase link).
+  // Useful for financial analysis: "real margin on this execution" requires
+  // knowing which lines used actual purchase costs vs. list estimates.
+  costBasis       String   @default("list")  // list | linked-purchase | manual
+  linkedAdhocPurchaseId String?  // FK to AdHocPurchase.id (when costBasis=linked-purchase)
+  linkedAdhocPurchase   AdHocPurchase? @relation(fields: [linkedAdhocPurchaseId], references: [id], onDelete: SetNull)
   createdAt       DateTime @default(now())
 
   @@index([executionLogId])
   @@index([materialSku])
+  @@index([costBasis])
 }
 
 // ────────────────────────────────────────────────────────────────────────────

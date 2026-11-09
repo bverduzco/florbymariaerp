@@ -14,6 +14,7 @@ export const dynamic = "force-dynamic"
  *   executedBy?: string,
  *   status: string,
  *   quotedPrice?: number,
+ *   paymentStatus?: string,            // v1.9.3: "paid" | "unpaid" (default: "paid" if orderId set, else "unpaid")
  *   notes?: string,
  *   lines: Array<{
  *     materialSku: string,
@@ -27,6 +28,8 @@ export const dynamic = "force-dynamic"
  *     originalMaterialSku?: string,
  *     originalQty?: number,
  *     notes?: string,
+ *     costBasis?: string,             // v1.9.3: list (default) | linked-purchase | manual
+ *     linkedAdhocPurchaseId?: string,  // v1.9.3: FK to AdHocPurchase.id when costBasis=linked-purchase
  *   }>,
  * }
  *
@@ -38,6 +41,27 @@ export const dynamic = "force-dynamic"
  *     is created for the difference.
  *   - Stock NEVER goes negative.
  *   - "removal" type lines don't deduct stock regardless of source.
+ *
+ * v1.9.3 paymentStatus + costBasis + time tracking:
+ *   - paymentStatus defaults to "paid" when orderId is set, "unpaid" otherwise.
+ *     Caller can override by passing paymentStatus explicitly. Replaces the
+ *     previous implicit inference from quotedPrice (which conflated "real sale"
+ *     with "has quote price field set").
+ *   - costBasis + linkedAdhocPurchaseId on each line are passed through to the
+ *     ExecutionLogLine record. The actual cost lookup (snapshotting unitCost
+ *     from the linked AdHocPurchase) is done client-side in the dialog — the
+ *     API just stores whatever unitCost/lineCost the client sends, plus the
+ *     optional link to the AdHocPurchase.
+ *   - Time tracking: startedAt, completedAt, durationMinutes all optional.
+ *     The dialog supports three input modes:
+ *       - Timer mode: user clicks Start (sets startedAt), clicks Stop (sets
+ *         completedAt + computes durationMinutes from the delta).
+ *       - Manual mode: user types durationMinutes directly; startedAt/
+ *         completedAt stay null.
+ *       - Hybrid: timer runs, user overrides durationMinutes at the end.
+ *     Reports use durationMinutes if set, else compute from start/end.
+ *     If durationMinutes is provided directly, we trust it (no recompute
+ *     from startedAt/completedAt — the user's explicit override wins).
  */
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null)
@@ -52,6 +76,29 @@ export async function POST(request: Request) {
       { error: "Execution log must contain at least one line item" },
       { status: 400 }
     )
+  }
+
+  // v1.9.3: paymentStatus default — paid if linked to an Order, unpaid otherwise.
+  // Caller can override by passing paymentStatus explicitly. Validate the value.
+  const validPaymentStatuses = ["paid", "unpaid"]
+  const paymentStatus = body.paymentStatus && validPaymentStatuses.includes(body.paymentStatus)
+    ? body.paymentStatus
+    : (body.orderId ? "paid" : "unpaid")
+
+  // v1.9.3: time tracking fields. All optional. Parse defensively — client
+  // may send ISO strings (timer mode) or null (manual mode).
+  const startedAt = body.startedAt ? new Date(body.startedAt) : null
+  const completedAt = body.completedAt ? new Date(body.completedAt) : null
+  // If the client provided durationMinutes explicitly, trust it (manual override).
+  // Otherwise compute from start/end if both are present.
+  let durationMinutes: number | null = null
+  if (typeof body.durationMinutes === "number" && Number.isFinite(body.durationMinutes) && body.durationMinutes > 0) {
+    durationMinutes = Math.round(body.durationMinutes)
+  } else if (startedAt && completedAt) {
+    const deltaMs = completedAt.getTime() - startedAt.getTime()
+    if (deltaMs > 0) {
+      durationMinutes = Math.round(deltaMs / 60000)
+    }
   }
 
   // Validate every line has required fields
@@ -116,6 +163,10 @@ export async function POST(request: Request) {
           marginDollars,
           marginPct,
           notes: body.notes || null,
+          paymentStatus,  // v1.9.3: paid | unpaid
+          startedAt,       // v1.9.3: optional, from timer
+          completedAt,     // v1.9.3: optional, from timer
+          durationMinutes, // v1.9.3: optional, manual override or computed
           lines: {
             create: body.lines.map((l: {
               materialSku: string
@@ -129,6 +180,8 @@ export async function POST(request: Request) {
               originalMaterialSku?: string
               originalQty?: number
               notes?: string
+              costBasis?: string
+              linkedAdhocPurchaseId?: string
             }) => ({
               materialSku: l.materialSku,
               materialName: l.materialName || materialMap.get(l.materialSku)?.name || "(unknown)",
@@ -141,6 +194,9 @@ export async function POST(request: Request) {
               originalMaterialSku: l.originalMaterialSku || null,
               originalQty: l.originalQty ? Number(l.originalQty) : null,
               notes: l.notes || null,
+              // v1.9.3: cost basis + optional link to AdHocPurchase
+              costBasis: l.costBasis || "list",
+              linkedAdhocPurchaseId: l.linkedAdhocPurchaseId || null,
             })),
           },
         },

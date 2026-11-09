@@ -134,13 +134,45 @@ async function getRecipeLinesByProduct() {
   return map
 }
 
+async function getRecentAdhocPurchases() {
+  // Fetch ad-hoc purchases from the last 30 days — used by the execution dialog
+  // for the per-line costBasis dropdown. When user picks "linked-purchase" for
+  // a line, they get a dropdown of these purchases filtered by the line's SKU.
+  // Includes no-SKU purchases (materialSku = null) so they appear in the
+  // "manual link" path even though they can't auto-match by SKU.
+  const thirtyDaysAgo = new Date()
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+  const purchases = await prisma.adHocPurchase.findMany({
+    where: { date: { gte: thirtyDaysAgo } },
+    select: {
+      id: true,
+      adhocNumber: true,
+      vendor: true,
+      date: true,
+      materialSku: true,
+      materialName: true,
+      materialType: true,
+      qtyPacks: true,
+      unitCost: true,
+      total: true,
+    },
+    orderBy: { date: "desc" },
+    take: 100,  // cap for performance — 100 recent purchases is plenty for the dropdown
+  })
+  return purchases.map((p) => ({
+    ...p,
+    date: p.date.toISOString(),
+  }))
+}
+
 export default async function ExecutionPage() {
-  const [logs, events, pendingOrders, materials, recipeLinesByProduct] = await Promise.all([
+  const [logs, events, pendingOrders, materials, recipeLinesByProduct, recentAdhocPurchases] = await Promise.all([
     getLogs(),
     getEventsWithLines(),
     getPendingOrders(),
     getMaterials(),
     getRecipeLinesByProduct(),
+    getRecentAdhocPurchases(),
   ])
 
   const executed = logs.filter((l) => l.status === "executed").length
@@ -160,6 +192,7 @@ export default async function ExecutionPage() {
           pendingOrders={pendingOrders}
           materials={materials}
           recipeLinesByProduct={recipeLinesByProduct}
+          recentAdhocPurchases={recentAdhocPurchases}
         />
       </div>
 
@@ -175,6 +208,7 @@ export default async function ExecutionPage() {
             pendingOrders={pendingOrders}
             materials={materials}
             recipeLinesByProduct={recipeLinesByProduct}
+            recentAdhocPurchases={recentAdhocPurchases}
           />
         </div>
       </div>
@@ -227,7 +261,7 @@ export default async function ExecutionPage() {
           </div>
         )}
         {logs.map((log) => {
-          const isPaid = log.quotedPrice !== null
+          const isPaid = log.paymentStatus === "paid"
           const v =
             (log.actualCost ?? 0) - (log.estimatedCost ?? 0)
           return (

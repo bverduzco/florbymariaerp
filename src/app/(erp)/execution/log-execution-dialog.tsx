@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import {
   Dialog,
@@ -81,6 +81,20 @@ type OrderOption = {
 // Internal line shape (editable)
 // ───────────────────────────────────────────────────────────────────────────
 type LineSource = "inventory" | "donation" | "loan"
+type CostBasis = "list" | "linked-purchase" | "manual"
+
+type AdhocPurchaseOption = {
+  id: string
+  adhocNumber: string
+  vendor: string
+  date: string  // ISO
+  materialSku: string | null
+  materialName: string
+  materialType: string | null
+  qtyPacks: number
+  unitCost: number
+  total: number
+}
 
 type EditLine = {
   key: string
@@ -95,12 +109,21 @@ type EditLine = {
   originalMaterialSku?: string
   originalQty?: number
   notes?: string
+  // v1.9.3: per-line cost basis
+  costBasis: CostBasis
+  linkedAdhocPurchaseId?: string  // set when costBasis=linked-purchase
 }
 
 const LINE_SOURCES = [
   { value: "inventory", label: "📦 Inventory" },
   { value: "donation", label: "🎁 Donation" },
   { value: "loan", label: "🔄 Loan" },
+]
+
+const COST_BASIS_OPTIONS = [
+  { value: "list", label: "📋 List price" },
+  { value: "linked-purchase", label: "🔗 Linked purchase" },
+  { value: "manual", label: "✏️ Manual" },
 ]
 
 const STATUSES = [
@@ -131,11 +154,13 @@ export function LogExecutionDialog({
   pendingOrders,
   materials,
   recipeLinesByProduct,
+  recentAdhocPurchases,
 }: {
   events: EventOption[]
   pendingOrders: OrderOption[]
   materials: Material[]
   recipeLinesByProduct: Record<string, RecipeLine[]>
+  recentAdhocPurchases: AdhocPurchaseOption[]
 }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -148,8 +173,46 @@ export function LogExecutionDialog({
   const [executedBy, setExecutedBy] = useState("Maria")
   const [status, setStatus] = useState("executed")
   const [quotedPrice, setQuotedPrice] = useState("")
+  const [paymentStatus, setPaymentStatus] = useState<"paid" | "unpaid">("unpaid")  // v1.9.3: auto-flips when an order is linked
   const [notes, setNotes] = useState("")
   const [lines, setLines] = useState<EditLine[]>([])
+
+  // v1.9.3: multi-select of recent AdHocPurchases to bulk-link to recipe lines.
+  // When a purchase is selected, we try to auto-match its materialSku to an
+  // existing recipe line. Matched lines flip to costBasis=linked-purchase with
+  // the linkedAdhocPurchaseId set + unitCost snapshotted from the purchase.
+  // No-SKU purchases (materialSku=null) can't auto-match — they go to the
+  // "Unmapped" section where the user manually picks which line to link to.
+  const [selectedAdhocIds, setSelectedAdhocIds] = useState<Set<string>>(new Set())
+  // Map adhocId → lineKey | "skip" — for unmapped items, user picks which
+  // line to link to (or "skip" to leave it unlinked).
+  const [manualLinks, setManualLinks] = useState<Record<string, string | "skip">>({})
+
+  // v1.9.3: time tracking state. Three input modes:
+  //   - Timer: user clicks Start → startedAt set; clicks Stop → completedAt set
+  //     + durationMinutes computed. While running, a live timer displays.
+  //   - Manual: user types durationMinutes directly; startedAt/completedAt stay null.
+  //   - Hybrid: timer runs, then user overrides the duration field.
+  const [timerStartedAt, setTimerStartedAt] = useState<Date | null>(null)
+  const [timerCompletedAt, setTimerCompletedAt] = useState<Date | null>(null)
+  const [timerRunning, setTimerRunning] = useState(false)
+  const [durationMinutesInput, setDurationMinutesInput] = useState("")  // string for input control
+  // Live elapsed time display (updates every second while running)
+  const [liveElapsedSec, setLiveElapsedSec] = useState(0)
+
+  // When the user picks a job, auto-default paymentStatus based on the link type:
+  //   - Order linked → "paid" (an order is a real sale — override back to "unpaid" if it was actually a free demo)
+  //   - Event linked → "unpaid" (events are typically demos)
+  //   - No job (manual) → "unpaid"
+  // The user can always override this manually via the dropdown.
+  function handleJobChangeWithPaymentDefault(value: string) {
+    handleJobChange(value)
+    if (value.startsWith("order:")) {
+      setPaymentStatus("paid")
+    } else {
+      setPaymentStatus("unpaid")
+    }
+  }
 
   // Resolve the selected job to its source object (for context bar)
   const selectedJob = useMemo(() => {
@@ -207,6 +270,7 @@ export function LogExecutionDialog({
           lineCost: Number((qtyUsed * rl.unitCost).toFixed(2)),
           type: "recipe",
           source: "inventory",
+          costBasis: "list",  // v1.9.3: default — user can flip to linked-purchase or manual
         })
       })
     })
@@ -226,6 +290,7 @@ export function LogExecutionDialog({
         lineCost: 0,
         type: "addition",
         source: "inventory",
+        costBasis: "list",
       },
     ])
   }
@@ -251,6 +316,258 @@ export function LogExecutionDialog({
         return next
       })
     )
+  }
+
+  /**
+   * v1.9.3: Apply a linked AdHocPurchase to a line.
+   *
+   * Snapshots the purchase's `unitCost` into the line and stores the link.
+   * Used when the user picks "linked-purchase" as costBasis and selects
+   * a specific purchase from the dropdown.
+   *
+   * Note: we don't change the line's `qtyUsed` — that's the qty Maria actually
+   * used in this execution. We just change where the unit cost came from.
+   * The purchase's `qtyPacks` is informational only.
+   */
+  function linkAdhocPurchase(key: string, purchaseId: string) {
+    const purchase = recentAdhocPurchases.find((p) => p.id === purchaseId)
+    if (!purchase) return
+    setLines((prev) =>
+      prev.map((l) => {
+        if (l.key !== key) return l
+        const next = {
+          ...l,
+          linkedAdhocPurchaseId: purchaseId,
+          costBasis: "linked-purchase" as const,
+          unitCost: purchase.unitCost,
+        }
+        next.lineCost = Number((next.qtyUsed * next.unitCost).toFixed(2))
+        return next
+      })
+    )
+  }
+
+  /**
+   * v1.9.3: Get the AdHocPurchases that match a line's materialSku.
+   * Used to populate the "linked-purchase" dropdown when the user picks
+   * that costBasis. Includes no-SKU purchases too (materialSku=null) so
+   * the user can manually link them to any line.
+   */
+  function getMatchingPurchases(materialSku: string): AdhocPurchaseOption[] {
+    return recentAdhocPurchases.filter(
+      (p) => p.materialSku === materialSku || p.materialSku === null
+    )
+  }
+
+  /**
+   * v1.9.3: Toggle an AdHocPurchase in the multi-select.
+   *
+   * When a purchase is SELECTED:
+   *   - Try to auto-match its materialSku to an existing recipe line.
+   *   - If matched: flip that line to costBasis=linked-purchase + set
+   *     linkedAdhocPurchaseId + snapshot the unitCost.
+   *   - If no match (or SKU is null): leave for the manual "Unmapped" section.
+   *
+   * When a purchase is DESELECTED:
+   *   - Find any lines linked to this purchase + revert them to list basis.
+   *   - Clear the manual link if set.
+   *
+   * The auto-match picks the FIRST recipe line with the matching SKU that
+   * isn't already linked to another purchase. If multiple lines have the
+   * same SKU, only the first gets linked automatically.
+   */
+  function toggleAdhocPurchase(purchaseId: string) {
+    const purchase = recentAdhocPurchases.find((p) => p.id === purchaseId)
+    if (!purchase) return
+
+    const isSelected = selectedAdhocIds.has(purchaseId)
+    const next = new Set(selectedAdhocIds)
+
+    if (isSelected) {
+      // Deselecting — revert any lines linked to this purchase
+      next.delete(purchaseId)
+      setLines((prev) =>
+        prev.map((l) => {
+          if (l.linkedAdhocPurchaseId === purchaseId) {
+            // Revert to list basis — restore material's preferred unitCost
+            const mat = materials.find((m) => m.sku === l.materialSku)
+            const restoredCost = mat?.unitCost ?? 0
+            return {
+              ...l,
+              costBasis: "list",
+              linkedAdhocPurchaseId: undefined,
+              unitCost: restoredCost,
+              lineCost: Number((l.qtyUsed * restoredCost).toFixed(2)),
+            }
+          }
+          return l
+        })
+      )
+      // Also clear the manual link if set
+      setManualLinks((prev) => {
+        const next = { ...prev }
+        delete next[purchaseId]
+        return next
+      })
+    } else {
+      // Selecting — try to auto-match
+      next.add(purchaseId)
+      if (purchase.materialSku) {
+        // Find the first recipe line with the matching SKU that isn't already linked
+        setLines((prev) => {
+          let matched = false
+          return prev.map((l) => {
+            if (matched) return l  // only match once per purchase
+            if (l.materialSku === purchase.materialSku && !l.linkedAdhocPurchaseId) {
+              matched = true
+              return {
+                ...l,
+                costBasis: "linked-purchase" as CostBasis,
+                linkedAdhocPurchaseId: purchaseId,
+                unitCost: purchase.unitCost,
+                lineCost: Number((l.qtyUsed * purchase.unitCost).toFixed(2)),
+              }
+            }
+            return l
+          })
+        })
+      }
+      // No-SKU purchases (materialSku=null) skip auto-match and go to the
+      // Unmapped section. The user manually picks which line to link to.
+    }
+
+    setSelectedAdhocIds(next)
+  }
+
+  /**
+   * v1.9.3: Manually link an unmapped AdHocPurchase to a specific line.
+   * Used in the "Unmapped" section when auto-match couldn't find a line.
+   */
+  function manuallyLinkAdhoc(purchaseId: string, lineKey: string | "skip") {
+    const purchase = recentAdhocPurchases.find((p) => p.id === purchaseId)
+    if (!purchase) return
+
+    setManualLinks((prev) => ({ ...prev, [purchaseId]: lineKey }))
+
+    if (lineKey === "skip") {
+      // Unlink if previously linked via manual
+      setLines((prev) =>
+        prev.map((l) => {
+          if (l.linkedAdhocPurchaseId === purchaseId) {
+            const mat = materials.find((m) => m.sku === l.materialSku)
+            const restoredCost = mat?.unitCost ?? 0
+            return {
+              ...l,
+              costBasis: "list" as CostBasis,
+              linkedAdhocPurchaseId: undefined,
+              unitCost: restoredCost,
+              lineCost: Number((l.qtyUsed * restoredCost).toFixed(2)),
+            }
+          }
+          return l
+        })
+      )
+      return
+    }
+
+    // Link the chosen line to this purchase
+    setLines((prev) =>
+      prev.map((l) => {
+        if (l.key !== lineKey) return l
+        // If this line was previously linked to a different purchase, that
+        // purchase will lose its link — but we don't deselect it here, the
+        // user can see in the multi-select list that it's still selected.
+        return {
+          ...l,
+          costBasis: "linked-purchase" as CostBasis,
+          linkedAdhocPurchaseId: purchaseId,
+          unitCost: purchase.unitCost,
+          lineCost: Number((l.qtyUsed * purchase.unitCost).toFixed(2)),
+        }
+      })
+    )
+  }
+
+  /**
+   * v1.9.3: Compute which selected purchases are unmapped (no auto-match
+   * found AND no manual link set). These appear in the "Unmapped" section.
+   */
+  const unmappedPurchases = Array.from(selectedAdhocIds)
+    .map((id) => recentAdhocPurchases.find((p) => p.id === id))
+    .filter((p): p is AdhocPurchaseOption => p !== undefined)
+    .filter((p) => {
+      // A purchase is "mapped" if any line has linkedAdhocPurchaseId === p.id
+      const isLinked = lines.some((l) => l.linkedAdhocPurchaseId === p.id)
+      // OR if the user manually set a link (even "skip" counts as resolved)
+      const hasManualChoice = manualLinks[p.id] !== undefined
+      return !isLinked && !hasManualChoice
+    })
+
+  // Reset ad-hoc selections when the dialog closes or job changes (fresh start)
+  function resetAdhocSelections() {
+    setSelectedAdhocIds(new Set())
+    setManualLinks({})
+  }
+
+  // v1.9.3: timer handlers
+  function startTimer() {
+    setTimerStartedAt(new Date())
+    setTimerCompletedAt(null)
+    setTimerRunning(true)
+    setLiveElapsedSec(0)
+  }
+
+  function stopTimer() {
+    const now = new Date()
+    setTimerCompletedAt(now)
+    setTimerRunning(false)
+    // Compute duration from start to now (in minutes, rounded)
+    if (timerStartedAt) {
+      const deltaMs = now.getTime() - timerStartedAt.getTime()
+      const minutes = Math.max(1, Math.round(deltaMs / 60000))
+      setDurationMinutesInput(String(minutes))
+    }
+  }
+
+  function resetTimer() {
+    setTimerStartedAt(null)
+    setTimerCompletedAt(null)
+    setTimerRunning(false)
+    setLiveElapsedSec(0)
+    setDurationMinutesInput("")
+  }
+
+  // Live timer effect — ticks every second while running
+  useEffect(() => {
+    if (!timerRunning || !timerStartedAt) return
+    const tick = () => {
+      const now = Date.now()
+      const elapsedSec = Math.floor((now - timerStartedAt.getTime()) / 1000)
+      setLiveElapsedSec(elapsedSec)
+    }
+    tick()  // immediate update
+    const interval = setInterval(tick, 1000)
+    return () => clearInterval(interval)
+  }, [timerRunning, timerStartedAt])
+
+  // Reset timer state on dialog close
+  function resetTimeTracking() {
+    setTimerStartedAt(null)
+    setTimerCompletedAt(null)
+    setTimerRunning(false)
+    setLiveElapsedSec(0)
+    setDurationMinutesInput("")
+  }
+
+  // Format seconds as "MM:SS" or "HH:MM:SS" for the live display
+  function formatElapsed(totalSec: number): string {
+    const hours = Math.floor(totalSec / 3600)
+    const mins = Math.floor((totalSec % 3600) / 60)
+    const secs = totalSec % 60
+    if (hours > 0) {
+      return `${hours}:${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
+    }
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`
   }
 
   const estimatedCost = lines
@@ -289,6 +606,12 @@ export function LogExecutionDialog({
         executedBy,
         status,
         quotedPrice: qp > 0 ? qp : null,
+        paymentStatus,
+        // v1.9.3: time tracking. Send all three — server trusts durationMinutes
+        // if provided, else computes from startedAt/completedAt.
+        startedAt: timerStartedAt?.toISOString() ?? null,
+        completedAt: timerCompletedAt?.toISOString() ?? null,
+        durationMinutes: durationMinutesInput ? Number(durationMinutesInput) : null,
         notes: notes || null,
         lines: lines.map((l) => ({
           materialSku: l.materialSku,
@@ -302,6 +625,9 @@ export function LogExecutionDialog({
           originalMaterialSku: l.originalMaterialSku || null,
           originalQty: l.originalQty || null,
           notes: l.notes || null,
+          // v1.9.3: cost basis + linked purchase
+          costBasis: l.costBasis,
+          linkedAdhocPurchaseId: l.linkedAdhocPurchaseId || null,
         })),
       }
       const res = await fetch("/api/execution-logs", {
@@ -338,8 +664,11 @@ export function LogExecutionDialog({
       setExecutedBy("Maria")
       setStatus("executed")
       setQuotedPrice("")
+      setPaymentStatus("unpaid")
       setNotes("")
       setLines([])
+      resetAdhocSelections()
+      resetTimeTracking()
       router.refresh()
     } catch (e) {
       toast.error("Failed to log execution", {
@@ -353,7 +682,14 @@ export function LogExecutionDialog({
   const hasPendingJobs = pendingOrders.length > 0 || events.length > 0
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => {
+      setOpen(v)
+      if (!v) {
+        // Reset ad-hoc selections + timer when dialog closes (fresh start next time)
+        resetAdhocSelections()
+        resetTimeTracking()
+      }
+    }}>
       <DialogTrigger asChild>
         <button className="px-4 py-2 text-sm font-medium bg-stone-900 text-white rounded-md hover:bg-stone-800 transition">
           + Log Execution
@@ -368,7 +704,7 @@ export function LogExecutionDialog({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>Linked job (optional)</Label>
-              <Select value={jobSelection} onValueChange={handleJobChange}>
+              <Select value={jobSelection} onValueChange={handleJobChangeWithPaymentDefault}>
                 <SelectTrigger>
                   <SelectValue placeholder="No job — manual log" />
                 </SelectTrigger>
@@ -448,6 +784,19 @@ export function LogExecutionDialog({
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>Payment *</Label>
+              <Select value={paymentStatus} onValueChange={(v) => setPaymentStatus(v as "paid" | "unpaid")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="paid">💵 Paid</SelectItem>
+                  <SelectItem value="unpaid">🎁 Unpaid demo</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="text-[10px] text-stone-500">
+                Auto-defaults to &quot;paid&quot; when an Order is linked. Override if it was actually a free demo.
+              </div>
+            </div>
           </div>
 
           {/* ── Job context bar ─────────────────────────────────── */}
@@ -488,6 +837,199 @@ export function LogExecutionDialog({
               </div>
             </div>
           )}
+
+          {/* ── v1.9.3: Link ad-hoc purchases ────────────────────── */}
+          {/* Multi-select recent AdHocPurchases. When selected, auto-matches
+              the purchase's SKU to existing recipe lines (flipping their
+              costBasis to linked-purchase). Unmatched items (no-SKU or no
+              matching recipe line) appear in the "Unmapped" section below
+              for manual linking. */}
+          {recentAdhocPurchases.length > 0 && (
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-stone-700">
+                🔗 Link ad-hoc purchases (optional)
+              </Label>
+              <div className="text-[10px] text-stone-500 -mt-1">
+                Pick recent purchases to auto-link their items to recipe lines by SKU.
+                Matched lines flip to &quot;linked-purchase&quot; cost basis with the actual purchase price.
+              </div>
+              <div className="border border-stone-200 rounded-md max-h-[180px] overflow-y-auto">
+                {recentAdhocPurchases.map((p) => {
+                  const isSelected = selectedAdhocIds.has(p.id)
+                  const isLinkedToLine = lines.some((l) => l.linkedAdhocPurchaseId === p.id)
+                  return (
+                    <label
+                      key={p.id}
+                      className={`flex items-start gap-2 px-3 py-2 border-b border-stone-100 last:border-b-0 cursor-pointer hover:bg-stone-50 ${isSelected ? "bg-blue-50" : ""}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleAdhocPurchase(p.id)}
+                        className="mt-0.5 cursor-pointer"
+                      />
+                      <div className="flex-1 min-w-0 text-xs">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className="font-mono font-semibold text-stone-800">{p.adhocNumber}</span>
+                          <span className="text-stone-600">· {p.vendor}</span>
+                          <span className="text-stone-400">·</span>
+                          <span className="text-stone-500">{new Date(p.date).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</span>
+                          {isLinkedToLine && (
+                            <span className="ml-1 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[9px] font-semibold uppercase tracking-wide">
+                              ✓ Linked
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-stone-700 mt-0.5">
+                          {p.materialName}
+                          {p.materialSku ? (
+                            <span className="text-stone-400 ml-1 font-mono text-[10px]">{p.materialSku}</span>
+                          ) : (
+                            <span className="text-amber-700 ml-1 text-[10px]">(no SKU)</span>
+                          )}
+                        </div>
+                        <div className="text-stone-500 mt-0.5">
+                          {p.qtyPacks} packs × ${p.unitCost.toFixed(2)} = <span className="font-semibold text-stone-700">${p.total.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </label>
+                  )
+                })}
+              </div>
+
+              {/* Unmapped purchases — selected but no auto-match found */}
+              {unmappedPurchases.length > 0 && (
+                <div className="border border-amber-200 bg-amber-50 rounded-md p-2 space-y-2">
+                  <div className="text-xs font-semibold text-amber-800">
+                    ⚠ Unmapped purchases ({unmappedPurchases.length})
+                  </div>
+                  <div className="text-[10px] text-amber-700">
+                    These purchases couldn&apos;t be auto-matched to a recipe line (no SKU or no matching line).
+                    Pick a line to link manually, or skip.
+                  </div>
+                  {unmappedPurchases.map((p) => (
+                    <div key={p.id} className="flex items-center gap-2 text-xs">
+                      <div className="flex-1 min-w-0">
+                        <span className="font-mono font-semibold">{p.adhocNumber}</span>
+                        <span className="text-stone-600 ml-1">· {p.materialName}</span>
+                        <span className="text-stone-500 ml-1">${p.unitCost.toFixed(2)}/pack</span>
+                      </div>
+                      <Select
+                        value={manualLinks[p.id] ?? ""}
+                        onValueChange={(v) => manuallyLinkAdhoc(p.id, v as string | "skip")}
+                      >
+                        <SelectTrigger className="h-7 text-[11px] w-[200px]">
+                          <SelectValue placeholder="Pick line…" />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-[240px]">
+                          <SelectItem value="skip">— Skip —</SelectItem>
+                          {lines.map((l) => (
+                            <SelectItem key={l.key} value={l.key}>
+                              {l.materialName} ({l.materialSku}) · {l.qtyUsed} {l.unit}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Summary of linked costs */}
+              {selectedAdhocIds.size > 0 && (
+                <div className="text-[10px] text-stone-500">
+                  {lines.filter((l) => l.linkedAdhocPurchaseId).length} line(s) using linked-purchase costs ·{" "}
+                  {lines.filter((l) => !l.linkedAdhocPurchaseId).length} on list/manual
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── v1.9.3: Time tracking ───────────────────────────── */}
+          {/* Personal KPI: how much time did Maria spend executing this order.
+              Three input modes:
+                1. Timer (Start/Stop buttons) — most accurate
+                2. Manual duration (type minutes) — fast for after-the-fact
+                3. Hybrid — timer runs, then override the duration field */}
+          <div className="space-y-2 border border-stone-200 rounded-md p-3 bg-stone-50">
+            <Label className="text-xs font-semibold text-stone-700">
+              ⏱ Time spent (optional)
+            </Label>
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Timer buttons */}
+              {!timerRunning ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={timerStartedAt ? "outline" : "default"}
+                  onClick={startTimer}
+                  className="h-8 text-xs"
+                  disabled={!!timerCompletedAt}
+                >
+                  {timerStartedAt ? "▶ Resume" : "▶ Start"}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="destructive"
+                  onClick={stopTimer}
+                  className="h-8 text-xs"
+                >
+                  ⏸ Stop
+                </Button>
+              )}
+              {(timerStartedAt || timerCompletedAt) && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={resetTimer}
+                  className="h-8 text-xs"
+                >
+                  ↺ Reset
+                </Button>
+              )}
+
+              {/* Live elapsed time */}
+              {timerRunning && (
+                <span className="font-mono text-lg font-semibold text-stone-900 tabular-nums">
+                  {formatElapsed(liveElapsedSec)}
+                </span>
+              )}
+
+              {/* Stopped: show final elapsed */}
+              {!timerRunning && timerStartedAt && timerCompletedAt && (
+                <span className="font-mono text-sm text-emerald-700 tabular-nums">
+                  ✓ {formatElapsed(Math.round((timerCompletedAt.getTime() - timerStartedAt.getTime()) / 1000))}
+                </span>
+              )}
+
+              {/* Manual duration input */}
+              <div className="ml-auto flex items-center gap-1">
+                <Label className="text-[10px] text-stone-500 whitespace-nowrap">Duration (min)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={durationMinutesInput}
+                  onChange={(e) => setDurationMinutesInput(e.target.value)}
+                  placeholder="e.g. 45"
+                  className="h-8 w-20 text-xs text-right"
+                />
+              </div>
+            </div>
+            {timerRunning && (
+              <div className="text-[10px] text-stone-500">
+                Timer running since {timerStartedAt?.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}. Click Stop when finished.
+              </div>
+            )}
+            {!timerRunning && !timerStartedAt && (
+              <div className="text-[10px] text-stone-500">
+                Use the timer for live tracking, or type the duration directly for after-the-fact logging.
+              </div>
+            )}
+          </div>
 
           {/* ── Line items table ──────────────────────────────────── */}
           <div className="space-y-2">
@@ -537,6 +1079,7 @@ export function LogExecutionDialog({
                       <th className="text-right px-2 py-2 font-medium w-20">Line $</th>
                       <th className="text-left px-2 py-2 font-medium w-28">Type</th>
                       <th className="text-left px-2 py-2 font-medium w-28">Source</th>
+                      <th className="text-left px-2 py-2 font-medium w-36">Cost basis</th>
                       <th className="px-2 py-2 w-8"></th>
                     </tr>
                   </thead>
@@ -578,6 +1121,11 @@ export function LogExecutionDialog({
                         </td>
                         <td className="px-2 py-1 text-stone-600">{l.unit}</td>
                         <td className="px-2 py-1">
+                          {/* v1.9.3: when costBasis=linked-purchase, the unitCost is
+                              snapshotted from the linked AdHocPurchase — read-only.
+                              When costBasis=manual, the user types the actual cost.
+                              When costBasis=list (default), the user can override
+                              (which implicitly switches to manual). */}
                           <Input
                             type="number"
                             step="0.01"
@@ -586,9 +1134,14 @@ export function LogExecutionDialog({
                             onChange={(e) =>
                               updateLine(l.key, {
                                 unitCost: Number(e.target.value),
+                                // Editing the unit cost implicitly means manual override
+                                costBasis: l.costBasis === "linked-purchase" ? "manual" : l.costBasis,
                               })
                             }
+                            disabled={l.costBasis === "linked-purchase"}
                             className="h-8 text-xs text-right"
+                            style={l.costBasis === "linked-purchase" ? { background: "#F5F5F4", color: "#78716C" } : undefined}
+                            title={l.costBasis === "linked-purchase" ? "Cost from linked ad-hoc purchase — switch to Manual to override" : undefined}
                           />
                         </td>
                         <td className="px-2 py-1 text-right font-semibold tabular-nums">
@@ -631,6 +1184,75 @@ export function LogExecutionDialog({
                               ))}
                             </SelectContent>
                           </Select>
+                        </td>
+                        {/* v1.9.3: cost basis column */}
+                        <td className="px-2 py-1">
+                          <Select
+                            value={l.costBasis}
+                            onValueChange={(v) => {
+                              const newBasis = v as CostBasis
+                              if (newBasis === "list") {
+                                // Reverting to list — restore the material's unitCost
+                                const mat = materials.find((m) => m.sku === l.materialSku)
+                                updateLine(l.key, {
+                                  costBasis: "list",
+                                  linkedAdhocPurchaseId: undefined,
+                                  unitCost: mat?.unitCost ?? 0,
+                                })
+                              } else if (newBasis === "manual") {
+                                // Manual — keep current unitCost, just unlink
+                                updateLine(l.key, {
+                                  costBasis: "manual",
+                                  linkedAdhocPurchaseId: undefined,
+                                })
+                              } else if (newBasis === "linked-purchase") {
+                                // Linked-purchase — don't pick a purchase yet, just mark
+                                // the basis. The user picks the actual purchase in the
+                                // dropdown below.
+                                updateLine(l.key, { costBasis: "linked-purchase" })
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {COST_BASIS_OPTIONS.map((c) => (
+                                <SelectItem key={c.value} value={c.value}>
+                                  {c.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {l.costBasis === "linked-purchase" && (
+                            <Select
+                              value={l.linkedAdhocPurchaseId ?? ""}
+                              onValueChange={(v) => linkAdhocPurchase(l.key, v)}
+                            >
+                              <SelectTrigger className="h-7 text-[10px] mt-1">
+                                <SelectValue placeholder="Pick purchase…" />
+                              </SelectTrigger>
+                              <SelectContent className="max-h-[240px]">
+                                {getMatchingPurchases(l.materialSku).length === 0 ? (
+                                  <SelectItem value="_none" disabled>
+                                    No recent purchases match this SKU
+                                  </SelectItem>
+                                ) : (
+                                  getMatchingPurchases(l.materialSku).map((p) => (
+                                    <SelectItem key={p.id} value={p.id}>
+                                      {p.adhocNumber} · {p.vendor} · ${p.unitCost.toFixed(2)}/pack
+                                      {p.materialSku === null && " (no SKU)"}
+                                    </SelectItem>
+                                  ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          {l.costBasis === "linked-purchase" && l.linkedAdhocPurchaseId && (
+                            <div className="text-[9px] text-stone-500 mt-1">
+                              ✓ Linked
+                            </div>
+                          )}
                         </td>
                         <td className="px-2 py-1 text-center">
                           <button

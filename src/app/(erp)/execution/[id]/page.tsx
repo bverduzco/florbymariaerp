@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic"
 import { db as prisma } from "@/lib/db"
 import { notFound } from "next/navigation"
 import Link from "next/link"
+import { EditExecutionDialog } from "../edit-execution-dialog"
 
 async function getLog(id: string) {
   return prisma.executionLog.findUnique({
@@ -24,7 +25,7 @@ export default async function ExecutionDetailPage({
   const log = await getLog(id)
   if (!log) notFound()
 
-  const isPaid = log.quotedPrice !== null
+  const isPaid = log.paymentStatus === "paid"
   const variance = (log.actualCost ?? 0) - (log.estimatedCost ?? 0)
 
   return (
@@ -49,6 +50,35 @@ export default async function ExecutionDetailPage({
             </span>
           </div>
         </div>
+        <EditExecutionDialog
+          log={{
+            id: log.id,
+            executionNumber: log.executionNumber,
+            executedAt: log.executedAt.toISOString(),
+            executedBy: log.executedBy,
+            status: log.status,
+            paymentStatus: log.paymentStatus,
+            quotedPrice: log.quotedPrice,
+            notes: log.notes,
+            startedAt: log.startedAt?.toISOString() ?? null,
+            completedAt: log.completedAt?.toISOString() ?? null,
+            durationMinutes: log.durationMinutes,
+            lines: log.lines.map((l) => ({
+              id: l.id,
+              materialSku: l.materialSku,
+              materialName: l.materialName,
+              qtyUsed: l.qtyUsed,
+              unit: l.unit,
+              unitCost: l.unitCost,
+              lineCost: l.lineCost,
+              type: l.type,
+              source: l.source,
+              costBasis: l.costBasis,
+              linkedAdhocPurchaseId: l.linkedAdhocPurchaseId,
+              notes: l.notes,
+            })),
+          }}
+        />
       </div>
 
       {/* Linked job */}
@@ -92,6 +122,7 @@ export default async function ExecutionDetailPage({
                   <th style={{ textAlign: "right" }}>Unit cost</th>
                   <th style={{ textAlign: "right" }}>Line cost</th>
                   <th>Type</th>
+                  <th>Cost basis</th>
                   <th>Notes</th>
                 </tr>
               </thead>
@@ -106,6 +137,20 @@ export default async function ExecutionDetailPage({
                     <td>
                       <span className={`fmd-status ${line.type === "recipe" ? "accepted" : line.type === "addition" ? "pending" : line.type === "substitution" ? "draft" : "cancelled"}`}>
                         {line.type}
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        className={`fmd-status ${line.costBasis === "linked-purchase" ? "accepted" : line.costBasis === "manual" ? "pending" : ""}`}
+                        title={
+                          line.costBasis === "linked-purchase"
+                            ? `Linked to ${line.linkedAdhocPurchaseId ?? "(missing)"}`
+                            : line.costBasis === "manual"
+                              ? "Manually entered cost"
+                              : "List price (preferred supplier)"
+                        }
+                      >
+                        {line.costBasis === "linked-purchase" ? "🔗 Linked" : line.costBasis === "manual" ? "✏️ Manual" : "📋 List"}
                       </span>
                     </td>
                     <td style={{ maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: "11px", color: "#78716C" }}>
@@ -148,6 +193,17 @@ export default async function ExecutionDetailPage({
           </div>
           <div className="fmd-kpi-label">Cost variance</div>
         </div>
+        {log.durationMinutes != null && (
+          <div className="fmd-kpi-cell">
+            <div className="fmd-kpi-value" style={{ color: "#2563EB" }}>
+              {Math.floor(log.durationMinutes / 60) > 0
+                ? `${Math.floor(log.durationMinutes / 60)}h `
+                : ""}
+              {log.durationMinutes % 60}m
+            </div>
+            <div className="fmd-kpi-label">Time spent</div>
+          </div>
+        )}
       </div>
 
       {/* Notes */}
