@@ -728,6 +728,38 @@ export default async function SettingsPage() {
               </>
             }
           />
+          <WishlistItem
+            priority="backlog"
+            title="🤖 Bot assistant: ticket photo → ad-hoc purchase / price list"
+            description={
+              <>
+                Snap a photo of a vendor receipt or price list. VLM extracts vendor, date, line
+                items, prices, total. SKU-matching service proposes matches (with confidence
+                score); items with no SKU get logged as free-text ad-hoc purchases (after the
+                <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>AdHocPurchase.materialSku</code>{" "}
+                nullable schema change lands). One photo can produce mixed records: ad-hoc
+                purchases (with stock bump), expenses (no inventory impact), or skipped items
+                (personal). Receipt image is attached to every record created — audit trail
+                preserved. <strong>Blocked on finishing the execution-workflow fixes
+                (Gap 1–4 from the 2026-11-09 design session).</strong> See{" "}
+                <code style={{ background: "#fff", padding: "1px 4px", borderRadius: "3px" }}>BOT_ASSISTANT.md</code>{" "}
+                for the full architecture + phased rollout plan.
+              </>
+            }
+            why={
+              <>
+                Manually logging ad-hoc purchases through the dialog is the most tedious part of
+                the current workflow — especially for Costco runs where items don&apos;t match
+                the preferred-supplier SKUs. A photo scan collapses the entire data-entry step
+                into &quot;upload + confirm.&quot; The price-list scan also keeps the Supplier
+                Comparison tab current without manual data entry. Long-term this is the highest-
+                leverage automation we could build: it removes the friction that causes Maria to
+                skip logging purchases entirely, which means inventory and cost-basis data
+                silently drifts.
+              </>
+            }
+            effort="~4 weeks (Phase 0: 1 day proof-of-concept, Phase 1-3: ~1 week each, Phase 4: ongoing alias learning)"
+          />
         </div>
       </div>
 
