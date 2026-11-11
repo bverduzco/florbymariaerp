@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation"
 
-// The old ERP single-page app lived here. The new UI is at /dashboard
-// with 21 standalone routes. Redirect to keep one entry point.
+// TEMPORARY: redirect to wireframe HTML so user can view it in preview panel
+// with mobile views. Revert to redirect("/dashboard") when done.
 export default function RootPage() {
-  redirect("/dashboard")
+  redirect("/flor-wireframe.html")
 }
