@@ -624,6 +624,15 @@ model AdHocPurchase {
   paymentMethod   String?  // cash | card | transfer
   notes           String?
   sourceRowKey    String?  @unique
+  // v1.9.4: per-line color + variant tracking (Option A2 from the 2026-11-11
+  // design discussion). `color` captures the primary visual axis (rose color,
+  // vase color, ribbon color, etc.). `variant` captures the secondary axis
+  // (rose variety name like "toffee", eucalyptus species like "gunnii", vase
+  // size like "tall", ribbon width like "1 inch"). Both are free-text with
+  // autocomplete offered from the material's `colors` field. Nullable so
+  // existing records are unaffected.
+  color           String?  // e.g. "white regular", "toffee", "clear", "gold"
+  variant         String?  // e.g. "gunnii" (eucalyptus species), "tall" (vase size), "1 inch" (ribbon width)
   createdAt       DateTime @default(now())
 
   // v1.9.3: back-relation for execution lines linked to this purchase
@@ -632,6 +641,7 @@ model AdHocPurchase {
   @@index([date])
   @@index([vendor])
   @@index([materialSku])
+  @@index([color])
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -718,11 +728,20 @@ model ExecutionLogLine {
   costBasis       String   @default("list")  // list | linked-purchase | manual
   linkedAdhocPurchaseId String?  // FK to AdHocPurchase.id (when costBasis=linked-purchase)
   linkedAdhocPurchase   AdHocPurchase? @relation(fields: [linkedAdhocPurchaseId], references: [id], onDelete: SetNull)
+  // v1.9.4: per-line color + variant tracking (Option A2). Mirrors the
+  // same fields on AdHocPurchase — when execution is logged, the color +
+  // variant of the materials actually used is captured per line. This
+  // powers per-color waste reporting ("pink roses wasted at 70% this month")
+  // and per-color demand analysis ("pink dominates February orders").
+  // Free-text with autocomplete offered from the material's `colors` field.
+  color           String?  // e.g. "white regular", "toffee", "clear"
+  variant         String?  // e.g. "gunnii", "tall", "1 inch"
   createdAt       DateTime @default(now())
 
   @@index([executionLogId])
   @@index([materialSku])
   @@index([costBasis])
+  @@index([color])
 }
 
 // ────────────────────────────────────────────────────────────────────────────

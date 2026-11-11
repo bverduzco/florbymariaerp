@@ -85,6 +85,7 @@ async function getMaterials() {
       packPrice: true,
       unitsPerPack: true,
       category: true,
+      colors: true,  // v1.9.4: passed to dialog for Color autocomplete suggestions
     },
     orderBy: { name: "asc" },
   })
@@ -155,6 +156,10 @@ async function getRecentAdhocPurchases() {
       qtyPacks: true,
       unitCost: true,
       total: true,
+      // v1.9.4: include color + variant so they can flow through to the
+      // execution line when the purchase is linked.
+      color: true,
+      variant: true,
     },
     orderBy: { date: "desc" },
     take: 100,  // cap for performance — 100 recent purchases is plenty for the dropdown

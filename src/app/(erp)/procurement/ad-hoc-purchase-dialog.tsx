@@ -15,6 +15,8 @@ type MaterialOption = {
   name: string
   unit: string
   packPrice: number | null
+  colors: string | null
+  category: string | null
 }
 
 const MATERIAL_TYPES = [
@@ -38,11 +40,25 @@ export function AdHocPurchaseDialog({ materials }: { materials: MaterialOption[]
     ticketNumber: "",
     paymentMethod: "cash",
     notes: "",
+    color: "",   // v1.9.4: free-text with autocomplete from material.colors
+    variant: "", // v1.9.4: free-text (rose variety, eucalyptus species, vase size, etc.)
   })
   const router = useRouter()
 
   const selected = materials.find((m) => m.sku === form.materialSku)
   const total = (Number(form.qtyPacks) || 0) * (Number(form.unitCost) || 0)
+
+  // v1.9.4: derive the autocomplete suggestion list for Color from the
+  // selected material's `colors` field (comma-separated). For no-SKU mode
+  // or materials with no colors set, the field is plain free-text.
+  // Also determine whether the Color label should be "lighter" (when the
+  // material is packaging/other — non-perishable items where color is
+  // less semantically meaningful).
+  const colorSuggestions: string[] = selected?.colors
+    ? selected.colors.split(",").map((c) => c.trim()).filter(Boolean)
+    : []
+  const isColorLighter = !selected || !selected.category ||
+    selected.category === "packaging" || selected.category === "other"
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -60,6 +76,11 @@ export function AdHocPurchaseDialog({ materials }: { materials: MaterialOption[]
         ticketNumber: form.ticketNumber || undefined,
         paymentMethod: form.paymentMethod,
         notes: form.notes || undefined,
+        // v1.9.4: per-line color + variant — send only if non-empty (API
+        // trims + nullifies empties, but skipping empties keeps the payload
+        // small + makes "no value" explicit).
+        color: form.color.trim() || undefined,
+        variant: form.variant.trim() || undefined,
       }
       if (noSku) {
         payload.materialSku = null
@@ -77,12 +98,13 @@ export function AdHocPurchaseDialog({ materials }: { materials: MaterialOption[]
       })
       if (!res.ok) throw new Error((await res.json()).error ?? "Failed")
       const displayName = noSku ? form.materialName : (selected?.name ?? form.materialSku)
+      const colorSuffix = form.color.trim() ? ` · ${form.color.trim()}` : ""
       toast.success("Ad-hoc purchase logged", {
-        description: `${form.vendor} · ${displayName} · $${total.toFixed(0)}`,
+        description: `${form.vendor} · ${displayName}${colorSuffix} · $${total.toFixed(0)}`,
       })
       setOpen(false)
       setNoSku(false)
-      setForm({ vendor: "", materialSku: "", materialName: "", materialType: "flower", qtyPacks: "1", unitCost: "", ticketNumber: "", paymentMethod: "cash", notes: "" })
+      setForm({ vendor: "", materialSku: "", materialName: "", materialType: "flower", qtyPacks: "1", unitCost: "", ticketNumber: "", paymentMethod: "cash", notes: "", color: "", variant: "" })
       router.refresh()
     } catch (e) {
       toast.error("Failed to log purchase", { description: e instanceof Error ? e.message : String(e) })
@@ -168,7 +190,10 @@ export function AdHocPurchaseDialog({ materials }: { materials: MaterialOption[]
               <Label>Material *</Label>
               <Select value={form.materialSku} onValueChange={(v) => {
                 const mat = materials.find((m) => m.sku === v)
-                setForm({ ...form, materialSku: v, unitCost: mat?.packPrice ? mat.packPrice.toString() : form.unitCost })
+                // v1.9.4: clear color when material changes — the new material
+                // has different available colors. Keep variant (sometimes
+                // reusable, e.g. "tall" vase size applies across vases).
+                setForm({ ...form, materialSku: v, unitCost: mat?.packPrice ? mat.packPrice.toString() : form.unitCost, color: "" })
               }}>
                 <SelectTrigger><SelectValue placeholder="Select material..." /></SelectTrigger>
                 <SelectContent className="max-h-[260px]">
@@ -181,6 +206,54 @@ export function AdHocPurchaseDialog({ materials }: { materials: MaterialOption[]
               </Select>
             </div>
           )}
+
+          {/* ─── v1.9.4: Color + Variant ───────────────────────── */}
+          {/* Color: free-text with autocomplete from material.colors. Lighter
+              label when material is packaging/other (per the design discussion:
+              non-perishable items where color is less semantically meaningful).
+              Variant: always free-text (rose variety, eucalyptus species, vase
+              size, ribbon width — context-dependent per material category). */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label
+                htmlFor="ah-color"
+                className={isColorLighter ? "text-stone-400 font-normal" : ""}
+              >
+                {isColorLighter ? "Color / variant (optional)" : "Color"}
+              </Label>
+              <Input
+                id="ah-color"
+                value={form.color}
+                onChange={(e) => setForm({ ...form, color: e.target.value })}
+                list="ah-color-suggestions"
+                placeholder={isColorLighter ? "e.g. clear, gold, white" : "e.g. red, pink, white"}
+              />
+              <datalist id="ah-color-suggestions">
+                {colorSuggestions.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+              {colorSuggestions.length > 0 && !isColorLighter && (
+                <div className="text-[10px] text-stone-500">
+                  Suggestions from material: {colorSuggestions.slice(0, 5).join(", ")}
+                </div>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ah-variant" className="text-stone-400 font-normal">
+                Variant (optional)
+              </Label>
+              <Input
+                id="ah-variant"
+                value={form.variant}
+                onChange={(e) => setForm({ ...form, variant: e.target.value })}
+                placeholder="e.g. gunnii, tall, 1 inch"
+              />
+              <div className="text-[10px] text-stone-500">
+                Variety, species, size, or other secondary attribute
+              </div>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">

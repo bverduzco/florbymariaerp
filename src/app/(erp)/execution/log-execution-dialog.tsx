@@ -36,6 +36,7 @@ type Material = {
   packPrice: number | null
   unitsPerPack: number | null
   category: string
+  colors: string | null  // v1.9.4: comma-separated list, drives the Color autocomplete suggestions
 }
 
 type RecipeLine = {
@@ -94,6 +95,11 @@ type AdhocPurchaseOption = {
   qtyPacks: number
   unitCost: number
   total: number
+  // v1.9.4: color + variant on the ad-hoc — when linked to an execution line,
+  // these flow through to the line automatically (so you don't have to re-enter
+  // the color twice: once when logging the ad-hoc, once when executing).
+  color: string | null
+  variant: string | null
 }
 
 type EditLine = {
@@ -112,6 +118,9 @@ type EditLine = {
   // v1.9.3: per-line cost basis
   costBasis: CostBasis
   linkedAdhocPurchaseId?: string  // set when costBasis=linked-purchase
+  // v1.9.4: per-line color + variant (free-text with autocomplete)
+  color?: string
+  variant?: string
 }
 
 const LINE_SOURCES = [
@@ -271,6 +280,8 @@ export function LogExecutionDialog({
           type: "recipe",
           source: "inventory",
           costBasis: "list",  // v1.9.3: default — user can flip to linked-purchase or manual
+          color: "",  // v1.9.4: user fills in per line
+          variant: "",
         })
       })
     })
@@ -291,6 +302,8 @@ export function LogExecutionDialog({
         type: "addition",
         source: "inventory",
         costBasis: "list",
+        color: "",
+        variant: "",
       },
     ])
   }
@@ -311,6 +324,11 @@ export function LogExecutionDialog({
             next.unit = mat.unit
             next.unitCost = mat.unitCost ?? 0
           }
+          // v1.9.4: clear color when material changes — different material has
+          // different available colors. Keep variant (sometimes reusable, e.g.
+          // "tall" vase size applies across vases; "gunnii" species doesn't
+          // but the user can clear it manually if wrong).
+          next.color = ""
         }
         next.lineCost = Number((next.qtyUsed * next.unitCost).toFixed(2))
         return next
@@ -340,6 +358,12 @@ export function LogExecutionDialog({
           linkedAdhocPurchaseId: purchaseId,
           costBasis: "linked-purchase" as const,
           unitCost: purchase.unitCost,
+          // v1.9.4: inherit color + variant from the linked ad-hoc purchase.
+          // Only set if the line doesn't already have a value (don't overwrite
+          // a user's manual override). If line's color is empty + purchase has
+          // a color, use the purchase's. Same for variant.
+          color: l.color || purchase.color || "",
+          variant: l.variant || purchase.variant || "",
         }
         next.lineCost = Number((next.qtyUsed * next.unitCost).toFixed(2))
         return next
@@ -392,12 +416,20 @@ export function LogExecutionDialog({
             // Revert to list basis — restore material's preferred unitCost
             const mat = materials.find((m) => m.sku === l.materialSku)
             const restoredCost = mat?.unitCost ?? 0
+            // v1.9.4: also revert color/variant IF they were inherited from
+            // this purchase (matched exactly). If the user manually set the
+            // same value, we can't tell — but that's an acceptable false
+            // positive (they can re-type it).
+            const inheritedColor = l.color && purchase.color && l.color === purchase.color
+            const inheritedVariant = l.variant && purchase.variant && l.variant === purchase.variant
             return {
               ...l,
               costBasis: "list",
               linkedAdhocPurchaseId: undefined,
               unitCost: restoredCost,
               lineCost: Number((l.qtyUsed * restoredCost).toFixed(2)),
+              color: inheritedColor ? "" : l.color,
+              variant: inheritedVariant ? "" : l.variant,
             }
           }
           return l
@@ -426,6 +458,10 @@ export function LogExecutionDialog({
                 linkedAdhocPurchaseId: purchaseId,
                 unitCost: purchase.unitCost,
                 lineCost: Number((l.qtyUsed * purchase.unitCost).toFixed(2)),
+                // v1.9.4: inherit color + variant from the linked ad-hoc
+                // (only if the line doesn't already have a value)
+                color: l.color || purchase.color || "",
+                variant: l.variant || purchase.variant || "",
               }
             }
             return l
@@ -456,12 +492,17 @@ export function LogExecutionDialog({
           if (l.linkedAdhocPurchaseId === purchaseId) {
             const mat = materials.find((m) => m.sku === l.materialSku)
             const restoredCost = mat?.unitCost ?? 0
+            // v1.9.4: revert inherited color/variant (same logic as toggleAdhocPurchase)
+            const inheritedColor = l.color && purchase.color && l.color === purchase.color
+            const inheritedVariant = l.variant && purchase.variant && l.variant === purchase.variant
             return {
               ...l,
               costBasis: "list" as CostBasis,
               linkedAdhocPurchaseId: undefined,
               unitCost: restoredCost,
               lineCost: Number((l.qtyUsed * restoredCost).toFixed(2)),
+              color: inheritedColor ? "" : l.color,
+              variant: inheritedVariant ? "" : l.variant,
             }
           }
           return l
@@ -483,6 +524,9 @@ export function LogExecutionDialog({
           linkedAdhocPurchaseId: purchaseId,
           unitCost: purchase.unitCost,
           lineCost: Number((l.qtyUsed * purchase.unitCost).toFixed(2)),
+          // v1.9.4: inherit color + variant from the linked ad-hoc
+          color: l.color || purchase.color || "",
+          variant: l.variant || purchase.variant || "",
         }
       })
     )
@@ -628,6 +672,9 @@ export function LogExecutionDialog({
           // v1.9.3: cost basis + linked purchase
           costBasis: l.costBasis,
           linkedAdhocPurchaseId: l.linkedAdhocPurchaseId || null,
+          // v1.9.4: per-line color + variant (free-text)
+          color: l.color?.trim() || null,
+          variant: l.variant?.trim() || null,
         })),
       }
       const res = await fetch("/api/execution-logs", {
@@ -887,6 +934,17 @@ export function LogExecutionDialog({
                           ) : (
                             <span className="text-amber-700 ml-1 text-[10px]">(no SKU)</span>
                           )}
+                          {/* v1.9.4: show color + variant badges inline if set */}
+                          {p.color && (
+                            <span className="ml-2 px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded text-[9px] font-semibold uppercase tracking-wide">
+                              {p.color}
+                            </span>
+                          )}
+                          {p.variant && (
+                            <span className="ml-1 px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded text-[9px] font-semibold uppercase tracking-wide">
+                              {p.variant}
+                            </span>
+                          )}
                         </div>
                         <div className="text-stone-500 mt-0.5">
                           {p.qtyPacks} packs × ${p.unitCost.toFixed(2)} = <span className="font-semibold text-stone-700">${p.total.toFixed(2)}</span>
@@ -1080,6 +1138,8 @@ export function LogExecutionDialog({
                       <th className="text-left px-2 py-2 font-medium w-28">Type</th>
                       <th className="text-left px-2 py-2 font-medium w-28">Source</th>
                       <th className="text-left px-2 py-2 font-medium w-36">Cost basis</th>
+                      <th className="text-left px-2 py-2 font-medium w-24">Color</th>
+                      <th className="text-left px-2 py-2 font-medium w-24">Variant</th>
                       <th className="px-2 py-2 w-8"></th>
                     </tr>
                   </thead>
@@ -1253,6 +1313,46 @@ export function LogExecutionDialog({
                               ✓ Linked
                             </div>
                           )}
+                        </td>
+                        {/* v1.9.4: Color cell — free-text with autocomplete from material.colors */}
+                        <td className="px-1 py-1">
+                          {(() => {
+                            const mat = materials.find((m) => m.sku === l.materialSku)
+                            const suggestions = mat?.colors
+                              ? mat.colors.split(",").map((c) => c.trim()).filter(Boolean)
+                              : []
+                            const isLighter = !mat || !mat.category ||
+                              mat.category === "packaging" || mat.category === "other"
+                            return (
+                              <>
+                                <input
+                                  type="text"
+                                  value={l.color ?? ""}
+                                  onChange={(e) => updateLine(l.key, { color: e.target.value })}
+                                  list={`color-sugg-${l.key}`}
+                                  placeholder={isLighter ? "—" : "color"}
+                                  className="h-8 w-full text-xs px-1 border border-stone-200 rounded"
+                                  style={isLighter ? { color: "#9CA3AF" } : undefined}
+                                />
+                                <datalist id={`color-sugg-${l.key}`}>
+                                  {suggestions.map((c) => (
+                                    <option key={c} value={c} />
+                                  ))}
+                                </datalist>
+                              </>
+                            )
+                          })()}
+                        </td>
+                        {/* v1.9.4: Variant cell — always free-text */}
+                        <td className="px-1 py-1">
+                          <input
+                            type="text"
+                            value={l.variant ?? ""}
+                            onChange={(e) => updateLine(l.key, { variant: e.target.value })}
+                            placeholder="—"
+                            className="h-8 w-full text-xs px-1 border border-stone-200 rounded"
+                            style={{ color: "#9CA3AF" }}
+                          />
                         </td>
                         <td className="px-2 py-1 text-center">
                           <button

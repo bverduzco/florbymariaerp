@@ -61,6 +61,8 @@ export async function GET(_request: Request, { params }: RouteParams) {
  *       notes?: string | null,
  *       costBasis?: string,
  *       linkedAdhocPurchaseId?: string | null,
+ *       color?: string,                  // v1.9.4: free-text — primary visual axis
+ *       variant?: string,                // v1.9.4: free-text — secondary axis (variety, species, size)
  *     }>,
  *   }
  *
@@ -243,6 +245,8 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           notes: string | null
           costBasis: string
           linkedAdhocPurchaseId: string | null
+          color: string | null
+          variant: string | null
         }> = []
 
         for (const newLine of newLinesRaw) {
@@ -415,6 +419,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
             notes: (newLine.notes as string | null) ?? null,
             costBasis,
             linkedAdhocPurchaseId,
+            // v1.9.4: per-line color + variant (free-text with autocomplete
+            // from material.colors in the UI). Trim + nullify empties.
+            color: typeof newLine.color === "string" && newLine.color.trim() ? newLine.color.trim() : null,
+            variant: typeof newLine.variant === "string" && newLine.variant.trim() ? newLine.variant.trim() : null,
           }
 
           if (oldLine) {

@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic"
 /**
  * POST /api/ad-hoc-purchases
  *
- * Body (v1.9.3 — materialSku is now optional):
+ * Body (v1.9.4 — adds color + variant fields):
  *   {
  *     vendor: string,                    // required
  *     materialSku?: string | null,       // optional — null when no SKU (first-time purchase)
@@ -18,7 +18,9 @@ export const dynamic = "force-dynamic"
  *     ticketNumber?: string,
  *     paymentMethod?: string,            // cash | card | transfer
  *     notes?: string,
- *     resolveMissingPurchaseId?: string  // when resolving a MissingPurchaseLog
+ *     resolveMissingPurchaseId?: string, // when resolving a MissingPurchaseLog
+ *     color?: string,                    // v1.9.4: free-text — primary visual axis (rose color, vase color, etc.)
+ *     variant?: string,                  // v1.9.4: free-text — secondary axis (rose variety, eucalyptus species, vase size, etc.)
  *   }
  *
  * Creates a new ad-hoc purchase record. When resolveMissingPurchaseId is
@@ -110,6 +112,11 @@ export async function POST(request: Request) {
         ticketNumber: body.ticketNumber?.trim() || null,
         paymentMethod: body.paymentMethod || null,
         notes,
+        // v1.9.4: per-line color + variant (free-text with autocomplete offered
+        // from material.colors in the UI). Trim + nullify empties so the DB
+        // doesn't fill up with "" strings.
+        color: typeof body.color === "string" && body.color.trim() ? body.color.trim() : null,
+        variant: typeof body.variant === "string" && body.variant.trim() ? body.variant.trim() : null,
       },
     })
 

@@ -76,6 +76,8 @@ export default async function ExecutionDetailPage({
               costBasis: l.costBasis,
               linkedAdhocPurchaseId: l.linkedAdhocPurchaseId,
               notes: l.notes,
+              color: l.color,
+              variant: l.variant,
             })),
           }}
         />
@@ -129,7 +131,20 @@ export default async function ExecutionDetailPage({
               <tbody>
                 {log.lines.map((line) => (
                   <tr key={line.id}>
-                    <td style={{ fontWeight: 600, color: "#44403C" }}>{line.materialName}</td>
+                    <td style={{ fontWeight: 600, color: "#44403C" }}>
+                      {line.materialName}
+                      {/* v1.9.4: show color + variant inline as small badges */}
+                      {line.color && (
+                        <span style={{ marginLeft: "6px", fontSize: "10px", color: "#92400E", background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: "3px", padding: "1px 5px", fontWeight: 600, verticalAlign: "middle" }}>
+                          {line.color}
+                        </span>
+                      )}
+                      {line.variant && (
+                        <span style={{ marginLeft: "4px", fontSize: "10px", color: "#1E40AF", background: "#DBEAFE", border: "1px solid #BFDBFE", borderRadius: "3px", padding: "1px 5px", fontWeight: 600, verticalAlign: "middle" }}>
+                          {line.variant}
+                        </span>
+                      )}
+                    </td>
                     <td style={{ fontFamily: "monospace", fontSize: "10px", color: "#78716C" }}>{line.materialSku}</td>
                     <td style={{ textAlign: "right" }}>{line.qtyUsed} {line.unit}</td>
                     <td style={{ textAlign: "right" }}>${line.unitCost.toLocaleString("es-MX", { maximumFractionDigits: 2 })}</td>

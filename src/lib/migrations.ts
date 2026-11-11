@@ -226,6 +226,22 @@ export const MIGRATIONS: Migration[] = [
       'CREATE INDEX IF NOT EXISTS "ExecutionLogLine_costBasis_idx" ON "ExecutionLogLine"("costBasis")',
     ],
   },
+  {
+    name: "20261111_add_color_variant_tracking",
+    description:
+      "v1.9.4 per-line color + variant tracking (Option A2 from the 2026-11-11 design discussion). Adds nullable `color` + `variant` columns to AdHocPurchase + ExecutionLogLine. `color` captures the primary visual axis (rose color, vase color, ribbon color). `variant` captures the secondary axis (rose variety name like 'toffee', eucalyptus species like 'gunnii', vase size like 'tall'). Both are free-text with autocomplete offered from the material's `colors` field in the UI. Existing records are unaffected (nullable, default null). Powers per-color waste reporting and per-color demand analysis.",
+    addedAt: "2026-11-11",
+    statements: [
+      // AdHocPurchase
+      'ALTER TABLE "AdHocPurchase" ADD COLUMN "color" TEXT',
+      'ALTER TABLE "AdHocPurchase" ADD COLUMN "variant" TEXT',
+      'CREATE INDEX IF NOT EXISTS "AdHocPurchase_color_idx" ON "AdHocPurchase"("color")',
+      // ExecutionLogLine
+      'ALTER TABLE "ExecutionLogLine" ADD COLUMN "color" TEXT',
+      'ALTER TABLE "ExecutionLogLine" ADD COLUMN "variant" TEXT',
+      'CREATE INDEX IF NOT EXISTS "ExecutionLogLine_color_idx" ON "ExecutionLogLine"("color")',
+    ],
+  },
 ]
 
 /**

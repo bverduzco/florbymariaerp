@@ -60,7 +60,7 @@ export default async function ProcurementPage() {
     getSupplierComparison(),
     prisma.material.findMany({
       where: { sku: { not: "" } },
-      select: { sku: true, name: true, unit: true, packPrice: true },
+      select: { sku: true, name: true, unit: true, packPrice: true, colors: true, category: true },
       orderBy: { name: "asc" },
     }),
     getMissingPurchases(),
@@ -178,6 +178,17 @@ export default async function ProcurementPage() {
                         <td>
                           <div style={{ fontWeight: 600, color: "#44403C" }}>
                             {a.materialName ?? a.materialSku ?? "—"}
+                            {/* v1.9.4: show color + variant inline as small badges */}
+                            {a.color && (
+                              <span style={{ marginLeft: "6px", fontSize: "10px", color: "#92400E", background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: "3px", padding: "1px 5px", fontWeight: 600, verticalAlign: "middle" }}>
+                                {a.color}
+                              </span>
+                            )}
+                            {a.variant && (
+                              <span style={{ marginLeft: "4px", fontSize: "10px", color: "#1E40AF", background: "#DBEAFE", border: "1px solid #BFDBFE", borderRadius: "3px", padding: "1px 5px", fontWeight: 600, verticalAlign: "middle" }}>
+                                {a.variant}
+                              </span>
+                            )}
                           </div>
                           {a.materialSku ? (
                             <div style={{ fontSize: "10px", color: "#78716C", fontFamily: "monospace" }}>{a.materialSku}</div>

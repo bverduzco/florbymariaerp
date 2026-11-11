@@ -30,6 +30,8 @@ export const dynamic = "force-dynamic"
  *     notes?: string,
  *     costBasis?: string,             // v1.9.3: list (default) | linked-purchase | manual
  *     linkedAdhocPurchaseId?: string,  // v1.9.3: FK to AdHocPurchase.id when costBasis=linked-purchase
+ *     color?: string,                  // v1.9.4: free-text — primary visual axis (rose color, vase color, etc.)
+ *     variant?: string,                // v1.9.4: free-text — secondary axis (rose variety, eucalyptus species, vase size, etc.)
  *   }>,
  * }
  *
@@ -182,6 +184,8 @@ export async function POST(request: Request) {
               notes?: string
               costBasis?: string
               linkedAdhocPurchaseId?: string
+              color?: string
+              variant?: string
             }) => ({
               materialSku: l.materialSku,
               materialName: l.materialName || materialMap.get(l.materialSku)?.name || "(unknown)",
@@ -197,6 +201,10 @@ export async function POST(request: Request) {
               // v1.9.3: cost basis + optional link to AdHocPurchase
               costBasis: l.costBasis || "list",
               linkedAdhocPurchaseId: l.linkedAdhocPurchaseId || null,
+              // v1.9.4: per-line color + variant (free-text with autocomplete
+              // from material.colors in the UI). Trim + nullify empties.
+              color: typeof l.color === "string" && l.color.trim() ? l.color.trim() : null,
+              variant: typeof l.variant === "string" && l.variant.trim() ? l.variant.trim() : null,
             })),
           },
         },

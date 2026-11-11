@@ -25,6 +25,9 @@ type ExecutionLine = {
   costBasis: string
   linkedAdhocPurchaseId: string | null
   notes: string | null
+  // v1.9.4: per-line color + variant (mirrors create dialog)
+  color: string | null
+  variant: string | null
 }
 
 type ExecutionLogData = {
@@ -131,6 +134,9 @@ export function EditExecutionDialog({ log }: { log: ExecutionLogData }) {
           costBasis: l.costBasis,
           linkedAdhocPurchaseId: l.linkedAdhocPurchaseId,
           notes: l.notes,
+          // v1.9.4: per-line color + variant (mirrors create dialog)
+          color: l.color,
+          variant: l.variant,
         })),
       }
       // Only include quotedPrice if changed (or always include — server handles null)
@@ -263,6 +269,8 @@ export function EditExecutionDialog({ log }: { log: ExecutionLogData }) {
                       <th className="text-right px-2 py-2 font-medium w-20">Line $</th>
                       <th className="text-left px-2 py-2 font-medium w-24">Source</th>
                       <th className="text-left px-2 py-2 font-medium w-24">Cost basis</th>
+                      <th className="text-left px-2 py-2 font-medium w-24">Color</th>
+                      <th className="text-left px-2 py-2 font-medium w-24">Variant</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -330,6 +338,31 @@ export function EditExecutionDialog({ log }: { log: ExecutionLogData }) {
                               ))}
                             </SelectContent>
                           </Select>
+                        </td>
+                        {/* v1.9.4: Color cell — free-text (no autocomplete in edit
+                            dialog since we don't have the materials list here;
+                            user types freely). Lighter styling to match create
+                            dialog's neutral treatment. */}
+                        <td className="px-1 py-1">
+                          <input
+                            type="text"
+                            value={l.color ?? ""}
+                            onChange={(e) => updateLine(l.id, { color: e.target.value })}
+                            placeholder="—"
+                            className="h-8 w-full text-xs px-1 border border-stone-200 rounded"
+                            style={{ color: "#9CA3AF" }}
+                          />
+                        </td>
+                        {/* v1.9.4: Variant cell — always free-text */}
+                        <td className="px-1 py-1">
+                          <input
+                            type="text"
+                            value={l.variant ?? ""}
+                            onChange={(e) => updateLine(l.id, { variant: e.target.value })}
+                            placeholder="—"
+                            className="h-8 w-full text-xs px-1 border border-stone-200 rounded"
+                            style={{ color: "#9CA3AF" }}
+                          />
                         </td>
                       </tr>
                     ))}
