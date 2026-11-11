@@ -31,6 +31,7 @@ export async function GET(
     "v1.8.1": "ERP Zai v1.8.1.xlsx",
     "v1.8.2": "ERP Zai v1.8.2.xlsx",
     "v1.8.3": "ERP Zai v1.8.3.xlsx",
+    "v1.9.4": "Flor by Maria ERP v1.9.4.xlsx",
   };
 
   const fileName = VERSION_MAP[version];

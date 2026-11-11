@@ -27,6 +27,7 @@ const VERSION_BY_FILENAME: Record<string, string> = {
   "ERP Zai v1.8.1.xlsx": "v1.8.1",
   "ERP Zai v1.8.2.xlsx": "v1.8.2",
   "ERP Zai v1.8.3.xlsx": "v1.8.3",
+  "Flor by Maria ERP v1.9.4.xlsx": "v1.9.4",
 };
 
 export default async function DownloadIndex() {
@@ -79,7 +80,9 @@ export default async function DownloadIndex() {
       </ul>
 
       <p style={{ marginTop: 40, color: "#9CA3AF", fontSize: 12 }}>
-        Latest version is <strong>v1.8.2</strong> (consolidated version history).
+        Latest version is <strong>v1.9.4</strong> — adds per-line color + variant tracking,
+        ad-hoc purchase with no-SKU support, payment status dropdown, per-line cost basis
+        (list / linked-purchase / manual), execution time tracking, and editable execution logs.
       </p>
     </main>
   );
