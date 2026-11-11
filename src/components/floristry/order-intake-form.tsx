@@ -543,6 +543,7 @@ interface InlineCustomer {
   phone: string
   email: string
   address: string
+  notes: string  // required to match Customer type — fix for TS2345
 }
 
 function NewCustomerInline({

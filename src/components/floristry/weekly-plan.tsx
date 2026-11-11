@@ -118,11 +118,11 @@ export function WeeklyPlan() {
   }, [products])
 
   const manualLineItems: LineItem[] = items
-    .map((it) => {
+    .map((it): LineItem | null => {
       const p = productBySku.get(it.productSku)
       if (!p) return null
       return {
-        source: "manual" as const,
+        source: "manual",
         id: `manual-${it.productSku}`,
         orderNumber: null,
         status: null,
@@ -135,7 +135,7 @@ export function WeeklyPlan() {
     .filter((x): x is LineItem => x !== null)
 
   const orderLineItems: LineItem[] = orders.flatMap((o) =>
-    o.lineItems.map((li) => {
+    o.lineItems.map((li): LineItem | null => {
       let p = productBySku.get(li.productSku)
       // For custom bouquets (PRD-CUSTOM-XXXX), the product isn't in the catalogue
       // because the recipe was saved as hidden. Create a synthetic product from
@@ -156,7 +156,7 @@ export function WeeklyPlan() {
       }
       if (!p) return null
       return {
-        source: "order" as const,
+        source: "order",
         id: `order-${o.id}-${li.id}`,
         orderNumber: o.orderNumber,
         status: o.status,
