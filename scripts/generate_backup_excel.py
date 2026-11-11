@@ -130,6 +130,21 @@ def main():
         ("Products", "ERP products / bouquets (from Excel + custom saved)"),
         ("Suppliers", "ERP suppliers"),
         ("Recipe Lines", "ERP recipe lines (bill of materials)"),
+        # v1.9.x tables — added for v1.9.4 backup
+        ("Ad-Hoc Purchases", "Ad-hoc vendor purchases (with color + variant fields)"),
+        ("Execution Logs", "Execution events — what was actually used per job"),
+        ("Execution Log Lines", "Per-line material usage + cost basis + color/variant"),
+        ("Losses", "Damaged / spoiled inventory"),
+        ("Loan Records", "Borrowed items (vases, tools) tracked for return"),
+        ("Missing Purchase Logs", "Inventory discrepancies found during execution"),
+        ("Payments", "Customer payments received"),
+        ("Expenses", "Generic business expenses"),
+        ("Purchase Orders", "Formal POs to suppliers"),
+        ("Purchase Order Lines", "Line items within POs"),
+        ("Quotes", "Customer quotes (pipeline: draft → sent → accepted)"),
+        ("Quote Lines", "Line items within quotes"),
+        ("Events", "Scheduled events (weddings, etc.)"),
+        ("Audit Logs", "Audit trail of record changes"),
     ]
 
     # Map display names to actual SQLite table names
@@ -144,6 +159,21 @@ def main():
         "Products": "Product",
         "Suppliers": "Supplier",
         "Recipe Lines": "RecipeLine",
+        # v1.9.x tables
+        "Ad-Hoc Purchases": "AdHocPurchase",
+        "Execution Logs": "ExecutionLog",
+        "Execution Log Lines": "ExecutionLogLine",
+        "Losses": "Loss",
+        "Loan Records": "LoanRecord",
+        "Missing Purchase Logs": "MissingPurchaseLog",
+        "Payments": "Payment",
+        "Expenses": "Expense",
+        "Purchase Orders": "PurchaseOrder",
+        "Purchase Order Lines": "PurchaseOrderLine",
+        "Quotes": "Quote",
+        "Quote Lines": "QuoteLine",
+        "Events": "Event",
+        "Audit Logs": "AuditLog",
     }
 
     for i, (tab, desc) in enumerate(tab_descriptions, start=5):
@@ -327,6 +357,245 @@ def main():
          "Unit Cost", "Line Cost", "Category", "Color", "Check"],
         [tuple(r) for r in rows],
         money_cols={"Unit Cost", "Line Cost"})
+
+    # === TAB 12: Ad-Hoc Purchases (v1.9.x) ===
+    ws = wb.create_sheet("Ad-Hoc Purchases")
+    cur.execute("""
+        SELECT adhocNumber, date, vendor, materialSku, materialName, materialType,
+               qtyPacks, unitCost, total, ticketNumber, paymentMethod,
+               color, variant, notes, createdAt
+        FROM AdHocPurchase ORDER BY date DESC
+    """)
+    rows = cur.fetchall()
+    write_table(ws, "Ad-Hoc Purchases", f"Backup {timestamp_str} · {len(rows)} purchases",
+        ["Adhoc #", "Date", "Vendor", "Material SKU", "Material Name", "Type",
+         "Qty (packs)", "Unit Cost", "Total", "Ticket #", "Payment Method",
+         "Color", "Variant", "Notes", "Created"],
+        [tuple(r) for r in rows],
+        money_cols={"Unit Cost", "Total"},
+        date_cols={"Date", "Created"})
+
+    # === TAB 13: Execution Logs (v1.9.x) ===
+    ws = wb.create_sheet("Execution Logs")
+    cur.execute("""
+        SELECT executionNumber, executedAt, executedBy, status, paymentStatus,
+               estimatedCost, actualCost, quotedPrice, marginDollars, marginPct,
+               durationMinutes, startedAt, completedAt,
+               notes, createdAt
+        FROM ExecutionLog ORDER BY executedAt DESC
+    """)
+    rows = cur.fetchall()
+    write_table(ws, "Execution Logs", f"Backup {timestamp_str} · {len(rows)} logs",
+        ["Execution #", "Executed At", "Executed By", "Status", "Payment Status",
+         "Estimated Cost", "Actual Cost", "Quoted Price", "Margin $", "Margin %",
+         "Duration (min)", "Started At", "Completed At",
+         "Notes", "Created"],
+        [tuple(r) for r in rows],
+        money_cols={"Estimated Cost", "Actual Cost", "Quoted Price", "Margin $"},
+        date_cols={"Executed At", "Started At", "Completed At", "Created"})
+
+    # === TAB 14: Execution Log Lines (v1.9.x — includes color + variant) ===
+    ws = wb.create_sheet("Execution Log Lines")
+    cur.execute("""
+        SELECT el.executionNumber, ell.materialSku, ell.materialName,
+               ell.qtyUsed, ell.unit, ell.unitCost, ell.lineCost,
+               ell.type, ell.source, ell.costBasis,
+               ell.linkedAdhocPurchaseId,
+               ell.color, ell.variant,
+               ell.notes
+        FROM ExecutionLogLine ell
+        JOIN ExecutionLog el ON ell.executionLogId = el.id
+        ORDER BY el.executionNumber, ell.materialName
+    """)
+    rows = cur.fetchall()
+    write_table(ws, "Execution Log Lines", f"Backup {timestamp_str} · {len(rows)} lines",
+        ["Execution #", "Material SKU", "Material Name",
+         "Qty Used", "Unit", "Unit Cost", "Line Cost",
+         "Type", "Source", "Cost Basis",
+         "Linked Adhoc Purchase ID",
+         "Color", "Variant",
+         "Notes"],
+        [tuple(r) for r in rows],
+        money_cols={"Unit Cost", "Line Cost"})
+
+    # === TAB 15: Losses (v1.9.x) ===
+    ws = wb.create_sheet("Losses")
+    cur.execute("""
+        SELECT l.lossNumber, l.date, l.materialSku,
+               COALESCE(m.name, l.materialSku) as materialName,
+               l.qtyLostPacks, l.qtyLostUnits, l.unit,
+               l.reason, l.discoveredBy, l.costImpact, l.notes, l.createdAt
+        FROM Loss l
+        LEFT JOIN Material m ON l.materialSku = m.sku
+        ORDER BY l.date DESC
+    """)
+    rows = cur.fetchall()
+    write_table(ws, "Losses", f"Backup {timestamp_str} · {len(rows)} losses",
+        ["Loss #", "Date", "Material SKU", "Material Name",
+         "Qty Lost (packs)", "Qty Lost (units)", "Unit",
+         "Reason", "Discovered By", "Cost Impact", "Notes", "Created"],
+        [tuple(r) for r in rows],
+        money_cols={"Cost Impact"},
+        date_cols={"Date", "Created"})
+
+    # === TAB 16: Loan Records (v1.9.x) ===
+    ws = wb.create_sheet("Loan Records")
+    cur.execute("""
+        SELECT loanNumber, itemName, description, owner, qty,
+               dateBorrowed, datePromised, dateReturned, notes, createdAt
+        FROM LoanRecord ORDER BY dateBorrowed DESC
+    """)
+    rows = cur.fetchall()
+    write_table(ws, "Loan Records", f"Backup {timestamp_str} · {len(rows)} loans",
+        ["Loan #", "Item", "Description", "Owner", "Qty",
+         "Date Borrowed", "Date Promised", "Date Returned", "Notes", "Created"],
+        [tuple(r) for r in rows],
+        date_cols={"Date Borrowed", "Date Promised", "Date Returned", "Created"})
+
+    # === TAB 17: Missing Purchase Logs (v1.9.x) ===
+    ws = wb.create_sheet("Missing Purchase Logs")
+    cur.execute("""
+        SELECT materialSku, materialName, qtyShort, estCost,
+               triggerType, triggerRef, triggerLineId,
+               resolutionType, resolvedAt, resolvedByPo, resolvedNotes,
+               notes, createdAt
+        FROM MissingPurchaseLog ORDER BY createdAt DESC
+    """)
+    rows = cur.fetchall()
+    write_table(ws, "Missing Purchase Logs", f"Backup {timestamp_str} · {len(rows)} logs",
+        ["Material SKU", "Material Name", "Qty Short", "Est. Cost",
+         "Trigger Type", "Trigger Ref", "Trigger Line ID",
+         "Resolution Type", "Resolved At", "Resolved By PO", "Resolved Notes",
+         "Notes", "Created"],
+        [tuple(r) for r in rows],
+        money_cols={"Est. Cost"},
+        date_cols={"Resolved At", "Created"})
+
+    # === TAB 18: Payments (v1.9.x) ===
+    ws = wb.create_sheet("Payments")
+    cur.execute("""
+        SELECT paymentNumber, date, direction, type,
+               linkedId, linkedName, amount, method, reference, status,
+               recordedBy, notes, createdAt
+        FROM Payment ORDER BY date DESC
+    """)
+    rows = cur.fetchall()
+    write_table(ws, "Payments", f"Backup {timestamp_str} · {len(rows)} payments",
+        ["Payment #", "Date", "Direction", "Type",
+         "Linked ID", "Linked Name", "Amount", "Method", "Reference", "Status",
+         "Recorded By", "Notes", "Created"],
+        [tuple(r) for r in rows],
+        money_cols={"Amount"},
+        date_cols={"Date", "Created"})
+
+    # === TAB 19: Expenses (v1.9.x) ===
+    ws = wb.create_sheet("Expenses")
+    cur.execute("""
+        SELECT expenseNumber, date, category, description, amount,
+               vendorPayee, linkedOrder, linkedEvent, paymentMethod,
+               notes, createdAt
+        FROM Expense ORDER BY date DESC
+    """)
+    rows = cur.fetchall()
+    write_table(ws, "Expenses", f"Backup {timestamp_str} · {len(rows)} expenses",
+        ["Expense #", "Date", "Category", "Description", "Amount",
+         "Vendor/Payee", "Linked Order", "Linked Event", "Payment Method",
+         "Notes", "Created"],
+        [tuple(r) for r in rows],
+        money_cols={"Amount"},
+        date_cols={"Date", "Created"})
+
+    # === TAB 20: Purchase Orders (v1.9.x) ===
+    ws = wb.create_sheet("Purchase Orders")
+    cur.execute("""
+        SELECT poNumber, supplier, status, totalCost, notes, createdAt, updatedAt
+        FROM PurchaseOrder ORDER BY createdAt DESC
+    """)
+    rows = cur.fetchall()
+    write_table(ws, "Purchase Orders", f"Backup {timestamp_str} · {len(rows)} POs",
+        ["PO #", "Supplier", "Status", "Total Cost", "Notes", "Created", "Updated"],
+        [tuple(r) for r in rows],
+        money_cols={"Total Cost"},
+        date_cols={"Created", "Updated"})
+
+    # === TAB 21: Purchase Order Lines (v1.9.x) ===
+    ws = wb.create_sheet("Purchase Order Lines")
+    cur.execute("""
+        SELECT po.poNumber, pol.materialSku, pol.materialName,
+               pol.qtyPacks, pol.costPerPack, pol.lineTotal
+        FROM PurchaseOrderLine pol
+        JOIN PurchaseOrder po ON pol.poId = po.id
+        ORDER BY po.poNumber, pol.materialName
+    """)
+    rows = cur.fetchall()
+    write_table(ws, "Purchase Order Lines", f"Backup {timestamp_str} · {len(rows)} lines",
+        ["PO #", "Material SKU", "Material Name", "Qty Packs", "Cost/Pack", "Line Total"],
+        [tuple(r) for r in rows],
+        money_cols={"Cost/Pack", "Line Total"})
+
+    # === TAB 22: Quotes (v1.9.x) ===
+    ws = wb.create_sheet("Quotes")
+    cur.execute("""
+        SELECT quoteNumber, quoteDate, customerName, status,
+               subtotal, discount, discountType, iva, deliveryFee, total,
+               depositRequired,
+               eventDate, validUntil,
+               leadSource, leadSourceDetail, lostReason,
+               notes, createdAt
+        FROM Quote ORDER BY quoteDate DESC
+    """)
+    rows = cur.fetchall()
+    write_table(ws, "Quotes", f"Backup {timestamp_str} · {len(rows)} quotes",
+        ["Quote #", "Quote Date", "Customer Name", "Status",
+         "Subtotal", "Discount", "Discount Type", "IVA", "Delivery Fee", "Total",
+         "Deposit Required",
+         "Event Date", "Valid Until",
+         "Lead Source", "Lead Source Detail", "Lost Reason",
+         "Notes", "Created"],
+        [tuple(r) for r in rows],
+        money_cols={"Subtotal", "Discount", "IVA", "Delivery Fee", "Total", "Deposit Required"},
+        date_cols={"Quote Date", "Event Date", "Valid Until", "Created"})
+
+    # === TAB 23: Quote Lines (v1.9.x) ===
+    ws = wb.create_sheet("Quote Lines")
+    cur.execute("""
+        SELECT q.quoteNumber, ql.productSku, ql.description,
+               ql.qty, ql.unitPrice, ql.lineTotal, ql.notes
+        FROM QuoteLine ql
+        JOIN Quote q ON ql.quoteId = q.id
+        ORDER BY q.quoteNumber, ql.description
+    """)
+    rows = cur.fetchall()
+    write_table(ws, "Quote Lines", f"Backup {timestamp_str} · {len(rows)} lines",
+        ["Quote #", "Product SKU", "Description", "Qty", "Unit Price", "Line Total", "Notes"],
+        [tuple(r) for r in rows],
+        money_cols={"Unit Price", "Line Total"})
+
+    # === TAB 24: Events (v1.9.x) ===
+    ws = wb.create_sheet("Events")
+    cur.execute("""
+        SELECT eventNumber, name, eventDate, status, notes, createdAt
+        FROM Event ORDER BY eventDate DESC
+    """)
+    rows = cur.fetchall()
+    write_table(ws, "Events", f"Backup {timestamp_str} · {len(rows)} events",
+        ["Event #", "Name", "Event Date", "Status", "Notes", "Created"],
+        [tuple(r) for r in rows],
+        date_cols={"Event Date", "Created"})
+
+    # === TAB 25: Audit Logs (v1.9.x) ===
+    ws = wb.create_sheet("Audit Logs")
+    cur.execute("""
+        SELECT entityType, entityId, action, fieldName, oldValue, newValue,
+               changedBy, changedAt
+        FROM AuditLog ORDER BY changedAt DESC
+    """)
+    rows = cur.fetchall()
+    write_table(ws, "Audit Logs", f"Backup {timestamp_str} · {len(rows)} entries",
+        ["Entity Type", "Entity ID", "Action", "Field Name",
+         "Old Value", "New Value", "Changed By", "Changed At"],
+        [tuple(r) for r in rows],
+        date_cols={"Changed At"})
 
     # Set workbook metadata
     wb.properties.creator = "Flor by Maria ERP"
