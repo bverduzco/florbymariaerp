@@ -15,7 +15,9 @@
     "db:seed:turso": "npx --yes tsx scripts/seed-turso.ts",
     "db:fix-spellings": "npx --yes tsx scripts/fix-spellings-turso.ts",
     "db:fix-spellings:dry-run": "npx --yes tsx scripts/fix-spellings-turso.ts --dry-run",
-    "db:migrate:turso": "npx --yes tsx scripts/apply-turso-expansion.ts"
+    "db:migrate:turso": "npx --yes tsx scripts/apply-turso-expansion.ts",
+    "erp:workbook": "python3 scripts/generate_erp_workbook.py",
+    "erp:backup": "python3 scripts/generate_backup_excel.py"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
