@@ -961,31 +961,141 @@ This was a v1.9.4 optimization (commit `bdf5026`) that reduced per-function size
 
 ---
 
-## 11. What to skip (don't build)
+## 11. Performance, caching & production hardening (Vercel best practices)
 
-### 11.1 Legacy `floristry/*` components
+§10.4 covers bundle size. This section covers everything else the rebuild must do to run well on Vercel + Turso at $0/month. Each rule is mandatory unless marked optional. These are additive to v1.9.4 — none of them exist there yet.
+
+### 11.1 Caching policy (route by route)
+
+v1.9.4 marks nearly every route `force-dynamic` (via `scripts/add-force-dynamic.py`). Keep dynamic rendering for ERP pages — the data is per-user and changes constantly — but add the layers v1.9.4 lacks:
+
+| Content | Strategy | Why |
+|---|---|---|
+| ERP pages (`(erp)/**`) | Dynamic render + React `cache()` for request-level dedupe | Data is per-user, changes per second |
+| Client list queries | TanStack Query with `staleTime: 30_000` | Instant tab switches without re-hitting the DB |
+| Wiki articles, legal templates | ISR with `revalidate = 300` + `revalidateTag` on write | Read often, written rarely |
+| Product photos | Cloudinary `f_auto,q_auto` URLs via `next/image` | Offloads image bandwidth to Cloudinary's CDN |
+| PDF / Excel responses | `Cache-Control: no-store`, always | Generated per request; a cached PDF is a wrong PDF |
+
+Rules:
+
+- Never set `force-dynamic` on a route that touches neither the DB nor auth cookies — measure before marking, don't blanket-apply.
+- GET handlers returning user-scoped data send `Cache-Control: no-store` (correctness first; TanStack Query provides the UX speed).
+- Any mutation that affects ISR-cached content calls `revalidateTag(...)` inside the same `withAudit` block that writes the audit entry.
+
+### 11.2 Turso resilience in serverless (retry + backoff)
+
+libSQL-over-HTTP calls can transiently fail (429 rate limit, 5xx, network blip). v1.9.4 does not retry — a single blip surfaces as a 500 to the user. Requirements for `src/lib/db.ts`:
+
+- Reuse ONE libSQL client via a `globalThis` singleton (already the pattern) — never create per-request clients; each one re-handshakes.
+- Wrap the adapter with a retry helper: idempotent reads retry up to 3 attempts with exponential backoff (250ms → 1s → 4s) + jitter. Retry writes **only** on clearly transient errors (HTTP 429/502/503), and never wrap `db.$transaction` bodies in the retry helper — Prisma retries transactions itself; double-retrying can double-apply writes.
+- Final failures surface through `withAudit` so they land in AuditLog with route + user context, not just a generic 500.
+- Keep Vercel region `iad1` and the Turso primary in a nearby region. If Maria reports slow pages, measure function↔DB latency in Vercel logs first; read replicas are optional and only if measurements demand them.
+
+### 11.3 Runtime choice: Node everywhere, no Edge routes
+
+- All API routes: Node.js runtime (default). Prisma, `pdfmake`, and `exceljs` all require Node.
+- Middleware stays minimal — cookie existence check only. The HMAC verification uses Node crypto; do NOT set `runtime = "edge"` on middleware unless that check is rewritten with Web Crypto. Middleware runs on every request — a slow middleware slows the whole app, a broken edge middleware breaks it.
+- Never force `runtime = "edge"` on DB-touching routes. Edge + `@libsql/client` works but adds cold-start variance for zero benefit at this traffic level.
+
+### 11.4 Security headers (add on day 1)
+
+```ts
+// next.config.ts
+async headers() {
+  return [{
+    source: "/(.*)",
+    headers: [
+      { key: "X-Frame-Options", value: "DENY" },
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
+    ],
+  }]
+}
+```
+
+- HSTS is set automatically by Vercel — don't duplicate it.
+- CSP: ship `Content-Security-Policy-Report-Only` first with `img-src` including Cloudinary, review reports for 2 weeks, then switch to enforcing `Content-Security-Policy`.
+- `camera=(self)` is deliberate — the planned ticket-photo scanning feature (§7.7, `BOT_ASSISTANT.md`) needs it.
+
+### 11.5 Rate limiting (protect login + write routes)
+
+Vercel has no app-level rate limiting on Hobby. Use `@upstash/ratelimit` + Upstash Redis (free tier), keyed by IP:
+
+| Route class | Limit |
+|---|---|
+| `/api/auth/*` (login attempts — brute-force protection on the shared password) | 5 per minute |
+| Mutating writes (POST/PATCH/DELETE on business routes) | 30 per minute |
+| Reads | unlimited |
+
+- Local dev (no Redis): fall back to an in-memory `Map` limiter — single instance, fine for dev.
+- Return `429` with a short JSON error; the UI shows "Demasiadas solicitudes, intenta de nuevo en un minuto."
+
+### 11.6 Observability
+
+- Enable Vercel **Speed Insights** + **Analytics** (free on Hobby) on the `(erp)` layout.
+- Extend the `withAudit` wrapper (§4.1) to emit one structured JSON log line per request: `{ route, method, userId, status, durationMs, error? }`. Vercel logs are searchable — this is the cheapest possible APM and it lands for free.
+- Add `/api/health` (extends the existing `/api/admin/db-status`): DB ping + pending migration count. Wire an external uptime check to it (UptimeRobot free tier) so Maria learns about outages before her customers do.
+- If error volume outgrows Vercel logs, add Sentry (free tier). Optional — don't build custom error aggregation.
+
+### 11.7 Cron jobs (Vercel crons)
+
+`vercel.json` ships with `"crons": []`. Add exactly two:
+
+```json
+"crons": [
+  { "path": "/api/cron/quote-reminders", "schedule": "0 14 * * *" },
+  { "path": "/api/cron/turso-snapshot", "schedule": "30 6 * * *" }
+]
+```
+
+- `0 14 * * *` UTC = 08:00 America/Mexico_City — daily quote-reminder sweep (reuses the existing quote-reminder logic; quotes are generated in the morning, reminders go out the same morning).
+- `30 6 * * *` UTC = 00:30 America/Mexico_City — nightly Turso snapshot export (reuses the `scripts/snapshot-turso.ts` logic) so a bad migration or accidental seed never loses more than one day.
+- Both routes MUST verify the `Authorization: Bearer ${CRON_SECRET}` header (Vercel injects the `CRON_SECRET` env var) and return 401 otherwise. An unprotected cron route is a free write API for anyone on the internet.
+- Hobby plan allows 2 cron jobs with daily precision — these two fit exactly. Needing a third or finer granularity is a Pro-plan signal, not a reason to build a scheduler.
+
+### 11.8 Build & deploy hygiene
+
+- `npx tsc --noEmit` gates every PR (§8.3 bans `ignoreBuildErrors`; this is the enforcement mechanism).
+- Check the Vercel preview deployment on every PR before merge — preview URLs are free and catch env-var/adapter problems that only appear outside localhost.
+- Deploy before 10:00 AM Mexico City time so verification happens the same working day — never deploy at the end of the day and walk away.
+- Keep `maxDuration: 60` only on the 3 heavy routes from §2.3. Don't widen it: a route that needs 60s is a design smell, not a config problem.
+
+### 11.9 Anti-patterns (don't do these)
+
+- Don't add Redis/caching layers "for performance" before measuring — at 5–20 orders/week the DB is never the bottleneck; TanStack Query + Turso is enough.
+- Don't split the app into multiple Vercel projects or micro-frontends — one repo, one project, one deployment.
+- Don't move PDF generation to a separate service — v1.9.4 measured it well under 2s against a 60s budget.
+- Don't add a second database (e.g. Postgres "for reporting") — Turso + the Waste report (§9) covers analytics at this scale.
+
+---
+
+## 12. What to skip (don't build)
+
+### 12.1 Legacy `floristry/*` components
 
 v1.9.4 has `src/components/floristry/*` — a legacy single-page-app shell superseded by the `(erp)/...` route group. ~2,000 lines of dead code with 5 type errors that were silently swallowed by `ignoreBuildErrors: true`. **Don't rebuild it.** Only build the `(erp)/...` route group.
 
-### 11.2 Wire service integration (FTD/Teleflora)
+### 12.2 Wire service integration (FTD/Teleflora)
 
 FTD explicitly forbids third-party integration (per FloristWare's FAQ). If you ever need wire orders, switch to a SaaS that has them — don't try to build it.
 
-### 11.3 Custom e-commerce storefront
+### 12.3 Custom e-commerce storefront
 
 Shopify + webhook → `/api/orders` is 1 week of work. Building your own storefront is 3+ months of work that will never be as good. Skip it.
 
-### 11.4 Custom delivery routing
+### 12.4 Custom delivery routing
 
 Use Routific, Onfleet, or similar. Don't build.
 
-### 11.5 Custom payment processing
+### 12.5 Custom payment processing
 
 Integrate Stripe via webhook. Don't build PCI-compliant flows.
 
 ---
 
-## 12. Acceptance criteria
+## 13. Acceptance criteria
 
 The rebuild is complete when:
 
@@ -1006,10 +1116,13 @@ The rebuild is complete when:
 11. ✅ Visit `/settings` to see migration status + DB row counts + Wishlist
 12. ✅ Mobile-responsive: every page works on 375px width with hamburger menu + bottom tab bar
 13. ✅ Design system preserved: rose primary accent, fmd-* custom classes, status badge color mapping
+14. ✅ Security headers present on every response (§11.4); rate limiting active on login + all mutating routes (§11.5)
+15. ✅ Two Vercel crons registered and `CRON_SECRET`-protected: daily quote-reminder sweep + nightly Turso snapshot (§11.7)
+16. ✅ `/api/health` returns DB ping + migration status; `withAudit` emits one structured JSON log line per request (§11.6)
 
 ---
 
-## 13. Migration path from v1.9.4 (if needed)
+## 14. Migration path from v1.9.4 (if needed)
 
 If the rebuild runs alongside v1.9.4 during a transition period:
 
@@ -1023,13 +1136,14 @@ The data mapping is straightforward because the rebuild's entities are supersets
 
 ---
 
-## 14. History
+## 15. History
 
 - **2026-11-11:** Brief written based on a design session reviewing v1.9.4 with Maria. The session covered:
   - What the v1.9.4 schema got right (color + variant tracking, ad-hoc no-SKU support, per-line cost basis, time tracking, editable execution logs)
   - What it got wrong (6 separate line-item tables, CustomRecipe + Product duplication, Quote + Order duplication, shared demo password, no audit logging on most routes, `ignoreBuildErrors: true` swallowing type errors)
   - What to skip entirely (legacy floristry components, wire services, custom e-commerce, custom delivery routing)
   - What to build first in the rebuild (waste report — see §9)
+- **2026-11-12:** Added §11 (Performance, caching & production hardening — Vercel best practices): caching policy, Turso retry/backoff, runtime choice, security headers, rate limiting, observability, cron jobs, deploy hygiene, anti-patterns. Former §11–§14 renumbered to §12–§15.
 - **2026-11-12 onwards:** Rebuild execution begins (Phase 0)
 
 ---
